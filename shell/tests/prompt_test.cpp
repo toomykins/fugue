@@ -247,6 +247,7 @@ private slots:
         auto* list = h.current()->findChild<QListWidget*>("promptList");
         auto* f = h.current()->findChild<QLineEdit*>("promptField");
         QVERIFY(list && f); QCOMPARE(list->count(), 3); QVERIFY(isPasteWired(f));
+        QVERIFY(f->isHidden());   // a listbox alone, as stock
         list->setCurrentRow(1);
         QCOMPARE(f->text(), QString("beta"));
         h.current()->findChild<QPushButton*>("promptOk")->click();
@@ -255,6 +256,7 @@ private slots:
         r.choices = {};  // the fetch failed: typed text still works
         h.present(r);
         QCOMPARE(h.current()->findChild<QListWidget*>("promptList")->count(), 0);
+        QVERIFY(!h.current()->findChild<QLineEdit*>("promptField")->isHidden());
         h.current()->findChild<QLineEdit*>("promptField")->setText("typed");
         h.current()->findChild<QPushButton*>("promptOk")->click();
         QCOMPARE(acc.at(1).at(2).toString(), QString("typed"));

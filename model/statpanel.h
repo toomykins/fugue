@@ -6,6 +6,7 @@
 // The model keeps the Stat() side (World::stat). Everything below is a pure function of a const World.
 #pragma once
 #include <cstdint>
+#include <map>
 #include <optional>
 #include <string>
 #include <vector>
@@ -35,16 +36,24 @@ std::string plainAtomName(const std::string& s);   // drops BYOND's 0xFF text-ma
 // The value column as stock DreamSeeker prints it: text, a trimmed number, an atom's name, else "".
 std::string statText(const World& w, const World::StatLine& l);
 
-// The player's verb scope (client appearance verbs UNION the own mob's). false = not knowable yet: callers use the dictionary.
+// The player's verb scope (client appearance verbs UNION the own mob's UNION srcAdmittedVerbIds). false = not knowable yet: callers use the dictionary.
 bool verbScope(const World& w, std::vector<uint16_t>& ids);
-std::vector<std::string> verbCategories(const World& w);              // ASCII-sorted, distinct
-std::vector<VerbDef> verbsInCategory(const World& w, const std::string& label);   // by name, byte order
+// The verb tabs of the scope above, computed once: a caller that needs the strip and a tab's rows builds this per tick.
+struct VerbPanel {
+    std::vector<std::string> categories;                          // ASCII-sorted, distinct
+    std::map<std::string, std::vector<VerbDef>> byCategory;       // by name, byte order
+};
+VerbPanel verbPanel(const World& w);
+std::vector<std::string> verbCategories(const World& w);
+std::vector<VerbDef> verbsInCategory(const World& w, const std::string& label);
 // The strip: Stat() tab names in wire order, then the verb categories, as shown (without text-macro markers).
 std::vector<std::string> statTabs(const World& w);
+std::vector<std::string> statTabs(const World& w, const VerbPanel& p);
 // The name a tab select sends: a Stat() tab's name as the server sent it, markers and all. "" = out of range.
 std::string statTabWireName(const World& w, int index);
 // The strip index -> verb category; false for a Stat() tab or an out-of-range index.
 bool verbTabCategory(const World& w, int index, std::string& label);
+bool verbTabCategory(const World& w, const VerbPanel& p, int index, std::string& label);
 
 // A clickable row: turf ([07][its id] = the row's head), obj ([01][head]), mob ([02][head]). AREA stays refused.
 bool statRowRef(const World& w, const StatValue& v, proto::enc::AtomRef& out);

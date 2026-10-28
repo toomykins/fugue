@@ -77,6 +77,27 @@ void SkinFeed::onFrame(uint16_t type, ByteSpan b) {
         if (!cstrAt(b, p, control) || !cstrAt(b, p, props)) return;
         c_.winsets++;
         live_->winset(control, props, /*urlEncoded=*/true);   // DreamSeeker url-decodes a world winset's values
+    } else if (type == 0x00a7) {
+        // output(html, "<clone>.<control>"): the page of a winclone()d window. The text arrives verbatim (a '+' or '%' in
+        // inline script is the page's own; only the argument list of a page call is url-encoded), plus the "\n" BYOND appends.
+        std::string text, control;
+        size_t p = 0;
+        if (!cstrAt(b, p, text) || !cstrAt(b, p, control) || control.find(':') != std::string::npos) return;
+        if (!text.empty() && text.back() == '\n') text.pop_back();
+        live_->setClonePage(control, text);
+    } else if (type == 0x00b1) {
+        // winclone: [template\0][clone\0]
+        std::string tmpl, clone;
+        size_t p = 0;
+        if (!cstrAt(b, p, tmpl) || !cstrAt(b, p, clone)) return;
+        if (lowerAscii(tmpl) == "window") live_->cloneWindow(clone);
+    } else if (type == 0x00b2) {
+        // winshow: [window\0][flag u8], the same as a winset of is-visible
+        std::string win;
+        size_t p = 0;
+        if (!cstrAt(b, p, win) || p >= b.size()) return;
+        c_.winsets++;
+        live_->winset(win, b[p] ? "is-visible=true" : "is-visible=false");
     }
 }
 

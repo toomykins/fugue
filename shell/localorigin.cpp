@@ -131,6 +131,18 @@ void LocalOrigin::process(const ConnP& c) {
     serveFile(c, file, head);
 }
 
+QByteArray LocalOrigin::cellPng(const render::Icon& icon) {
+    if (icon.states.empty()) return {};
+    std::vector<uint8_t> px;
+    if (!icon.frame(icon.states[0], 0, 0, px)) return {};
+    QImage img(px.data(), icon.width, icon.height, icon.width * 4, QImage::Format_RGBA8888);
+    QByteArray out;
+    QBuffer buf(&out);
+    buf.open(QIODevice::WriteOnly);
+    if (!img.save(&buf, "PNG")) return {};
+    return out;
+}
+
 // browserImage: an icon a page references is served as its first cell (first state, dir, frame) as a plain PNG,
 // not the raw .dmi sheet; stock DreamSeeker draws the sheet's top-left cell. Anything that is not a multi-cell
 // .dmi comes back unchanged.
@@ -141,14 +153,8 @@ QByteArray LocalOrigin::browserImage(const QByteArray& b) {
     int64_t cells = 0;
     for (const auto& s : r.icon->states) cells += s.dirs * s.frames;
     if (cells <= 1) return b;
-    std::vector<uint8_t> px;
-    if (!r.icon->frame(r.icon->states[0], 0, 0, px)) return b;
-    QImage img(px.data(), r.icon->width, r.icon->height, r.icon->width * 4, QImage::Format_RGBA8888);
-    QByteArray out;
-    QBuffer buf(&out);
-    buf.open(QIODevice::WriteOnly);
-    if (!img.save(&buf, "PNG")) return b;
-    return out;
+    QByteArray out = cellPng(*r.icon);
+    return out.isEmpty() ? b : out;
 }
 
 // A file that is not here yet is polled for, never waited on the GUI thread. A 404'd stylesheet or <img> is never

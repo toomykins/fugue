@@ -99,7 +99,7 @@ public:
     std::string wingetType(const std::string& control) const;
     // Whether output() text sent to this control prints in the chat (model::Session::setTextTarget). Stock DreamSeeker
     // prints it only into an OUTPUT control: not into a BROWSER, LABEL, MAP or window, nor a control that does not exist
-    // (a winclone'd window, which fugue-qt does not make). With no skin loaded yet, everything prints. No winexists()
+    // (a winclone'd window's browser too). With no skin loaded yet, everything prints. No winexists()
     // side effect.
     bool printsOutput(const std::string& control) const;
     // The default MAP control's `style` (what a winset last set, else the .dmf's). Stock lays out MeasureText() with
@@ -166,6 +166,24 @@ public:
     // The GUI's half of is-visible: a popup the player closed is hidden until the world browse()s it again.
     void setPopupShown(const std::string& name, bool shown);
     bool isPopup(const std::string& name) const;
+
+    // winclone(src, "window", name) (s2c 0x00b1): a blank window the world fills. Stock DreamSeeker answers winexists
+    // "MAIN" and is-visible "false" until a winshow / is-visible winset, takes size, on-close and title like a popup, and
+    // destroys it on `parent=none`. Its page is what output() sends to one of its controls (vg's html_interface builds
+    // "browser_<ref>.browser" in one). A clone from a skin window or pane is not modelled.
+    struct CloneWindow {
+        std::string name, html, size, pos;   // size / pos: what the world set, "" when it set none
+        bool hasHtml = false, shown = false;
+        uint64_t pageSeq = 0;                // bumps on every page
+    };
+    void cloneWindow(const std::string& name);
+    // output(html, "<clone>.<control>"): false when `control` is not inside a clone.
+    bool setClonePage(const std::string& control, const std::string& html);
+    std::vector<CloneWindow> cloneWindows() const;
+    // What the GUI must do for the clones now: open (or reload) a shown clone that holds a page it was not last sent,
+    // close one that is hidden, closed by the player or destroyed. `open` maps a clone to the page seq the GUI holds.
+    struct CloneAction { bool open; std::string name, params, html; };
+    std::vector<CloneAction> cloneActions(std::map<std::string, uint64_t>& open) const;
 
     SkinSnapshot snapshot() const;
     uint64_t generation() const;
@@ -243,6 +261,10 @@ private:
     std::set<std::string> popups_;          // open in the model now
     std::set<std::string> knownPopups_;     // ever browse()d this session (DreamSeeker hides, never destroys, a popup)
     std::set<std::string> hiddenPopups_;    // the player closed it and the world has not re-browsed it
+    struct Clone { std::string name, html; bool hasHtml = false; uint64_t pageSeq = 0; };
+    std::vector<Clone> clones_;             // winclone()d windows, also in knownPopups_; visibility is the `is-visible` prop
+    Clone* cloneLocked(const std::string& name);
+    bool destroyCloneLocked(const std::string& name);
     bool knownPopupLocked(const std::string& name) const;
     struct PendingWinset { std::string control, props; bool urlEncoded; };
     std::vector<PendingWinset> pending_;   // winsets that arrived before the skin, replayed on load (E4)

@@ -143,6 +143,113 @@ jobs:
         with:
           files: Fugue-windows-x64.zip
 
+  # The .deb uses the distribution's Qt (Ubuntu 24.04+, Debian 13), so it is built on 24.04, whose glibc is its floor. Its
+  # Qt is 6.4 (Debian 13's is 6.8), older than the GPU renderer needs (6.7), so this package has the CPU renderer only; the
+  # AppImage has both.
+  deb:
+    if: false   # off until the web sandbox tiers land
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build pkg-config dpkg-dev \
+            qt6-base-dev qt6-webengine-dev qt6-webchannel-dev \
+            libjpeg-dev zlib1g-dev libopenmpt-dev libgl-dev
+      - name: Configure
+        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release -DFUGUE_RELEASE=ON -DFUGUE_OPENMPT=ON -DFUGUE_STATIC_JPEG=ON -DFUGUE_COMPILE_JOBS=2
+      - name: Build
+        run: ninja -C build -j2 fugue-qt
+      - name: Check the Depends list
+        run: ctest --test-dir build -R deb_depends --output-on-failure
+      - name: Package
+        run: |
+          cpack --config build/CPackConfig.cmake -G DEB -B "$PWD/dist"
+          dpkg-deb --info dist/fugue_*_amd64.deb
+          dpkg-deb --contents dist/fugue_*_amd64.deb
+      - name: Smoke test in clean containers
+        # No user namespaces in a container, so the web sandbox is off here only; on a desktop the package keeps it on.
+        run: |
+          for image in ubuntu:24.04 debian:13; do
+            echo "::group::$image"
+            docker run --rm -v "$PWD/dist:/dist:ro" -e DEBIAN_FRONTEND=noninteractive \
+              -e QT_QPA_PLATFORM=offscreen -e QTWEBENGINE_DISABLE_SANDBOX=1 -e QTWEBENGINE_CHROMIUM_FLAGS=--disable-gpu \
+              "$image" sh -ec '
+                apt-get update -qq
+                apt-get install -y -qq /dist/fugue_*_amd64.deb
+                fugue-qt --version
+                fugue-qt webcheck
+                test -f /usr/share/applications/io.github.toomykins.Fugue.desktop'
+            echo "::endgroup::"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fugue-deb
+          path: dist/fugue_*_amd64.deb
+      - name: Attach the package to the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/fugue_*_amd64.deb
+
+  # The AppImage bundles Qt 6.8 including WebEngine. It is built on the oldest runner image so the glibc it needs (2.35)
+  # is old enough for every current distribution; the distribution's own Qt there (6.2) is too old, hence aqtinstall.
+  appimage:
+    if: false   # off until the web sandbox tiers land
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential g++-12 cmake ninja-build pkg-config curl file \
+            libjpeg-dev zlib1g-dev libopenmpt-dev libgl-dev libegl-dev libxkbcommon-dev libxkbcommon-x11-0 \
+            libxcomposite-dev libxdamage-dev libxrandr-dev libxkbfile-dev libxtst-dev libxi-dev libxcursor-dev \
+            libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libxcb-image0 libxcb-render-util0 libxcb-xinerama0 \
+            libxcb-xkb1 libwayland-client0 libwayland-cursor0 libwayland-egl1 libnss3 libasound2 libfontconfig1 libdbus-1-3 libcups2
+      - uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125   # v4.4.1
+        with:
+          version: '6.8.3'
+          arch: linux_gcc_64
+          modules: 'qtwebengine qtwebchannel qtpositioning qtserialport qtshadertools'
+          cache: true
+      - name: Build the AppImage
+        env:
+          CC: gcc-12
+          CXX: g++-12
+        run: packaging/appimage/build.sh "$PWD/dist"
+      - name: Smoke test in clean containers
+        # Containers have no user namespaces, so the AppImage's launch hook turns the web sandbox off and says so.
+        run: |
+          deb_libs="libgl1 libegl1 libopengl0 libgbm1 libdrm2 libfontconfig1 libfreetype6 libexpat1 libx11-6 libx11-xcb1 libxcb1 libwayland-client0 zlib1g fonts-dejavu-core"
+          for image in ubuntu:22.04 ubuntu:24.04 debian:12 fedora:latest; do
+            echo "::group::$image"
+            case "$image" in
+              fedora*) setup='dnf install -y -q alsa-lib libdrm libglvnd-egl libglvnd-glx libglvnd-opengl mesa-libgbm expat fontconfig freetype libwayland-client libX11 libX11-xcb libxcb dejavu-sans-fonts' ;;
+              *)       setup="apt-get update -qq && apt-get install -y -qq $deb_libs && { apt-get install -y -qq libasound2t64 || apt-get install -y -qq libasound2; }" ;;
+            esac
+            docker run --rm -v "$PWD/dist:/dist:ro" -e DEBIAN_FRONTEND=noninteractive -e APPIMAGE_EXTRACT_AND_RUN=1 \
+              -e QT_QPA_PLATFORM=offscreen -e QTWEBENGINE_CHROMIUM_FLAGS=--disable-gpu \
+              "$image" sh -ec "$setup
+                /dist/Fugue-x86_64.AppImage --version
+                /dist/Fugue-x86_64.AppImage webcheck"
+            echo "::endgroup::"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fugue-appimage
+          path: dist/Fugue-x86_64.AppImage
+      - name: Attach the AppImage to the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/Fugue-x86_64.AppImage
+
   # The experimental GPU renderer's own tests run here; the release builds contain it but skip these tests.
   gpu-linux:
     runs-on: ubuntu-24.04

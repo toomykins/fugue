@@ -20,6 +20,7 @@
 //
 // GUI-thread object (QTcpServer lives where it was created).
 #pragma once
+#include "render/dmi.h"
 #include <QHash>
 #include <QObject>
 #include <QString>
@@ -63,6 +64,8 @@ public:
     static QString mimeFor(const QString& name);
     // A browse_rsc'd icon as a page sees it: its first cell as a plain PNG (see localorigin.cpp).
     static QByteArray browserImage(const QByteArray& bytes);
+    // The icon's first cell (first state, dir, frame) as a PNG; empty when it has none.
+    static QByteArray cellPng(const render::Icon& icon);
     // waited: requests held open. heldRefused: 404ed at once because kMaxHeld or kMaxHeldUnnamed was reached, or
     // evicted for an announced name. heldPeak: most held at once.
     struct Stats { int pages = 0, rsc = 0, notFound = 0, topics = 0, bridge = 0, refused = 0, waited = 0, heldRefused = 0, heldPeak = 0; };

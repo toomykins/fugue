@@ -481,6 +481,82 @@ private slots:
         w.appearances[20].fieldsJson = "{\"verbs\":[]}";
         QCOMPARE(verbCategories(w), (std::vector<std::string>{"Mine"}));  // client section = verb 1 only
     }
+    void verbScopeIncludesAtomsWhoseSrcClauseAdmitsThem() {
+        auto withSrc = [](std::string j, int src, int head) {
+            j.replace(j.find("\"head\":255"), 10, "\"head\":" + std::to_string(head));
+            j.replace(j.find("\"src\":0"), 7, "\"src\":" + std::to_string(src));
+            return j;
+        };
+        World w;
+        w.verbById[1] = verbJson(1, "mine", "Mine");
+        w.verbById[2] = verbJson(2, "zoom", "Object");                           // no clause: admits a carried obj only
+        w.verbById[3] = withSrc(verbJson(3, "near", "Near"), 0x01, 1);           // set src in view(1)
+        w.verbById[4] = withSrc(verbJson(4, "far", "Far"), 0x01, 1);
+        w.verbById[5] = verbJson(5, "floor", "Floor");                           // no clause on an obj off the contents
+        w.haveClientAppid = true; w.clientAppid = 10;
+        w.appearances[10].fieldsJson = "{\"verbs\":[1]}";
+        w.haveSelf = true; w.selfRef = 5;
+        auto& me = w.atoms[5 | kRegistryA];
+        me.appid = 20; me.hasPos = true; me.x = 10; me.y = 10;
+        w.appearances[20].fieldsJson = "{\"verbs\":[]}";
+        w.appearances[30].fieldsJson = "{\"verbs\":[2]}";                       // a camera in usr.contents
+        w.usrContents[100] = 30;
+        w.appearances[31].fieldsJson = "{\"verbs\":[3]}";
+        auto& near = w.atoms[200]; near.appid = 31; near.hasPos = true; near.x = 11; near.y = 10;
+        w.appearances[32].fieldsJson = "{\"verbs\":[4]}";
+        auto& far = w.atoms[201]; far.appid = 32; far.hasPos = true; far.x = 14; far.y = 10;
+        w.appearances[33].fieldsJson = "{\"verbs\":[5]}";
+        auto& floor = w.atoms[202]; floor.appid = 33; floor.hasPos = true; floor.x = 10; floor.y = 10;
+        QCOMPARE(verbCategories(w), (std::vector<std::string>{"Mine", "Near", "Object"}));
+        QCOMPARE(int(verbsInCategory(w, "Object").size()), 1);
+    }
+    void verbScopeCoversTurfAreaScreenAndRefreshes() {
+        auto src = [](int id, const char* name, const char* cat, int src, int head) {
+            std::string j = verbJson(id, name, cat);
+            j.replace(j.find("\"head\":255"), 10, "\"head\":" + std::to_string(head));
+            j.replace(j.find("\"src\":0"), 7, "\"src\":" + std::to_string(src));
+            return j;
+        };
+        World w;
+        w.verbById[1] = verbJson(1, "turf_here", "Turf");                 // turf verb, no clause: the player's own cell
+        w.verbById[2] = verbJson(2, "turf_next", "Turf");                 // no clause on the cell beside the player
+        w.verbById[3] = src(3, "turf_view1", "Turf", 0x01, 1);            // set src in view(1)
+        w.verbById[4] = verbJson(4, "area_here", "Area");                 // area verb, no clause
+        w.verbById[5] = verbJson(5, "screen_noclause", "Screen");
+        w.verbById[6] = src(6, "screen_world", "Screen", 0x10, 255);
+        w.verbById[7] = src(7, "screen_view", "Screen", 0x01, 255);       // a HUD obj has no cell: not in view()
+        w.verbById[8] = verbJson(8, "carried", "Carried");
+        w.verbById[9] = verbJson(9, "same_number", "Carried");            // on an obj numbered like the own mob, lying about
+        w.haveClientAppid = true; w.clientAppid = 10;
+        w.appearances[10].fieldsJson = "{\"verbs\":[]}";
+        w.haveSelf = true; w.selfRef = 5;
+        auto& me = w.atoms[5 | kRegistryA];
+        me.appid = 20; me.hasPos = true; me.x = 10; me.y = 10;
+        w.appearances[20].fieldsJson = "{\"verbs\":[]}";
+        w.appearances[30].fieldsJson = "{\"verbs\":[1]}";
+        w.appearances[31].fieldsJson = "{\"verbs\":[2]}";
+        w.appearances[32].fieldsJson = "{\"verbs\":[3]}";
+        w.appearances[33].fieldsJson = "{\"verbs\":[4]}";
+        w.tiles[{9, 9, 0}] = 30;        // wire cells are 0-based: (10,10)
+        w.tiles[{10, 9, 0}] = 31;       // (11,10)
+        w.tiles[{9, 10, 0}] = 32;       // (10,11)
+        w.areaCells[{9, 9, 0}] = 7;
+        w.turfBinds[7] = 33;
+        w.appearances[40].fieldsJson = "{\"verbs\":[5,6,7]}";
+        w.hud[300] = "{\"appid\":40}"; w.hudAppid[300] = 40;
+        w.appearances[41].fieldsJson = "{\"verbs\":[8]}";
+        w.usrContents[100] = 41;
+        w.appearances[42].fieldsJson = "{\"verbs\":[9]}";
+        auto& twin = w.atoms[5]; twin.appid = 42; twin.hasPos = true; twin.x = 14; twin.y = 10;   // obj 5 is not mob 5
+        std::vector<uint16_t> ids;
+        QVERIFY(verbScope(w, ids));
+        QCOMPARE(ids, (std::vector<uint16_t>{1, 3, 4, 6, 8}));
+        // The panel follows the world: dropping the carried obj and stepping off the turf changes the scope.
+        w.usrContents.clear();
+        me.x = 11;
+        QVERIFY(verbScope(w, ids));
+        QCOMPARE(ids, (std::vector<uint16_t>{2, 3, 6}));   // turf_next is now underfoot; (10,11) is still within view(1)
+    }
     void tokenGateAndOwnership() {
         Session s;
         std::vector<std::string> tabs = {"Status", "Values"};

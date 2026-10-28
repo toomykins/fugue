@@ -29,6 +29,7 @@ struct Elem {
     const std::string* get(const std::string& key) const;
     std::string str(const std::string& key, const std::string& def) const;
     int64_t intv(const std::string& key, int64_t def) const;      // `none`/empty/unparseable -> def
+    double floatv(const std::string& key, double def) const;      // `none`/empty/unparseable -> def
     bool boolv(const std::string& key, bool def) const;
     bool point(const std::string& key, int64_t& x, int64_t& y) const;   // `none` -> false
     bool size(const std::string& key, int64_t& w, int64_t& h) const;    // `WxH`

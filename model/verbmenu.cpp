@@ -154,12 +154,15 @@ std::vector<uint16_t> verbIdsOf(const World& w, uint32_t appid) {
 // The verbs the player carries: the client appearance's verbs UNION the own mob's when knowable, else the own mob's alone.
 std::vector<uint16_t> ownVerbIds(const World& w) {
     std::vector<uint16_t> own;
+    // The own mob is keyed selfRef | kRegistryA, or before its 0x0007 the 0x0009 bind; the bare key is an obj ref.
     std::vector<uint32_t> mobApps;
-    if (w.haveSelf)
-        for (uint32_t key : {w.selfRef | kRegistryA, w.selfRef}) {
-            auto m = w.atoms.find(key);
-            if (m != w.atoms.end() && w.appearances.count(m->second.appid)) mobApps.push_back(m->second.appid);
+    if (w.haveSelf) {
+        if (auto m = w.atoms.find(w.selfRef | kRegistryA); m != w.atoms.end()) {
+            if (w.appearances.count(m->second.appid)) mobApps.push_back(m->second.appid);
+        } else if (auto rb = w.refBind.find(w.selfRef); rb != w.refBind.end() && w.appearances.count(rb->second)) {
+            mobApps.push_back(rb->second);
         }
+    }
     if (w.haveClientAppid && w.appearances.count(w.clientAppid) && !mobApps.empty()) {
         std::set<uint16_t> scope;
         for (uint16_t id : verbIdsOf(w, w.clientAppid)) scope.insert(id);
@@ -358,6 +361,86 @@ VerbSrcRank srcRank(const World& w, VerbSrc src) {
     } else if (src.kind == 0x08) r.dist = -1;
     else if (src.kind == 0x04) r.dist = 0;   // usr's own area
     return r;
+}
+
+std::vector<uint16_t> srcAdmittedVerbIds(const World& w) {
+    std::set<uint16_t> out;
+    int px = 0, py = 0;
+    bool havePos = playerPos(w, px, py);
+    int view = worldView(w);
+    // Each verb is parsed once per call, and each appearance's verb list resolved once: thousands of atoms share a few appearances.
+    std::unordered_map<uint16_t, std::optional<VerbDef>> defs;
+    std::unordered_map<uint32_t, std::vector<const VerbDef*>> carried;
+    auto carries = [&](uint32_t appid) -> const std::vector<const VerbDef*>& {
+        auto [it, fresh] = carried.try_emplace(appid);
+        if (!fresh) return it->second;
+        for (uint16_t id : verbIdsOf(w, appid)) {
+            auto [d, parsed] = defs.try_emplace(id);
+            if (parsed) { VerbDef e; if (dict(w, id, e)) d->second = std::move(e); }
+            if (d->second) it->second.push_back(&*d->second);
+        }
+        return it->second;
+    };
+    // Popup flags are ignored here: the panel gates on hidden itself, and a no-popup verb is still listed.
+    auto take = [&](uint32_t appid, const AtomTarget& t) {
+        for (const VerbDef* e : carries(appid))
+            if (!out.count(e->id) && srcClauseAdmits(*e, t, px, py, havePos, view)) out.insert(e->id);
+    };
+    for (const auto& [key, a] : w.atoms) {
+        if (!a.hasPos) continue;
+        bool mob = key & kRegistryA;
+        uint32_t ref = key & ~kRegistryA;
+        if (mob && w.haveSelf && ref == w.selfRef) continue;   // the own mob's section is the caller's
+        if (carries(a.appid).empty()) continue;
+        AtomTarget t;
+        t.kind = mob ? kTargetMob : kTargetObj;
+        t.ref = ref; t.x = a.x; t.y = a.y;
+        take(a.appid, t);
+    }
+    for (const auto& [key, appid] : w.usrContents) {
+        AtomTarget t;
+        t.kind = (key & kRegistryA) ? kTargetMob : kTargetObj;
+        t.ref = key & ~kRegistryA; t.inContents = true;
+        take(appid, t);
+    }
+    for (const auto& [ref, json] : w.hud) {
+        uint32_t appid = 0;
+        if (!hudAppidOf(w, ref, appid)) continue;
+        AtomTarget t;
+        t.kind = kTargetObj; t.ref = ref;
+        take(appid, t);
+    }
+    if (!havePos) return {out.begin(), out.end()};
+    int z = 0;
+    if (w.haveSelf) {
+        auto s = w.atoms.find(w.selfRef | kRegistryA);
+        if (s != w.atoms.end()) z = s->second.z;
+    }
+    // Turfs within view: a turf verb with no clause admits the player's own cell only. An unlisted cell is the default turf.
+    uint32_t defaultTurf = 0;
+    int haveDefault = -1;   // looked up on the first unlisted cell only
+    for (int y = std::max(1, py - view); y <= py + view; y++)
+        for (int x = std::max(1, px - view); x <= px + view; x++) {
+            uint32_t appid = 0;
+            auto t = w.tiles.find({uint16_t(x - 1), uint16_t(y - 1), uint16_t(z)});
+            if (t != w.tiles.end() && w.appearances.count(t->second)) appid = t->second;
+            else {
+                if (haveDefault < 0) haveDefault = defaultTurfAppid(w, defaultTurf) ? 1 : 0;
+                if (!haveDefault) continue;
+                appid = defaultTurf;
+            }
+            if (carries(appid).empty()) continue;
+            AtomTarget at;
+            at.kind = kTargetTurf; at.x = x; at.y = y;
+            take(appid, at);
+        }
+    // The player's own area, for a verb with no clause (an area verb with any other clause is not modelled).
+    auto ac = w.areaCells.find({uint16_t(px - 1), uint16_t(py - 1), uint16_t(z)});
+    if (ac != w.areaCells.end())
+        if (auto b = w.turfBinds.find(ac->second); b != w.turfBinds.end())
+            for (const VerbDef* e : carries(b->second))
+                if (e->src == kVerbSrcDefault) out.insert(e->id);
+    return {out.begin(), out.end()};
 }
 
 std::vector<VerbSrcCandidate> verbSrcCandidates(const World& w, uint16_t id, bool everyAtom) {

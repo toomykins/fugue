@@ -16,6 +16,7 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QStyle>
+#include <QTabBar>
 #include <QToolButton>
 #include <QMetaObject>
 #include <QMouseEvent>
@@ -60,6 +61,12 @@ private:
     const SkinWindow::SpaceCompleter* c_;
 };
 
+// A winset colour: "#rrggbb" or a name. "none", "" and anything unreadable give an invalid colour (the default look).
+QColor skinColor(const std::string& v) {
+    std::string t = skin::lowerAscii(skin::trimSpace(v));
+    return t.empty() || t == "none" ? QColor() : QColor(QString::fromStdString(t));
+}
+
 // One CHILD's divider, as a widget the player can drag. Stock DreamSeeker behaves as follows:
 //   - the grab area is the 4 px bar itself;
 //   - the pointer shows the split cursor;
@@ -68,7 +75,7 @@ private:
 //   - on release the bar's left (top) edge lands on the pointer, with no grab offset kept, and the value is
 //     (x - box.x0) / (box width - 4) * 100. Dragged past the window edge, it stops at 0 or 100.
 // While the button is held this widget follows the pointer as the only feedback. The value then goes through
-// LiveSkin::setSplitter, which clamps it to [10,90]% as a winset does (skin/layout.cpp clampFrac); stock lays out 0..100.
+// LiveSkin::setSplitter, which clamps it to 0..100% as stock does (skin/layout.cpp clampFrac).
 class SplitterHandle : public QWidget {
 public:
     using Drop = std::function<void(const std::string& path, double pct)>;
@@ -424,6 +431,38 @@ void SkinWindow::applyProps(const skin::Control& c, QWidget* w, const skin::Skin
         if (s.props.controlProp(c.window, c.name, "zoom-mode", zm)) mode = zm;
         mw->setMapScale(zoom, icon, letterbox, mode);
     }
+    // A live winset wins over the file's colour; "none" in either is the default look.
+    auto col = [&](const char* key) {
+        std::string x;
+        return prop(key, x) ? skinColor(x) : QColor();
+    };
+    QString css, rules;
+    QColor bg = col("background-color");
+    std::string bgv;
+    // An INPUT, OUTPUT or INFO set to "none" takes the control face colour; with no colour at all it is white.
+    if (!bg.isValid() && (c.type == "INPUT" || c.type == "OUTPUT" || c.type == "INFO") && prop("background-color", bgv) && skin::lowerAscii(skin::trimSpace(bgv)) == "none")
+        bg = QColor(0xf4, 0xf4, 0xf4);
+    if (bg.isValid()) css += QString("background-color:%1;").arg(bg.name());
+    if (QColor fg = col("text-color"); fg.isValid()) css += QString("color:%1;").arg(fg.name());
+    if (auto* sp = qobject_cast<StatPanelWidget*>(w)) {
+        QColor tb = col("tab-background-color"), tt = col("tab-text-color"), pc = col("prefix-color"), sc = col("suffix-color");
+        sp->setTextColors(pc, sc);
+        sp->tabBar()->setDrawBase(!(tb.isValid() || tt.isValid()));   // the base line is the style's, not the tab text colour
+        if (tb.isValid() || tt.isValid()) {
+            QString tab = "padding:2px 6px;";
+            if (tb.isValid()) tab += QString("background-color:%1;").arg(tb.name());
+            if (tt.isValid()) tab += QString("color:%1;border:1px solid %1;").arg(tt.name());
+            rules += "QTabBar::tab{" + tab + "}";
+            if (tb.isValid()) rules += QString("QTabBar{background-color:%1;}").arg(tb.name());
+            if (QColor edge = pc.isValid() ? pc : tt; edge.isValid()) rules += QString("QTableWidget{border:1px solid %1;}").arg(edge.name());
+        }
+    }
+    if (!rules.isEmpty()) css = (css.isEmpty() ? QString() : "*{" + css + "}") + rules;   // declarations ahead of rules are not parsed as the widget's own
+    if (css != w->property("fugueCss").toString()) {
+        w->setProperty("fugueCss", css);
+        w->setStyleSheet(css);
+        w->setProperty("fugueFont", QVariant());   // a style sheet change drops the font set before it: set it again below
+    }
     if (c.type == "BUTTON" || c.type == "LABEL" || c.type == "INPUT" || c.type == "INFO") {
         std::string fam, size, style;
         prop("font-family", fam);
@@ -435,6 +474,7 @@ void SkinWindow::applyProps(const skin::Control& c, QWidget* w, const skin::Skin
             const SkinFont sf = skinControlFont(fam, size, style);
             if (auto* b = dynamic_cast<SkinButton*>(w)) b->setSkinFont(sf);
             else if (auto* l = dynamic_cast<SkinLabel*>(w)) l->setSkinFont(sf);
+            else if (auto* sp = qobject_cast<StatPanelWidget*>(w)) sp->setPanelFont(sf.font);
             else w->setFont(sf.font);
         }
     }
@@ -443,22 +483,31 @@ void SkinWindow::applyProps(const skin::Control& c, QWidget* w, const skin::Skin
         prop("align", al);
         l->setAlignment(skinLabelAlign(al));
     }
-    // Colours come from the overlay only; the file's own per-control colours are not applied.
-    QString css;
-    if (s.props.controlProp(c.window, c.name, "background-color", v)) css += QString("background-color:%1;").arg(QString::fromStdString(v));
-    if (s.props.controlProp(c.window, c.name, "text-color", v)) css += QString("color:%1;").arg(QString::fromStdString(v));
-    if (css != w->property("fugueCss").toString()) {
-        w->setProperty("fugueCss", css);
-        w->setStyleSheet(css);
-    }
+}
+
+void SkinWindow::paintEvent(QPaintEvent* e) {
+    QWidget::paintEvent(e);
+    QPainter p(this);
+    for (const auto& [r, c] : fills_) p.fillRect(r, c);
 }
 
 void SkinWindow::apply(const skin::SkinSnapshot& s) {
     std::string mainKey;
     // Create what is now visible and placed; show or hide and place everything.
     std::set<std::string> placed;
+    fills_.clear();
+    std::set<std::string> filled;
+    auto addFill = [&](const skin::Rect& r, const std::string& color) {
+        if (QColor col = skinColor(color); col.isValid()) fills_.emplace_back(QRect(r.x0, r.y0 + menuBarHeight(), r.dx(), r.dy()), col);
+    };
     for (const skin::Control& c : s.tree.controls) {
-        if (c.type == "CHILD" || c.type == "MAIN") continue;
+        std::string bg;
+        if (c.visible && !c.offPane && filled.insert(c.window).second && s.props.get(c.window, "background-color", bg))
+            addFill(c.box, bg);   // the window's own background, over the box it was laid out in
+        if (c.type == "CHILD" || c.type == "MAIN") {
+            if (c.visible && !c.offPane && s.props.controlProp(c.window, c.name, "background-color", bg)) addFill(c.rect, bg);
+            continue;
+        }
         std::string key = c.window + "." + c.name;
         bool show = c.visible && !c.offPane;
         auto it = widgets_.find(key);
@@ -479,6 +528,7 @@ void SkinWindow::apply(const skin::SkinSnapshot& s) {
         w->setGeometry(c.rect.x0, c.rect.y0 + top, c.rect.dx(), c.rect.dy());
         w->setVisible(show);
     }
+    update();
     // A control that left the layout is hidden, not destroyed, so its content survives.
     for (auto& [key, w] : widgets_)
         if (!placed.count(key)) w->hide();
@@ -537,7 +587,8 @@ void SkinWindow::rebuildMenu(const skin::Menu& m) {
         for (const skin::MenuItem& it : c.items)
             sig += "," + QString::fromStdString(it.name + ":" + it.label + ":" + it.command) + (it.disabled ? "!" : "") + (it.separator ? "-" : "");
     }
-    if (sig == menuSig_) return;
+    // A new skin clears the signature, so a menu-less skin's empty one matches it: the bar must still go.
+    if (sig == menuSig_ && m.empty() == (!bar_ || bar_->isHidden())) return;
     menuSig_ = sig;
     if (m.empty()) {
         if (bar_) { bar_->clear(); bar_->hide(); }

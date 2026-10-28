@@ -25,9 +25,11 @@ endfunction()
 
 fugue_shell_test(shell_urlopener urlopener_test)   # macOS QFileOpenEvent URL delivery, without Launch Services
 fugue_shell_test(shell          shell_test)       # one QtTest executable
+fugue_shell_test(shell_skincolor skincolor_test)  # winset colours -> widgets
 fugue_shell_test(shell_input    input_test)       # pointer events -> MapPointer, keys -> their macro bindings only, command routing
 fugue_shell_test(shell_live     live_test)        # winset -> widgets, menu bar, skin button / menu commands, cross-thread sync
 fugue_shell_test(shell_browse   browse_test)      # browse(): popups, loopback origin, page<->client bridge, chat page
+fugue_shell_test(shell_recipefiler recipefiler_test)  # browse_rsc runtime icons (DDMI recipes) filed for pages as PNG
 fugue_shell_test(shell_prompt   prompt_test)      # alert()/input() PromptHost, the INFO control's StatPanelWidget, paste in every key-taking widget
 fugue_shell_test(shell_ttmetrics ttmetrics_test)  # MeasureText's TrueType metrics
 fugue_shell_test(shell_skinfont skinfont_test)    # skin control fonts: stock defaults, .dmf and winset font-family/size/style

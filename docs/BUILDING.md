@@ -166,9 +166,45 @@ flatpak run io.github.toomykins.Fugue
 Inside the sandbox the state directory is `~/.var/app/io.github.toomykins.Fugue/.fugue`, separate from a
 native install's. `~/.byond/cfg` is visible read-only so an existing key can be imported.
 
+## AppImage and .deb
+
+Both are built by CI on a release tag and can be built locally. The `install` step puts `fugue-qt`, the desktop file, icons and
+metainfo under the prefix (the same files the Flatpak uses).
+
+**.deb**, on Ubuntu 24.04 (the dependency versions it records come from the machine that builds it):
+
+```bash
+cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release -DFUGUE_RELEASE=ON -DFUGUE_OPENMPT=ON -DFUGUE_STATIC_JPEG=ON
+ninja -C build fugue-qt
+cpack --config build/CPackConfig.cmake -G DEB        # fugue_<version>_amd64.deb; settings in packaging/deb/CPackDeb.cmake
+```
+
+It depends on the distribution's Qt 6 and WebEngine packages and bundles nothing. The Depends list is written out in
+`CPackDeb.cmake`: Ubuntu 24.04 and Debian 13 name some Qt packages differently (`libqt6gui6t64` and `libqt6gui6`), so those are
+alternatives, and `FUGUE_STATIC_JPEG` links libjpeg in because its soname differs too (`libjpeg-turbo8-dev` provides the static
+library). `ctest -R deb_depends` checks both. Ubuntu's Qt is 6.4, so the package has no GPU renderer; Debian 13's is 6.8.
+
+**AppImage**: `packaging/appimage/build.sh` needs a Qt 6.8 with WebEngine, WebChannel and ShaderTools, for example from
+`aqt install-qt linux desktop 6.8.3 linux_gcc_64 -m qtwebengine qtwebchannel qtpositioning qtserialport qtshadertools`. CI builds
+on Ubuntu 22.04 for the oldest glibc, with g++ 12; its apt package list is in `.github/workflows/ci.yml` (the Qt libraries it
+bundles are linked against X11, xkbcommon, Wayland and CUPS development packages).
+
+```bash
+QT_ROOT_DIR=$HOME/Qt/6.8.3/gcc_64 packaging/appimage/build.sh out    # out/Fugue-x86_64.AppImage
+```
+
+The script downloads linuxdeploy, its Qt plugin, appimagetool and the AppImage runtime at the versions and sha256 pinned in
+it, bundles Qt (including `QtWebEngineProcess`, its resources and locales) and libopenmpt, and adds the launch hook
+`packaging/appimage/fugue-sandbox.sh`. The hook keeps Chromium's user-namespace sandbox on where the system allows it
+(an AppImage's mount is `nosuid`, so the setuid helper is not an option) and otherwise disables it for that run with a
+warning on stderr; `FUGUE_KEEP_SANDBOX=1` turns the fallback off.
+
+`fugue-qt webcheck` is the install smoke test for both: it starts WebEngine, runs a script in one page and prints
+`webcheck ok`. CI runs it, offscreen, in clean Ubuntu, Debian and Fedora containers.
+
 ## Releases
 
 The version is set once, by `project(... VERSION)` in the top-level `CMakeLists.txt`. It becomes `FUGUE_VERSION`
 (`fugue_version.h`) and is what `fugue-qt --version`, the About box and the `fugue-version` winget answer report.
 Configuring fails unless `packaging/flatpak/*.metainfo.xml` has a `<release>` for that version. Pushing a `v*` tag
-makes CI build the Flatpak bundle and attach it to the GitHub release.
+makes CI build the Flatpak bundle, the AppImage and the .deb and attach them to the GitHub release.

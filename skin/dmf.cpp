@@ -1,6 +1,7 @@
 #include "skin/dmf.h"
 
 #include <cctype>
+#include <cstdlib>
 #include <limits>
 
 namespace fugue::skin {
@@ -97,6 +98,15 @@ int64_t Elem::intv(const std::string& key, int64_t def) const {
     int64_t n;
     if (!parseInt64(trimSpace(*v), n)) return def;
     return n;
+}
+
+double Elem::floatv(const std::string& key, double def) const {
+    const std::string* v = get(key);
+    if (!v || v->empty() || eqFoldNone(*v)) return def;
+    std::string t = trimSpace(*v);
+    char* end = nullptr;
+    double d = std::strtod(t.c_str(), &end);
+    return t.empty() || *end ? def : d;
 }
 
 bool Elem::boolv(const std::string& key, bool def) const {

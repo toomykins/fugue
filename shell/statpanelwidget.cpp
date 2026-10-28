@@ -120,6 +120,20 @@ bool StatPanelWidget::iconAt(int row, const QPoint& p, int& ix, int& iy) const {
     return true;
 }
 
+void StatPanelWidget::setPanelFont(const QFont& f) {
+    setFont(f);
+    tabs_->setFont(f);
+    table_->setFont(f);
+    rebuildRows();
+}
+
+void StatPanelWidget::setTextColors(const QColor& prefix, const QColor& suffix) {
+    if (prefix == prefix_ && suffix == suffix_) return;
+    prefix_ = prefix;
+    suffix_ = suffix;
+    rebuildRows();
+}
+
 void StatPanelWidget::setView(const StatView& v) {
     if (v == view_ && tabs_->count() == v.tabs.size()) return;
     setting_ = true;
@@ -156,6 +170,8 @@ void StatPanelWidget::rebuildRows() {
             Qt::ItemFlags f = Qt::ItemIsEnabled;
             a->setFlags(f); b->setFlags(f);
             a->setTextAlignment(Qt::AlignLeft | Qt::AlignTop);   // stock: a label sits at the top of an icon row
+            if (prefix_.isValid()) a->setForeground(prefix_);
+            if (suffix_.isValid()) b->setForeground(suffix_);
             if (!view_.rows[i].icon.isNull()) b->setData(kIconRole, view_.rows[i].icon);
             if (view_.rows[i].clickable) {
                 QFont ft = table_->font();   // the INFO control's font (an item's own font() is the application's)

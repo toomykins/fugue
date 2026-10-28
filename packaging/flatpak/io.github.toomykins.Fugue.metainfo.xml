@@ -48,6 +48,14 @@
     <content_attribute id="social-chat">intense</content_attribute>
   </content_rating>
   <releases>
+    <release version="0.5.5" date="2026-10-28">
+      <description>
+        <p>Opens /vg/station's RCD and RPD windows with their icons, lists the verbs of carried and nearby objects in the
+        verb tabs (the AI's camera zoom), applies /vg/station's dark mode to the whole window, draws a skin's own control
+        colours, lays skins out exactly as DreamSeeker does (/vg/station, Baystation and tgstation), parses winset strings
+        as DreamSeeker does, and shows input() list prompts as a list alone.</p>
+      </description>
+    </release>
     <release version="0.5.4" date="2026-10-19">
       <description>
         <p>Adds an experimental GPU renderer, off until the pager's "Use GPU rendering" option turns it on. Sends typed

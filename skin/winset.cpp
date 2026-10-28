@@ -1,6 +1,8 @@
 #include "skin/winset.h"
 
 #include "skin/dmf.h"
+
+#include <algorithm>
 #include "net/textmacro.h"
 
 namespace fugue::skin {
@@ -55,29 +57,67 @@ std::string unescapeQuoted(const std::string& v) {
 }
 }  // namespace
 
+namespace {
+struct Tok { std::string text; size_t b = 0, e = 0; bool quoted = false; };
+
+// DreamSeeker's winset tokenizer (docs/protocol/GAME-CLIENT-SERVER-516.md, "Winset params"). White space and '=' are
+// interchangeable separators, and so, when `wide` (a world's winset), are '?' ':' '!'; a token is a quoted run ('...' or
+// "...", only at its start) or a run of anything else. ';' and '&' end a pair. Inside a pair the tokens alternate key,
+// value; a lone last token is a key with an empty value.
+std::vector<std::pair<Tok, Tok>> stockPairs(std::string_view s, bool escapes, bool wide) {
+    std::vector<std::pair<Tok, Tok>> out;
+    std::vector<Tok> seg;
+    auto flush = [&] {
+        for (size_t k = 0; k < seg.size(); k += 2) out.emplace_back(seg[k], k + 1 < seg.size() ? seg[k + 1] : Tok{"", seg[k].e, seg[k].e, false});
+        seg.clear();
+    };
+    auto sep = [&](char c) { return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '=' || (wide && (c == '?' || c == ':' || c == '!')); };
+    auto end = [](char c) { return c == ';' || c == '&'; };
+    const size_t n = s.size();
+    size_t i = 0;
+    while (i < n) {
+        char c = s[i];
+        if (end(c)) { flush(); i++; continue; }
+        if (sep(c)) { i++; continue; }
+        Tok t;
+        t.b = i;
+        if (c == '"' || c == '\'') {
+            size_t j = i + 1;
+            while (j < n && s[j] != c) j += (escapes && s[j] == '\\') ? 2 : 1;
+            j = std::min(j, n);
+            t.text = std::string(s.substr(i + 1, j - i - 1));
+            t.quoted = true;
+            i = std::min(j + 1, n);
+            t.e = i;
+            while (i < n && !sep(s[i]) && !end(s[i])) i++;   // what trails a closing quote is dropped
+        } else {
+            while (i < n && !sep(s[i]) && !end(s[i])) i++;
+            t.text = std::string(s.substr(t.b, i - t.b));
+            t.e = i;
+        }
+        seg.push_back(std::move(t));
+    }
+    flush();
+    return out;
+}
+}  // namespace
+
 std::vector<WinsetPair> splitWinset(std::string_view id, std::string_view props, bool urlEncoded) {
     std::vector<WinsetPair> out;
-    for (const std::string& a : splitOutsideQuotes(props, urlEncoded)) {
+    for (const auto& [k, v] : stockPairs(props, urlEncoded, urlEncoded)) {
         WinsetPair p;
-        p.raw = a;
-        size_t eq = a.find('=');
-        if (eq == std::string::npos) { out.push_back(p); continue; }
-        std::string lhs = a.substr(0, eq), val = a.substr(eq + 1);
-        size_t b = 0, e = val.size();
-        while (b < e && val[b] == '"') b++;
-        while (e > b && val[e - 1] == '"') e--;
-        p.value = val.substr(b, e - b);
-        if (urlEncoded && val.size() >= 2 && val.front() == '"' && val.back() == '"')
-            p.value = net::plainText(unescapeQuoted(val.substr(1, val.size() - 2)));
-        else if (urlEncoded)
-            p.value = net::plainText(urlDecode(p.value));
+        p.raw = std::string(props.substr(k.b, v.e - k.b));
+        if (urlEncoded)
+            p.value = net::plainText(v.quoted ? unescapeQuoted(v.text) : urlDecode(v.text));
+        else
+            p.value = v.text;
         p.target = std::string(id);
-        p.key = lhs;
+        p.key = k.text;
         if (p.target.empty()) {
-            size_t dot = lhs.rfind('.');
+            size_t dot = k.text.rfind('.');
             if (dot == std::string::npos) { out.push_back(p); continue; }
-            p.target = lhs.substr(0, dot);
-            p.key = lhs.substr(dot + 1);
+            p.target = k.text.substr(0, dot);
+            p.key = k.text.substr(dot + 1);
         }
         p.key = lowerAscii(trimSpace(p.key));
         p.ok = !p.key.empty();
@@ -95,12 +135,29 @@ bool winsetBody(std::string_view cmd, std::string& body) {
     return true;
 }
 
+// The on-show body is re-split by splitWinset, so `key = value` is rejoined to `key=value` first.
+static std::string joinSpacedEquals(std::string_view s) {
+    std::string t;
+    bool inQ = false;
+    for (size_t i = 0; i < s.size(); i++) {
+        char r = s[i];
+        if (r == '"') inQ = !inQ;
+        if (!inQ && (r == ' ' || r == '\t')) {
+            size_t j = i;
+            while (j < s.size() && (s[j] == ' ' || s[j] == '\t')) j++;
+            if ((!t.empty() && t.back() == '=') || (j < s.size() && s[j] == '=')) { i = j - 1; continue; }
+        }
+        t.push_back(r);
+    }
+    return t;
+}
+
 bool onShowParams(std::string_view cmd, std::string& params) {
     std::string body;
     if (!winsetBody(cmd, body)) return false;
     params.clear();
     bool first = true;
-    for (const std::string& tok : splitOutsideQuotes(body)) {
+    for (const std::string& tok : splitOutsideQuotes(joinSpacedEquals(body))) {
         if (tok.find('?') != std::string::npos) continue;
         if (!first) params.push_back(';');
         params += tok;

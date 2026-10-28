@@ -11,6 +11,8 @@
 //     strip follows the model's `selected`, which selectStatTab moves when the request is made.
 // Only value types (StatView) cross from the session thread; this widget never sees the model.
 #pragma once
+#include <QColor>
+#include <QFont>
 #include <QImage>
 #include <QList>
 #include <QMetaType>
@@ -48,6 +50,10 @@ public:
     const StatView& view() const { return view_; }
     QTabBar* tabBar() const { return tabs_; }
     QTableWidget* table() const { return table_; }
+    // The INFO control's prefix-color and suffix-color: a Stat() row's name and its value. Invalid = the control's text colour.
+    // The INFO control's font, on the tab strip and the rows too (a style sheet change resets their inherited font).
+    void setPanelFont(const QFont& f);
+    void setTextColors(const QColor& prefix, const QColor& suffix);
     void setControlId(const QString& id) { controlId_ = id; }   // "<window>.<control>", named by a row click
     QString controlId() const { return controlId_; }
     enum RowMods { ModCtrl = 1, ModShift = 2, ModAlt = 4 };
@@ -69,6 +75,7 @@ private:
     QTabBar* tabs_ = nullptr;
     QTableWidget* table_ = nullptr;
     StatView view_;
+    QColor prefix_, suffix_;
     bool setting_ = false;
 };
 

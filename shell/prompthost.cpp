@@ -178,8 +178,8 @@ QDialog* PromptHost::build(const PromptRequest& r) {
         lay->addWidget(le);
         d->value = [le] { return le->text(); };
         focus = le;
-        if (r.verbArg && !r.choices.isEmpty()) {
-            // Stock DreamSeeker shows a listbox alone, so Enter picks its selected choice.
+        if (!r.choices.isEmpty()) {
+            // Stock DreamSeeker shows a listbox alone, for input() and a verb argument alike, so Enter picks its selected choice.
             le->hide();
             focus = list;
         }

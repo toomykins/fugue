@@ -205,6 +205,8 @@ private slots:
         QCOMPARE(c.rest, (std::vector<std::string>{"--connect", "h:1"}));
         QCOMPARE(chooseMode("fugue-qt", {"pager", "-list"}, false).mode, std::string("pager"));
         QCOMPARE(chooseMode("fugue-qt", {"version"}, true).mode, std::string("version"));
+        QCOMPARE(chooseMode("fugue-qt", {"webcheck"}, true).mode, std::string("webcheck"));
+        QCOMPARE(chooseMode("dreamseeker", {"webcheck"}, true).mode, std::string("client"));   // a target to DreamSeeker
         // --version wins in every mode; as DreamSeeker only when it is the sole argument.
         for (bool rel : {true, false}) {
             QCOMPARE(chooseMode("fugue-qt", {"--version"}, rel).mode, std::string("version"));

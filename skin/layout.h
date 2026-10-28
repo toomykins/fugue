@@ -1,15 +1,15 @@
 // skin/layout.h - a parsed skin laid out as control rectangles for one client rect.
 //
 // Stock DreamSeeker 516: an omitted `splitter` is 50; the divider is 4 px and comes out of the box BEFORE the fraction
-//   is applied; the split is a percentage preserved across resizes; a pane window hosted in a splitter slot always fills
-//   the slot exactly (its MAIN anchors are never consulted); a control whose two anchors track the same edge keeps its
-//   designed extent on that axis.
-// Where stock's behaviour is not pinned down, the layout follows these rules: the anchor formula
-//   corner' = corner_design + (actual - design) * pct / 100, rounded half away from zero; `size = 0x0` meaning "the rest
-//   of the design box"; an anchor of `none` on ONE corner meaning "keep the size"; the fraction clamped to [0.1, 0.9];
-//   the 8-deep and seen-once limits; and the empty-slot rule (a slot with no window is filled by the first window whose
-//   own on-show assigns it; browser panes sort last). Stock does not fill a slot until it shows that pane, so LiveSkin
-//   turns the rule off (layoutSkin inferSlots).
+//   is applied; the split is a percentage preserved across resizes and clamped to 0..100 (tg's 2 and 97.5 are honoured,
+//   not pulled to 10 and 90); a pane window hosted in a splitter slot always fills the slot exactly (its MAIN anchors
+//   are never consulted); a control whose two anchors track the same edge keeps its designed extent on that axis.
+// The anchor formula is stock's (MEASURED): corner' = corner_design + trunc(actual * pct / 100) - trunc(design * pct / 100).
+// Where stock's behaviour is not pinned down, the layout follows these rules: `size = 0x0` meaning "the rest
+//   of the design box"; an anchor of `none` on ONE corner meaning "keep the size"; the 8-deep and seen-once limits;
+//   and the empty-slot rule (a slot with no window is filled by the first window whose own on-show assigns it; browser
+//   panes sort last). Stock does not fill a slot until it shows that pane, so LiveSkin turns the rule off (layoutSkin
+//   inferSlots).
 // Quirk, matched on purpose: an empty result rect is the zero rect (0,0,0,0), not an empty rect at the control's corner.
 //   A divergence here would move an off-pane control.
 // Live property overlays: the layoutSkin() overload taking a PropStore (skin/props.h) lets a winset override, per
@@ -40,9 +40,11 @@ struct Rect {
 
 struct Control {
     std::string window, name, type;
-    Rect rect;
+    Rect rect;         // what is visible: full clipped to the box its window shows through
+    Rect full;         // the anchor rectangle before that clip; winget `size`, and the box a CHILD splits (stock measures a
+                       // control that overhangs its pane at its whole size)
     Rect box;          // the box its WINDOW was laid out in (the main client, or the slot hosting its pane): winget `pos`
-                       // is rect's corner relative to this (liveskin.cpp wingetLocked)
+                       // is full's corner relative to this (liveskin.cpp wingetLocked)
     bool visible = true, disabled = false, isDefault = false, offPane = false;
     int depth = 0;
     std::string side;  // "left" / "right" / ""

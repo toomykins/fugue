@@ -1,5 +1,5 @@
 // skin/skinfeed.h - wires the s2c skin frames (0x00af text, 0x00ef resource id + the .dmf resource, 0x00a8
-// winset) into a LiveSkin and answers 0x00a9 winget queries from it. Pure C++, session-thread use.
+// winset, 0x00a7 output to a winclone()d window, 0x00b1 winclone, 0x00b2 winshow) into a LiveSkin and answers 0x00a9 winget queries from it. Pure C++, session-thread use.
 //
 // Reply rules:
 //   * every winget gets a reply (the DM proc is parked on it); the empty string is the refusal encoding.
@@ -62,7 +62,7 @@ public:
     using Reply = std::function<void(uint32_t reqId, const std::string& value)>;
     explicit SkinFeed(std::shared_ptr<LiveSkin> live) : live_(std::move(live)) {}
 
-    void onFrame(uint16_t type, ByteSpan body);                                   // 0x00af 0x00ef 0x00a8
+    void onFrame(uint16_t type, ByteSpan body);                                   // 0x00af 0x00ef 0x00a8 0x00a7 0x00b1 0x00b2
     void onResource(uint32_t id, const std::string& name, ByteSpan data);          // every verified resource
     // Browse windows currently open (names), for winexists / popup winsets. Cheap; call each tick.
     void setBrowseNames(std::set<std::string> names) { live_->setPopups(std::move(names)); }

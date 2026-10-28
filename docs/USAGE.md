@@ -8,7 +8,8 @@ fugue-qt pager byond://host:port      # the launcher with a server preselected
 fugue-qt pager -join host:port        # headless: join and stream the client's log
 fugue-qt client --connect host:port   # open the game window directly (as a guest)
 fugue-qt --help                       # options (also `pager --help`, `client --help`)
-fugue-qt --version                    # prints e.g. "fugue-qt 0.5.4" (accepted by every mode; also `fugue-qt version`)
+fugue-qt webcheck                     # self-test: starts WebEngine, runs one page and prints "webcheck ok" (install checks)
+fugue-qt --version                    # prints e.g. "fugue-qt 0.5.5" (accepted by every mode; also `fugue-qt version`)
 ```
 
 On macOS, use `Fugue.app/Contents/MacOS/Fugue` in place of `fugue-qt`, or open the app from Finder.

@@ -21,12 +21,25 @@ std::string dims(int w, int h) { return std::to_string(w) + "x" + std::to_string
 bool storedKey(const std::string& k) {
     static const char* keys[] = {"is-visible", "is-disabled", "is-checked", "right-click", "pos", "size", "left", "right", "text",
                                  "background-color", "text-color", "on-close", "title", "use-title", "style", "command",
-                                 "icon-size", "zoom", "zoom-mode", "letterbox", "icon", "font-family", "font-size", "font-style"};
+                                 "icon-size", "zoom", "zoom-mode", "letterbox", "icon", "font-family", "font-size", "font-style",
+                                 "tab-background-color", "tab-text-color", "prefix-color", "suffix-color"};
     for (const char* s : keys) if (k == s) return true;
     return false;
 }
 
-double clampFrac(double f) { return f < 0.1 ? 0.1 : (f > 0.9 ? 0.9 : f); }
+// What stock stores for a winset value that is empty (`pos`, `pos=` and `pos=""` alike): the property's own reading of "".
+// MEASURED on DreamSeeker 516.1684 (tests/data/winsetempty-world); the two colours read back as #b47229 and paint that.
+// A window or pane's pos and size are left as sent: stock answers them oddly (-1,-1 and 6x-1) and nothing here reads them.
+const char* valueOfEmpty(const std::string& k, bool control) {
+    if (k == "is-visible" || k == "is-disabled" || k == "is-checked") return "false";
+    if (k == "size" && control) return "0x0";   // fill to the parent's far edge
+    if (k == "pos" && control) return "-1,-1";
+    if (k == "font-size" || k == "zoom") return "0";
+    if (k == "background-color" || k == "text-color") return "#b47229";
+    return "";
+}
+
+double clampFrac(double f) { return f < 0 ? 0 : (f > 1 ? 1 : f); }
 
 std::string boolParam(bool b) { return b ? "true" : "false"; }
 
@@ -208,12 +221,16 @@ bool LiveSkin::hasConsumerLocked(Kind kind, const WinsetPair& p) const {
     if (k == "title") return kind == Kind::Popup || kind == Kind::Window;
     // A window's `icon`, consumed by mainIcon() (skin/winicon.h) and by shell/skinwindow's setSkinIcon.
     if (k == "icon") return kind == Kind::Window;
-    if (k == "background-color" || k == "style") return kind == Kind::Control;
+    if (k == "background-color") return kind == Kind::Control || kind == Kind::Window;   // a window's fills its box (shell/skinwindow)
+    if (k == "style") return kind == Kind::Control;
     if (k == "text-color") {
         std::string t = controlTypeLocked(p.target);
         // A MAP's is maptext's default colour (defaultMapStyle).
-        return kind == Kind::Control && (t == "OUTPUT" || t == "BROWSER" || t == "INFO" || t == "INPUT" || t == "LABEL" || t == "MAP");
+        return kind == Kind::Control && (t == "OUTPUT" || t == "BROWSER" || t == "INFO" || t == "INPUT" || t == "LABEL" || t == "MAP" || t == "BUTTON");
     }
+    // An INFO's tab strip and stat rows (a Stat() row's name is the prefix, its value the suffix).
+    if (k == "tab-background-color" || k == "tab-text-color" || k == "prefix-color" || k == "suffix-color")
+        return kind == Kind::Control && controlTypeLocked(p.target) == "INFO";
     if (k == "text") {
         if (kind != Kind::Control) return false;
         std::string t = controlTypeLocked(p.target);
@@ -271,7 +288,7 @@ bool LiveSkin::applyPropLocked(const WinsetPair& p) {
     if (kind == Kind::Window) target = windowLocked(p.target)->name;
     // A world-set place answers verbatim until the GUI reports where the window really went (setWindowPos).
     if (p.key == "pos" && (kind == Kind::Window || kind == Kind::Popup)) screenPos_.erase(lowerAscii(target));
-    props_.set(target, p.key, p.value);
+    props_.set(target, p.key, p.value.empty() ? valueOfEmpty(p.key, kind == Kind::Control) : p.value);
     // zoom and icon-size are one property: setting one clears the other, or a later icon-size=64 would lose to an
     // earlier zoom=2 in shell/skinwindow's read.
     if (p.key == "zoom" || p.key == "icon-size") {
@@ -562,7 +579,7 @@ bool LiveSkin::wingetLocked(const std::string& id, const std::string& param, std
         return false;
     }
     // First, what the laid-out tree says: a stored intent never beats the layout.
-    if (param == "size") { out = dims(c->rect.dx(), c->rect.dy()); return true; }
+    if (param == "size") { out = dims(c->full.dx(), c->full.dy()); return true; }   // not what the pane clips it to
     if (param == "type") { out = c->type; return true; }
     if (param == "is-visible") { out = boolParam(c->visible); return true; }
     if (param == "is-disabled") { out = boolParam(c->disabled); return true; }
@@ -572,13 +589,13 @@ bool LiveSkin::wingetLocked(const std::string& id, const std::string& param, std
     if (param == "splitter" && c->type == "CHILD") {
         auto sp = splitPct_.find(c->window + "." + c->name);
         if (sp != splitPct_.end()) { out = splitterText(sp->second); return true; }
-        if (c->elem && !c->elem->get("splitter")) { out = std::to_string(kDefaultSplitter); return true; }
+        if (c->elem) { out = splitterText(float(c->elem->floatv("splitter", kDefaultSplitter))); return true; }
     }
     // Second, what the world itself set.
     if (props_.controlProp(c->window, c->name, param, out)) return true;
     // pos is pane-local: the laid-out corner relative to the box its window was laid out in. A stored winset value
     // answers verbatim; an empty (off-pane) rect falls through to the file.
-    if (param == "pos" && !c->rect.empty()) { out = std::to_string(c->rect.x0 - c->box.x0) + "," + std::to_string(c->rect.y0 - c->box.y0); return true; }
+    if (param == "pos" && !c->rect.empty()) { out = std::to_string(c->full.x0 - c->box.x0) + "," + std::to_string(c->full.y0 - c->box.y0); return true; }
     // (E3) THIRD, what the .dmf states for this control.
     if (c->elem) if (const std::string* v = c->elem->get(param)) { out = *v; return true; }
     return false;
@@ -700,6 +717,7 @@ bool LiveSkin::applyParentLocked(const WinsetPair& p) {
         for (RuntimeCtl& r : runtime_) if (r.name == name) r.parent = parent;
         return true;
     }
+    if (destroy && destroyCloneLocked(p.target)) return true;
     if (destroy || tree_.byName(p.target) || declaresLocked(p.target) || windowLocked(p.target) || knownPopupLocked(p.target)) return false;
     std::string parent = parentWindowLocked(p.value);
     if (parent.empty()) return false;
@@ -1114,6 +1132,8 @@ std::string LiveSkin::load(const std::string& dmf) {
         usedMenus_.clear();
         usedMacros_.clear();
         runtime_.clear();
+        for (const Clone& c : clones_) knownPopups_.erase(c.name);
+        clones_.clear();
         for (const Block& b : file_->blocks) {
             const Elem* m = b.kind == "window" ? b.main() : nullptr;
             if (!m) continue;
@@ -1203,8 +1223,94 @@ void LiveSkin::setPopups(std::set<std::string> names) {
 
 void LiveSkin::setPopupShown(const std::string& name, bool shown) {
     std::lock_guard<std::mutex> g(mu_);
+    if (cloneLocked(name)) props_.set(name, "is-visible", shown ? "true" : "false");
     if (shown) hiddenPopups_.erase(name);
     else hiddenPopups_.insert(name);
+}
+
+LiveSkin::Clone* LiveSkin::cloneLocked(const std::string& name) {
+    for (Clone& c : clones_) if (ieq(c.name, name)) return &c;
+    return nullptr;
+}
+
+bool LiveSkin::destroyCloneLocked(const std::string& name) {
+    Clone* c = cloneLocked(name);
+    if (!c) return false;
+    std::string n = c->name;
+    clones_.erase(clones_.begin() + (c - clones_.data()));
+    for (auto it = knownPopups_.begin(); it != knownPopups_.end();) it = ieq(*it, n) ? knownPopups_.erase(it) : std::next(it);
+    hiddenPopups_.erase(n);
+    props_.eraseTarget(n);
+    screenPos_.erase(lowerAscii(n));
+    for (auto it = runtime_.begin(); it != runtime_.end();) it = ieq(it->parent, n) ? runtime_.erase(it) : std::next(it);
+    return true;
+}
+
+void LiveSkin::cloneWindow(const std::string& name) {
+    {
+        std::lock_guard<std::mutex> g(mu_);
+        if (!file_ || name.empty()) return;
+        destroyCloneLocked(name);
+        clones_.push_back({name, "", false, 0});
+        knownPopups_.insert(name);
+        props_.set(name, "is-visible", "false");
+        props_.set(name, "size", "640x480");
+        props_.set(name, "can-close", "true");
+        props_.set(name, "statusbar", "true");
+    }
+    notify();
+}
+
+bool LiveSkin::setClonePage(const std::string& control, const std::string& html) {
+    std::lock_guard<std::mutex> g(mu_);
+    size_t dot = control.find('.');
+    if (dot == std::string::npos) return false;
+    Clone* c = cloneLocked(control.substr(0, dot));
+    if (!c) return false;
+    c->html = html;
+    c->hasHtml = true;
+    c->pageSeq++;
+    return true;
+}
+
+std::vector<LiveSkin::CloneWindow> LiveSkin::cloneWindows() const {
+    std::lock_guard<std::mutex> g(mu_);
+    std::vector<CloneWindow> out;
+    for (const Clone& c : clones_) {
+        CloneWindow w{c.name, c.html, "", "", c.hasHtml, false, c.pageSeq};
+        std::string v;
+        w.shown = props_.get(c.name, "is-visible", v) && winsetBool(v);
+        props_.get(c.name, "size", w.size);
+        props_.get(c.name, "pos", w.pos);
+        out.push_back(std::move(w));
+    }
+    return out;
+}
+
+std::vector<LiveSkin::CloneAction> LiveSkin::cloneActions(std::map<std::string, uint64_t>& open) const {
+    std::vector<CloneAction> out;
+    std::set<std::string> alive;
+    for (const CloneWindow& c : cloneWindows()) {
+        alive.insert(c.name);
+        auto it = open.find(c.name);
+        if (c.shown && c.hasHtml) {
+            if (it != open.end() && it->second == c.pageSeq) continue;
+            open[c.name] = c.pageSeq;
+            std::string params = "window=" + c.name;
+            if (!c.size.empty()) params += ";size=" + c.size;
+            if (!c.pos.empty()) params += ";pos=" + c.pos;
+            out.push_back({true, c.name, std::move(params), c.html});
+        } else if (it != open.end()) {
+            out.push_back({false, c.name, "", ""});
+            open.erase(it);
+        }
+    }
+    for (auto it = open.begin(); it != open.end();) {
+        if (alive.count(it->first)) { ++it; continue; }
+        out.push_back({false, it->first, "", ""});
+        it = open.erase(it);
+    }
+    return out;
 }
 
 Menu LiveSkin::menuLocked() const {

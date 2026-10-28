@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(fugue_qt VERSION 0.5.4 LANGUAGES CXX)
+project(fugue_qt VERSION 0.5.5 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -34,6 +34,9 @@ endif()
 # Release build: the player-facing binary. The pager is the no-argument default. Test hooks (FUGUE_AUTO_*, pager
 # --auto-join/--quit-after) are compiled out, and the client disables core dumps (PR_SET_DUMPABLE=0 on Linux).
 option(FUGUE_RELEASE "build the shippable fugue-qt (pager default, no dev hooks)" OFF)
+
+# Ubuntu names libjpeg's soname 8 and Debian 62; they are not interchangeable, so the .deb links it in (libjpeg-turbo8-dev).
+option(FUGUE_STATIC_JPEG "link libjpeg statically instead of depending on the distribution's soname" OFF)
 
 # Headless-only build: just the Qt-free/Core modules, tools and tests (no window, no pager UI). This is an explicit opt-out;
 # without it a missing Qt Widgets/WebEngine/WebChannel is a configure ERROR, so nobody ends up with a build that silently
@@ -108,4 +111,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/tests/CMakeLists.txt)
 endif()
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/cmake/devtree.cmake)
   include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/devtree.cmake)
+endif()
+if(UNIX AND NOT APPLE AND FUGUE_BUILD_SHELL)
+  include(packaging/deb/CPackDeb.cmake)   # `cpack -G DEB`: the Ubuntu/Debian package, which uses the distro's Qt
 endif()

@@ -5,10 +5,9 @@
 // Stock DreamDaemon: the query string
 //   `size;inner-size;statusbar;titlebar;pos` goes on the wire verbatim and is answered
 //   `size=900x640;inner-size=900x640;statusbar=false;titlebar=true;pos=16%2c-6` (values percent-encoded).
-// Stock DreamSeeker's delimiter bitmask: ! & : ; = ? and
-//   whitespace. We deliberately split on the SUBSET `; & space tab newline` because real VALUES contain the
-//   rest (urls, "0%2c0") - under-splitting is the safe direction.
-// Attribution rules: first '=' splits key from value; with no id the target is the text before the LAST '.';
+// Stock DreamSeeker's tokenizer (measured; docs/protocol/GAME-CLIENT-SERVER-516.md, "Winset params"): white space and '=' (and, for a
+//   world's winset, '?' ':' '!') separate tokens, ';' and '&' end a pair, and the tokens of a pair alternate key, value.
+// Attribution rules: a pair's first token is the key; with no id the target is the text before the LAST '.';
 //   keys are trimmed and lower-cased; a double-quoted run is one token and its OUTER quotes come off the value
 //   (so `text="Box Station"` survives a whitespace delimiter); nothing url-decodes (except parsePair, which
 //   reads `%2c` as the comma it encodes).

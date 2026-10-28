@@ -2,6 +2,7 @@
 //   fugue-qt pager [flags] [byond://host:port]   the launcher: window by default, headless with -join/-list/-dry-run/...
 //   fugue-qt client --connect host:port ...      the game window (app/main.cpp: clientMain)
 //   fugue-qt version
+//   fugue-qt webcheck                            WebEngine self-test for an installed package (app/webcheck.cpp)
 //   dreamseeker "byond://host:port" -pager ...   fugue-qt installed AS DreamSeeker: DreamSeeker's own command line (pager/dsargv.h)
 // No subcommand => the build's defaultMode: a FUGUE_RELEASE build is the pager (a player starting it from a menu passes no
 // arguments); a development build stays the client.
@@ -42,6 +43,7 @@
 #include "shell/urlopener.h"
 
 int clientMain(int argc, char** argv);   // app/main.cpp
+int webcheckMain(int argc, char** argv);   // app/webcheck.cpp
 
 namespace {
 using namespace fugue;
@@ -185,9 +187,12 @@ int pagerMain(int argc, char** argv, const std::vector<std::string>& args) {
         std::fprintf(stderr, "pager: on macOS, copy Fugue.app to Applications and open it to register byond:// links.\n");
         return 1;
 #endif
-        auto r = pager::installDesktop(self, fugue::shell::fugueIconPngs());   // Fugue's icon into hicolor (shell/fugueicon.h)
+        // An AppImage runs from a temporary mount, so the menu entry must name the AppImage file itself.
+        const QByteArray appImage = qgetenv("APPIMAGE");
+        const std::string entryExe = appImage.isEmpty() ? self : appImage.toStdString();
+        auto r = pager::installDesktop(entryExe, fugue::shell::fugueIconPngs());   // Fugue's icon into hicolor (shell/fugueicon.h)
         if (!r.ok) { std::fprintf(stderr, "pager: install-desktop: %s\n", r.err.c_str()); return 1; }
-        std::printf("wrote %s -> %s\n", r.desktopPath.c_str(), self.c_str());
+        std::printf("wrote %s -> %s\n", r.desktopPath.c_str(), entryExe.c_str());
         for (const auto& ip : r.iconPaths) std::printf("icon %s\n", ip.c_str());
         std::printf("byond:// links: registered in %s\nbyond:// links now open Fugue\n", r.mimeappsPath.c_str());
         return 0;
@@ -560,6 +565,7 @@ int main(int argc, char** argv) {
     std::vector<std::string>& rest = m.rest;
     if (mode == "version") { std::printf("%s\n", kRelease ? kVersionRelease : kVersionDev); return 0; }
     if (mode == "pager") return pagerMain(argc, argv, rest);
+    if (mode == "webcheck") return webcheckMain(argc, argv);
     // client: hand clientMain an argv with the subcommand removed
     std::vector<char*> cargv{argv[0]};
     for (auto& s : rest) cargv.push_back(s.data());

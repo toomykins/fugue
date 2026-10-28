@@ -24,13 +24,16 @@ Rect makeRect(int x0, int y0, int x1, int y1) {  // canonicalising the corners
     return Rect{x0, y0, x1, y1};
 }
 
-double clampFrac(double f) { return f < 0.1 ? 0.1 : (f > 0.9 ? 0.9 : f); }
+double clampFrac(double f) { return f < 0 ? 0 : (f > 1 ? 1 : f); }
 
 int roundInt(double v) { return int(std::round(v)); }  // half away from zero
 
+// An edge anchored at pct% sits at its design coordinate, shifted by the whole-pixel share of the pane's extent that
+// the anchor moved: trunc(actual * pct / 100) - trunc(design * pct / 100), each term truncated on its own (MEASURED on
+// stock: tg's button strip, 676 designed, 498 shown).
 int anchorAxis(int64_t design, int64_t pct, bool ok, int designExtent, int actualExtent) {
     if (!ok || pct < 0) return int(design);
-    return roundInt(double(design) + double(actualExtent - designExtent) * double(pct) / 100);
+    return int(design + int64_t(actualExtent) * pct / 100 - int64_t(designExtent) * pct / 100);
 }
 
 // The window's design size = its MAIN `size`; a window with no usable MAIN size is laid out 1:1.
@@ -66,8 +69,8 @@ Rect anchorRect(const Elem& e, const GeomOverride& ov, int dw, int dh, const Rec
     // An anchor of `none` on ONE corner means "keep the size" (the corner pins, the far side follows).
     if (ok1 && !ok2) { x2 = x1 + int(sw); y2 = y1 + int(sh); }
     else if (!ok1 && ok2) { x1 = x2 - int(sw); y1 = y2 - int(sh); }
-    Rect r = makeRect(x1, y1, x2, y2).intersect(box);
-    return r;  // empty -> the zero rect (see layout.h, Quirk)
+    // An inverted extent is a zero one (stock answers 82x0 for a button its strip has shrunk past), not a flipped rect.
+    return Rect{x1, y1, std::max(x1, x2), std::max(y1, y2)};
 }
 
 struct Ctx {
@@ -138,9 +141,10 @@ std::vector<std::string> slotClaimants(const File& f, const std::string& path, c
     return out;
 }
 
-void layoutWindow(Ctx& c, const Block& b, const Rect& box, int depth, const std::string& side);
+void layoutWindow(Ctx& c, const Block& b, const Rect& box, const Rect& clip, int depth, const std::string& side);
 
-void fillSlot(Ctx& c, const std::string& path, const std::string& side, std::string window, const Rect& box, int depth) {
+void fillSlot(Ctx& c, const std::string& path, const std::string& side, std::string window, const Rect& box, const Rect& clip,
+              int depth) {
     std::vector<std::string> cands = slotClaimants(c.f, path, side);
     if (window.empty()) {
         Slot sl{path + "." + side, box, cands, cands.empty() || !c.infer ? "" : cands[0]};
@@ -152,10 +156,10 @@ void fillSlot(Ctx& c, const std::string& path, const std::string& side, std::str
     }
     const Block* blk = c.f.window(window);
     if (!blk) return;
-    layoutWindow(c, *blk, box, depth, side);
+    layoutWindow(c, *blk, box, clip, depth, side);
 }
 
-void layoutChild(Ctx& c, const Block& b, const Elem& e, const Rect& box, int depth) {
+void layoutChild(Ctx& c, const Block& b, const Elem& e, const Rect& box, const Rect& clip, int depth) {
     std::string path = b.name + "." + e.name;
     bool vert = e.boolv("is-vert", true);
     std::string left = e.str("left", ""), right = e.str("right", "");
@@ -166,23 +170,25 @@ void layoutChild(Ctx& c, const Block& b, const Elem& e, const Rect& box, int dep
         if (c.props->controlProp(b.name, e.name, "left", v)) { left = v; leftLive = true; }
         if (c.props->controlProp(b.name, e.name, "right", v)) { right = v; rightLive = true; }
     }
-    // The clearing form: a live-emptied side is hidden and the other side fills the whole box, undivided. Without the
-    // empty-slot rule, a side the rule would fill is empty the same way. An empty side nothing claims keeps the split.
-    if (!c.infer) {
-        if (left.empty() && !slotClaimants(c.f, path, "left").empty()) leftLive = true;
-        if (right.empty() && !slotClaimants(c.f, path, "right").empty()) rightLive = true;
-    }
+    // A side that names no window (tg's `left=null`) is hidden as an emptied one is.
+    if (!left.empty() && !c.f.window(left)) left.clear();
+    if (!right.empty() && !c.f.window(right)) right.clear();
+    // The clearing form: an emptied side is hidden and the other side fills the whole box, undivided. A side the skin
+    // leaves empty is emptied the same way unless the empty-slot rule would fill it from an on-show claimant (tg's
+    // output_selector_screen names only a left window and measures at the box's full size).
+    if (left.empty() && (!c.infer || slotClaimants(c.f, path, "left").empty())) leftLive = true;
+    if (right.empty() && (!c.infer || slotClaimants(c.f, path, "right").empty())) rightLive = true;
     if (leftLive && left.empty() && !right.empty()) {
         c.t.slotList.push_back(Slot{path + ".left", Rect{}, slotClaimants(c.f, path, "left"), ""});
-        fillSlot(c, path, "right", right, box, depth + 1);
+        fillSlot(c, path, "right", right, box, clip, depth + 1);
         return;
     }
     if (rightLive && right.empty() && !left.empty()) {
         c.t.slotList.push_back(Slot{path + ".right", Rect{}, slotClaimants(c.f, path, "right"), ""});
-        fillSlot(c, path, "left", left, box, depth + 1);
+        fillSlot(c, path, "left", left, box, clip, depth + 1);
         return;
     }
-    double frac = double(e.intv("splitter", kDefaultSplitter)) / 100;
+    double frac = e.floatv("splitter", kDefaultSplitter) / 100;
     auto ov = c.splits.find(path);
     if (ov != c.splits.end()) frac = ov->second;
     frac = clampFrac(frac);
@@ -202,12 +208,12 @@ void layoutChild(Ctx& c, const Block& b, const Elem& e, const Rect& box, int dep
         sp = makeRect(box.x0, cut, box.x1, cut + sw);
         b2 = makeRect(box.x0, cut + sw, box.x1, box.y1);
     }
-    if (sw > 0) c.t.splitters.push_back(Splitter{path, sp.intersect(box), vert, frac, box});
-    fillSlot(c, path, "left", left, a.intersect(box), depth + 1);
-    fillSlot(c, path, "right", right, b2.intersect(box), depth + 1);
+    if (sw > 0) c.t.splitters.push_back(Splitter{path, sp.intersect(clip), vert, frac, box});
+    fillSlot(c, path, "left", left, a, a.intersect(clip), depth + 1);
+    fillSlot(c, path, "right", right, b2, b2.intersect(clip), depth + 1);
 }
 
-void layoutWindow(Ctx& c, const Block& b, const Rect& box, int depth, const std::string& side) {
+void layoutWindow(Ctx& c, const Block& b, const Rect& box, const Rect& clip, int depth, const std::string& side) {
     if (depth > 8) return;
     if (c.seen.count(b.name)) return;
     c.seen.insert(b.name);
@@ -228,13 +234,14 @@ void layoutWindow(Ctx& c, const Block& b, const Rect& box, int depth, const std:
         }
         ctl.isDefault = e->boolv("is-default", false);
         ctl.depth = depth; ctl.side = side;
-        ctl.rect = anchorRect(*e, ov, dw, dh, box);
+        ctl.full = anchorRect(*e, ov, dw, dh, box);
+        ctl.rect = ctl.full.intersect(clip);  // empty -> the zero rect (see layout.h, Quirk)
         ctl.box = box;
         ctl.offPane = ctl.visible && ctl.rect.empty();
-        Rect r = ctl.rect;
+        Rect full = ctl.full, vis = ctl.rect;
         bool child = ctl.type == "CHILD" && ctl.visible;
         c.t.controls.push_back(std::move(ctl));
-        if (child) layoutChild(c, b, *e, r, depth);
+        if (child) layoutChild(c, b, *e, full, vis, depth);
     }
 }
 
@@ -261,7 +268,7 @@ Tree layoutSkin(const File& f, Rect client, const std::map<std::string, double>&
     const Block* mw = findMainWindow(f);
     if (!mw) return t;
     Ctx c{f, t, splits, props, inferSlots, {}};
-    layoutWindow(c, *mw, client, 0, "");
+    layoutWindow(c, *mw, client, client, 0, "");
     return t;
 }
 

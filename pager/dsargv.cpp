@@ -80,7 +80,7 @@ Mode chooseMode(const std::string& argv0, const std::vector<std::string>& args, 
     m.asDreamSeeker = invokedAsDreamSeeker(argv0);
     m.mode = (release && !m.asDreamSeeker) ? "pager" : "client";
     m.rest = args;
-    if (!m.asDreamSeeker && !m.rest.empty() && (m.rest[0] == "pager" || m.rest[0] == "client" || m.rest[0] == "version")) {
+    if (!m.asDreamSeeker && !m.rest.empty() && (m.rest[0] == "pager" || m.rest[0] == "client" || m.rest[0] == "version" || m.rest[0] == "webcheck")) {
         m.mode = m.rest[0];
         m.rest.erase(m.rest.begin());
     }

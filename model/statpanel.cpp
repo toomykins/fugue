@@ -83,64 +83,67 @@ bool verbScope(const World& w, std::vector<uint16_t>& ids) {
     ids.clear();
     if (!w.haveClientAppid || !w.appearances.count(w.clientAppid)) return false;
     if (!w.haveSelf) return false;
-    std::vector<uint32_t> mobApps;
-    for (uint32_t key : {w.selfRef | kRegistryA, w.selfRef}) {
-        auto m = w.atoms.find(key);
-        if (m != w.atoms.end() && w.appearances.count(m->second.appid)) mobApps.push_back(m->second.appid);
-    }
-    if (mobApps.empty()) return false;
+    // The own mob is keyed selfRef | kRegistryA once the 0x0007 announces it; before that its appearance is the 0x0009 bind.
+    // The bare key is the obj ref space: an obj that shares the mob's number is not the mob.
+    uint32_t mobApp = 0;
+    bool known = false;
+    if (auto m = w.atoms.find(w.selfRef | kRegistryA); m != w.atoms.end()) { mobApp = m->second.appid; known = true; }
+    else if (auto rb = w.refBind.find(w.selfRef); rb != w.refBind.end()) { mobApp = rb->second; known = true; }
+    if (!known || !w.appearances.count(mobApp)) return false;
     std::set<uint16_t> s;
     for (uint16_t id : verbIdsOf(w, w.clientAppid)) s.insert(id);
-    for (uint32_t a : mobApps) for (uint16_t id : verbIdsOf(w, a)) s.insert(id);
+    for (uint16_t id : verbIdsOf(w, mobApp)) s.insert(id);
+    for (uint16_t id : srcAdmittedVerbIds(w)) s.insert(id);
     if (s.empty()) return false;   // no verbs is indistinguishable from a server that sends no verb sections
     ids.assign(s.begin(), s.end());
     return true;
 }
 
-std::vector<std::string> verbCategories(const World& w) {
+VerbPanel verbPanel(const World& w) {
     std::vector<uint16_t> scope;
     bool scoped = verbScope(w, scope);
     std::set<uint16_t> in(scope.begin(), scope.end());
-    std::set<std::string> seen;
+    VerbPanel p;
     for (const auto& [id, js] : w.verbById) {
         if (scoped && !in.count(uint16_t(id))) continue;
         VerbDef e;
         if (!parseVerbDef(js, e)) continue;
         std::string l = categoryLabel(e);
-        if (!l.empty()) seen.insert(l);
+        if (!l.empty()) p.byCategory[l].push_back(std::move(e));
     }
-    return {seen.begin(), seen.end()};   // byte order, not case-folded
+    for (auto& [label, verbs] : p.byCategory) {
+        std::sort(verbs.begin(), verbs.end(), [](const VerbDef& a, const VerbDef& b) { return a.name != b.name ? a.name < b.name : a.id < b.id; });
+        p.categories.push_back(label);   // byte order, not case-folded
+    }
+    return p;
 }
+
+std::vector<std::string> verbCategories(const World& w) { return verbPanel(w).categories; }
 
 std::vector<VerbDef> verbsInCategory(const World& w, const std::string& label) {
-    std::vector<uint16_t> scope;
-    bool scoped = verbScope(w, scope);
-    std::set<uint16_t> in(scope.begin(), scope.end());
-    std::vector<VerbDef> out;
-    for (const auto& [id, js] : w.verbById) {
-        if (scoped && !in.count(uint16_t(id))) continue;
-        VerbDef e;
-        if (!parseVerbDef(js, e)) continue;
-        if (categoryLabel(e) == label) out.push_back(std::move(e));
-    }
-    std::sort(out.begin(), out.end(), [](const VerbDef& a, const VerbDef& b) { return a.name != b.name ? a.name < b.name : a.id < b.id; });
-    return out;
+    VerbPanel p = verbPanel(w);
+    auto it = p.byCategory.find(label);
+    return it == p.byCategory.end() ? std::vector<VerbDef>{} : std::move(it->second);
 }
 
-std::vector<std::string> statTabs(const World& w) {
+std::vector<std::string> statTabs(const World& w, const VerbPanel& p) {
     std::vector<std::string> t;
     for (const std::string& n : w.stat.tabs) t.push_back(net::plainText(n));
-    for (auto& c : verbCategories(w)) t.push_back(std::move(c));
+    t.insert(t.end(), p.categories.begin(), p.categories.end());
     return t;
 }
+std::vector<std::string> statTabs(const World& w) { return statTabs(w, verbPanel(w)); }
 
-bool verbTabCategory(const World& w, int index, std::string& label) {
+bool verbTabCategory(const World& w, const VerbPanel& p, int index, std::string& label) {
     int n = int(w.stat.tabs.size());
     if (index < n) return false;
-    auto cats = verbCategories(w);
-    if (index - n >= int(cats.size())) return false;
-    label = cats[size_t(index - n)];
+    if (index - n >= int(p.categories.size())) return false;
+    label = p.categories[size_t(index - n)];
     return true;
+}
+bool verbTabCategory(const World& w, int index, std::string& label) {
+    if (index < int(w.stat.tabs.size())) return false;   // a Stat() tab needs no scope
+    return verbTabCategory(w, verbPanel(w), index, label);
 }
 
 std::string statTabWireName(const World& w, int index) {

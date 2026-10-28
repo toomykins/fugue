@@ -155,7 +155,10 @@ protected:
     // Closing the main window quits the client. The popups are transient for it, so the browse host is told first,
     // and the popups that close with it run no on-close.
     void closeEvent(QCloseEvent* e) override;
+    // The background-color of each MAIN and CHILD control (the main window, a pane, a splitter's area), behind the widgets.
+    void paintEvent(QPaintEvent*) override;
 private:
+    std::vector<std::pair<QRect, QColor>> fills_;
     DisplaySettings* display_ = nullptr;
     SpaceCompleter spaceCompleter_;
     QString worldName_, skinTitle_;

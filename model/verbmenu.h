@@ -128,6 +128,10 @@ struct VerbSrcRank { int dist = 127, cell = -1, carried = -1; };
 struct VerbSrcCandidate { VerbSrc src; std::string name; VerbSrcRank rank = {}; };
 std::vector<VerbSrcCandidate> verbSrcCandidates(const World& w, uint16_t verbId, bool everyAtom = false);
 VerbSrcRank srcRank(const World& w, VerbSrc src);
+// The verb ids of the atoms around the player (map movables, usr.contents, client.screen, the turfs in view, the player's
+// own area) whose `set src` clause admits them where they stand: the verbs stock DreamSeeker lists in its panel besides
+// the client's and the own mob's. A verb whose dictionary entry has not arrived yet is left out.
+std::vector<uint16_t> srcAdmittedVerbIds(const World& w);
 // A typed ATOM argument DreamSeeker resolves itself (FilterKind view / oview / range / orange / usr, an atom-only mask,
 // or `as anything` / `as text|anything` without a list, read as mob|obj|turf): the atoms it accepts, in its bare
 // listbox's order (objs by ascending ref, carried ones interleaved; mobs first and turfs last; usr's own turf first among

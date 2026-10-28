@@ -31,10 +31,12 @@
 #include "net/reconnect.h"
 #include "pager/target.h"
 #include "proto/enc_c2s_0002_input.h"
+#include "render/ddmi.h"
 #include "render/mousechain.h"
 #include "render/hittest.h"
 #include "render/scene.h"
 #include "skin/skinfeed.h"
+#include "shell/recipefiler.h"
 #include "skin/winicon.h"
 
 using namespace fugue;
@@ -69,12 +71,13 @@ constexpr int kTickMs = 90;     // the UI tick: chat, stat panel, browse windows
 shell::StatView buildStatView(const model::Session& m, render::ResStore& res, int64_t clockNs) {
     const model::World& w = m.world();
     shell::StatView v;
-    for (const std::string& t : model::statTabs(w)) v.tabs << QString::fromStdString(t);
+    model::VerbPanel panel = model::verbPanel(w);   // once per tick: the strip and the selected tab's rows share it
+    for (const std::string& t : model::statTabs(w, panel)) v.tabs << QString::fromStdString(t);
     v.selected = w.stat.selected;
     std::string cat;
-    if (model::verbTabCategory(w, w.stat.selected, cat)) {
+    if (model::verbTabCategory(w, panel, w.stat.selected, cat)) {
         v.verbTab = true;
-        for (const model::VerbDef& e : model::verbsInCategory(w, cat)) v.rows.append({QString::fromStdString(e.name), QString(), false});
+        for (const model::VerbDef& e : panel.byCategory[cat]) v.rows.append({QString::fromStdString(e.name), QString(), false});
     } else {
         for (const auto& l : w.stat.lines) {
             model::StatValue sv;
@@ -281,6 +284,7 @@ net::SessionEnding SessionWorker::runSession(net::Session& s, bool first, bool a
         std::fprintf(stderr, "[skin] winget req %u -> \"%s\"\n", reqId, v.substr(0, 120).c_str());
     };
     std::map<std::string, std::string> lastBrowse;   // window -> the html the GUI was last sent
+    std::map<std::string, uint64_t> cloneOpen;       // winclone()d window -> the page seq the GUI was last sent
     // Windows opened by a browse_file offer (never seen as 0x009f), and the popups still open when the last session ended:
     // stock DreamSeeker keeps them open across a reconnect, a reboot and a link().
     std::set<std::string> fileBrowse = openPopups_;
@@ -452,10 +456,11 @@ net::SessionEnding SessionWorker::runSession(net::Session& s, bool first, bool a
         },
         [&](uint32_t id) { return s.resources().store().nameOf(id); },
     });
+    shell::BrowseRecipeFiler browseRecipes;
     s.setResourceObserver([&](uint32_t id, const std::string& name, ByteSpan data) {
         icon.noteResource(id, name);
         m.noteResource(id, data, name);
-        if (rsc_) rsc_->put(id, name, std::string(reinterpret_cast<const char*>(data.data()), data.size()));
+        if (rsc_ && !render::isDdmi(data.data(), data.size())) rsc_->put(id, name, std::string(reinterpret_cast<const char*>(data.data()), data.size()));
         // browse(file(...)) arrives as a resource plus a directive in the offer's params (not as a 0x0084): open it as a
         // browse window, or file it under the alias a page will ask for.
         std::string opts;
@@ -479,6 +484,7 @@ net::SessionEnding SessionWorker::runSession(net::Session& s, bool first, bool a
         std::string err;
         uint32_t claimed = id;
         if (!res.add(data, &claimed, &err)) log("resource refused: " + err);
+        if (rsc_) browseRecipes.onResource(id, name, data, res, m.world().resources, *rsc_);
         feed.onResource(id, name, data);   // the skin may arrive as a .dmf resource named by 0x00ef
     });
     // winget (0x00a9): the skin holds a query until it has a measured layout.
@@ -981,6 +987,10 @@ net::SessionEnding SessionWorker::runSession(net::Session& s, bool first, bool a
         for (auto it = lastBrowse.begin(); it != lastBrowse.end();) {
             if (!w.browsers.count(it->first) && !fileBrowse.count(it->first)) { emit browseClosed(QString::fromStdString(it->first)); it = lastBrowse.erase(it); }
             else ++it;
+        }
+        for (const skin::LiveSkin::CloneAction& a : live->cloneActions(cloneOpen)) {   // a winclone()d window: open while shown and holding a page
+            if (a.open) emit browseHtml(QString::fromStdString(a.name), QString::fromStdString(a.params), QString::fromStdString(a.html));
+            else emit browseClosed(QString::fromStdString(a.name));
         }
 
     }
