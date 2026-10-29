@@ -6,9 +6,30 @@ unofficial and not affiliated with BYOND.
 
 **Status:** early software. It plays full /vg/station rounds, other BYOND games may work, and bugs are expected.
 
+![Fugue playing /vg/station as the AI, with the camera list and the crew monitor open](docs/images/vgstation.png)
+
+<sub>/vg/station's art is © its contributors under [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/).</sub>
+
 ## Install
 
-Build from source (details and prerequisites in [docs/BUILDING.md](docs/BUILDING.md)):
+Download the latest build from the [releases page](https://github.com/toomykins/fugue/releases/latest):
+
+* **Linux:** `fugue.flatpak`. It uses KDE's runtime from Flathub:
+
+  ```bash
+  flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+  flatpak install --user fugue.flatpak
+  flatpak run io.github.toomykins.Fugue
+  ```
+* **Windows:** `Fugue-windows-x64.zip`. Unzip it and run `Fugue\bin\fugue-qt.exe`. The build is not signed, so Windows
+  SmartScreen may ask first: choose "More info", then "Run anyway".
+* **macOS:** `Fugue-macos-apple-silicon.zip` or `Fugue-macos-intel.zip`. Unzip it and move `Fugue.app` to Applications.
+  The app is not notarized, so the first launch is blocked: open System Settings → Privacy & Security and choose
+  "Open Anyway", or run `xattr -dr com.apple.quarantine /Applications/Fugue.app`.
+
+### Build from source
+
+Details and prerequisites are in [docs/BUILDING.md](docs/BUILDING.md):
 
 ```bash
 cmake -G Ninja -S . -B build -DFUGUE_RELEASE=ON
