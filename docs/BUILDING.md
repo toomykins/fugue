@@ -207,4 +207,11 @@ warning on stderr; `FUGUE_KEEP_SANDBOX=1` turns the fallback off.
 The version is set once, by `project(... VERSION)` in the top-level `CMakeLists.txt`. It becomes `FUGUE_VERSION`
 (`fugue_version.h`) and is what `fugue-qt --version`, the About box and the `fugue-version` winget answer report.
 Configuring fails unless `packaging/flatpak/*.metainfo.xml` has a `<release>` for that version. Pushing a `v*` tag
-makes CI build the Flatpak bundle, the AppImage and the .deb and attach them to the GitHub release.
+makes CI build the Flatpak bundle and attach it to the GitHub release, then start the `Flatpak repository` workflow. The
+AppImage and .deb jobs are switched off until the web sandbox tiers land.
+
+The workflow runs `packaging/flatpak/publish-repo.sh`, which imports the latest release's bundle into a new repository,
+signs it, and deploys it to GitHub Pages at <https://toomykins.github.io/fugue/>. It needs the repository secret
+`FLATPAK_REPO_GPG_KEY` (the ASCII-armoured private key) and GitHub Pages set to deploy from Actions. Installed clients
+trust that key, so changing it means every user adding the repository again. Run the workflow by hand to republish
+without a new release.

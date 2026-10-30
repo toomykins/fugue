@@ -329,3 +329,15 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: fugue.flatpak
+
+  flatpak-repo:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: flatpak
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: write
+    steps:
+      - name: Publish the Flatpak repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run flatpak-repo.yml -R "$GITHUB_REPOSITORY" --ref main

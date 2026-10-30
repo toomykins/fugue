@@ -14,13 +14,17 @@ unofficial and not affiliated with BYOND.
 
 Download the latest build from the [releases page](https://github.com/toomykins/fugue/releases/latest):
 
-* **Linux:** `fugue.flatpak`. It uses KDE's runtime from Flathub:
+* **Linux:** install from the Flatpak repository, so `flatpak update` and your software centre keep Fugue current. It uses
+  KDE's runtime from Flathub:
 
   ```bash
   flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-  flatpak install --user fugue.flatpak
+  flatpak install --user https://toomykins.github.io/fugue/io.github.toomykins.Fugue.flatpakref
   flatpak run io.github.toomykins.Fugue
   ```
+
+  `fugue.flatpak` on the releases page is the same build for offline installs, but it does not update. To switch from it,
+  run `flatpak uninstall --user io.github.toomykins.Fugue` and then the install line above; your sign-ins and cache stay.
 * **Windows:** `Fugue-windows-x64.zip`. Unzip it and run `Fugue\bin\fugue-qt.exe`. The build is not signed, so Windows
   SmartScreen may ask first: choose "More info", then "Run anyway".
 * **macOS:** `Fugue-macos-apple-silicon.zip` or `Fugue-macos-intel.zip`. Unzip it and move `Fugue.app` to Applications.

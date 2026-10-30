@@ -1,0 +1,43 @@
+name: Flatpak repository
+
+# Publishes the latest release's fugue.flatpak as a signed repository on GitHub Pages. CI starts this after attaching the
+# bundle to a release (a release made with GITHUB_TOKEN triggers no workflow); it can also be run by hand.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: flatpak-repo
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak ostree
+      - name: Download the latest release's bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download -p fugue.flatpak
+      - name: Import the signing key
+        env:
+          FLATPAK_REPO_GPG_KEY: ${{ secrets.FLATPAK_REPO_GPG_KEY }}
+        run: printenv FLATPAK_REPO_GPG_KEY | gpg --batch --import
+      - name: Build the site
+        run: |
+          key="$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/ { print $10; exit }')"
+          packaging/flatpak/publish-repo.sh fugue.flatpak site "$key" "https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}"
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4

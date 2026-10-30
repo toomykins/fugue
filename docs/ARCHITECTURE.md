@@ -18,7 +18,7 @@
 | `tools/` | the canonical JSON writer and `gdifont`, the generator for the bitmap-font width tables |
 | `tests/`, `*/tests/` | tests and their recorded data |
 | `platform/` | shared Linux/macOS socket and close-on-exec pipe helpers |
-| `packaging/flatpak/` | Flatpak manifest, desktop entry, AppStream metadata, icons and their sources |
+| `packaging/flatpak/` | Flatpak manifest, desktop entry, AppStream metadata, icons and their sources, repository publishing script |
 | `packaging/macos/` | app bundle metadata, icon generation, Qt/WebEngine deployment and dependency relocation |
 | `cmake/` | the `fugue_module()` helper |
 
