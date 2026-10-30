@@ -7,7 +7,7 @@ body:
     attributes:
       label: Fugue version
       description: The output of `fugue-qt --version`, or the version in the About dialog.
-      placeholder: fugue-qt 0.5.5
+      placeholder: fugue-qt 0.5.6
     validations:
       required: true
   - type: dropdown

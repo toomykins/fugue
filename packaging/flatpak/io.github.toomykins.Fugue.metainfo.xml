@@ -48,6 +48,12 @@
     <content_attribute id="social-chat">intense</content_attribute>
   </content_rating>
   <releases>
+    <release version="0.5.6" date="2026-10-30">
+      <description>
+        <p>Fixes the view from inside an opaque mech, which showed only your own tile and whatever opaque tiles touched it.
+        The Flatpak now updates through its own repository.</p>
+      </description>
+    </release>
     <release version="0.5.5" date="2026-10-28">
       <description>
         <p>Opens /vg/station's RCD and RPD windows with their icons, lists the verbs of carried and nearby objects in the

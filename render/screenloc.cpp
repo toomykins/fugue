@@ -296,6 +296,8 @@ CellSet visibleCells(int ex, int ey, int rng, const std::function<bool(int, int)
     vis.insert({ex, ey});
     if (rng < 0) return vis;
     auto cheb = [&](int x, int y) { return std::max(std::abs(x - ex), std::abs(y - ey)); };
+    // The eye's own tile never blocks: an opaque mech, or an opaque turf, sees out of itself.
+    auto blocks = [&](int x, int y) { return !(x == ex && y == ey) && opaque(x, y); };
     for (int d = 1; d <= rng; d++) {
         for (int x = ex - d; x <= ex + d; x++) {
             for (int y = ey - d; y <= ey + d; y++) {
@@ -307,16 +309,16 @@ CellSet visibleCells(int ex, int ey, int rng, const std::function<bool(int, int)
                         if (nx == x && ny == y) continue;
                         if (cheb(nx, ny) != d - 1) continue;
                         if (std::abs(nx - ex) > ax || std::abs(ny - ey) > ay) continue;
-                        if (nx != x && ny != y && opaque(nx, y) && opaque(x, ny)) continue;
-                        if (vis.count({nx, ny}) && !opaque(nx, ny)) { seen = true; break; }
+                        if (nx != x && ny != y && blocks(nx, y) && blocks(x, ny)) continue;
+                        if (vis.count({nx, ny}) && !blocks(nx, ny)) { seen = true; break; }
                     }
                 }
                 if (seen) vis.insert({x, y});
             }
         }
     }
-    // The wall pass: an opaque cell is visible if any 8-neighbour is, without chaining wall to wall (the
-    // eye tile is the one exception). Decided against the PRE-pass visible set, applied afterwards.
+    // The wall pass: an opaque cell is visible if any 8-neighbour is, without chaining wall to wall.
+    // Decided against the PRE-pass visible set, applied afterwards.
     std::vector<std::pair<int, int>> add;
     for (int x = ex - rng; x <= ex + rng; x++) {
         for (int y = ey - rng; y <= ey + rng; y++) {
@@ -325,7 +327,7 @@ CellSet visibleCells(int ex, int ey, int rng, const std::function<bool(int, int)
             for (int nx = x - 1; nx <= x + 1 && !done; nx++) {
                 for (int ny = y - 1; ny <= y + 1; ny++) {
                     if (!vis.count({nx, ny})) continue;
-                    if (!(nx == ex && ny == ey) && opaque(nx, ny)) continue;
+                    if (blocks(nx, ny)) continue;
                     add.push_back({x, y});
                     done = true;
                     break;
