@@ -34,9 +34,11 @@ std::string webDir() {
 
 // True while a client holds the web profile's QLockFile (<web>/.lock): its first line is the owner's pid.
 bool webStorageInUse(const std::string& web) {
-    std::ifstream f(web + "/.lock");
     long long pid = 0;
-    if (!(f >> pid) || pid <= 0) return false;
+    {
+        std::ifstream f(web + "/.lock");  // closed before the Windows delete probe, which our own handle would fail
+        if (!(f >> pid) || pid <= 0) return false;
+    }
 #ifdef _WIN32
     std::error_code ec;
     std::filesystem::path lk = std::filesystem::path(web) / ".lock";
