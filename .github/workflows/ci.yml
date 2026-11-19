@@ -110,8 +110,14 @@ jobs:
         run: |
           # A fail-fast exit loses buffered stdout, so run each function on its own and report its exit code.
           $env:PATH = "$pwd/build/vcpkg_installed/x64-windows/bin;$env:PATH"
-          Get-ChildItem build -Recurse -Filter jpeg_test.exe | ForEach-Object {
+          $failed = Get-ChildItem build/Testing/Temporary -Filter 'LastTestsFailed*.log' -ErrorAction SilentlyContinue |
+            Get-Content | ForEach-Object { ($_ -split ':', 2)[1] }
+          $exes = foreach ($t in $failed) {
+            Get-ChildItem build -Recurse -Include "${t}_test.exe", "$t.exe" | Select-Object -First 1
+          }
+          $exes | ForEach-Object {
             $exe = $_.FullName
+            "=== $exe"
             foreach ($f in (& $exe -functions | ForEach-Object { $_ -replace '\(\)$', '' })) {
               $out = & $exe $f -v2 2>&1 | Out-String
               "== $f exit=$LASTEXITCODE"
