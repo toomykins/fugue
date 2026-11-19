@@ -2,6 +2,7 @@
 // and keeps everything else (pager.json, the sid files, client.log, ~/.byond). Temp HOME only.
 #include <QDir>
 #include <QFile>
+#include <QLockFile>
 #include <QTemporaryDir>
 #include <QtTest>
 #include "account/store.h"
@@ -126,10 +127,14 @@ private slots:
         QVERIFY(seen);
         QVERIFY(QString::fromStdString(describeClearCache(p)).contains("Web page storage"));
 
-        // A live client (this process's pid) holds the profile: refused, nothing deleted.
-        h.put(".fugue/web/.lock", QByteArray::number(qint64(QCoreApplication::applicationPid())) + "\nfugue\nhost\n");
+        // A live client holds the profile: refused, nothing deleted. A real QLockFile, because on Windows "held"
+        // means the file is open, not that its pid is alive.
         std::string err;
-        clearCache(&err);
+        {
+            QLockFile held(h.p(".fugue/web/.lock"));
+            QVERIFY(held.tryLock());
+            clearCache(&err);
+        }
         QVERIFY2(err.find("in use") != std::string::npos, err.c_str());
         QVERIFY(h.has(".fugue/web/IndexedDB/x/db"));
         QVERIFY(!h.has(".fugue/identity-somekey"));  // the rest still cleared
