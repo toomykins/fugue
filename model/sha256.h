@@ -13,6 +13,7 @@ public:
     void update(const void* data, size_t n);
     // Finishes the hash and returns 64 lowercase hex digits. The object must not be reused.
     std::string hexDigest();
+
 private:
     void block(const uint8_t* p);
     uint32_t h_[8];

@@ -29,7 +29,8 @@ int main(int argc, char** argv) {
     qputenv("QT_QPA_PLATFORM", "offscreen");
     QTemporaryDir home;
     qputenv("HOME", home.path().toUtf8());
-    for (auto v : {"FUGUE_PAGER_CONFIG", "FUGUE_IDENTITY", "FUGUE_BYOND_SID", "FUGUE_KEYTXT", "XDG_STATE_HOME"}) qunsetenv(v);
+    for (auto v : {"FUGUE_PAGER_CONFIG", "FUGUE_IDENTITY", "FUGUE_BYOND_SID", "FUGUE_KEYTXT", "XDG_STATE_HOME"})
+        qunsetenv(v);
     QApplication app(argc, argv);
     QString out = argc > 1 ? argv[1] : ".";
     QDir().mkpath(out);
@@ -42,7 +43,8 @@ int main(int argc, char** argv) {
     account::Config cfg;
     cfg.servers = account::defaultServers();
     account::Server s;
-    s.name = "Friday night box"; s.addr = "10.0.0.5:6000";
+    s.name = "Friday night box";
+    s.addr = "10.0.0.5:6000";
     s.lastPlayed = account::Timestamp{1760000000, 0};
     s.lastPrefetch = account::Timestamp{1759000000, 0};
     cfg.servers.push_back(s);
@@ -94,12 +96,13 @@ int main(int argc, char** argv) {
         w.setState(cfg, check(cfg));
         snap(w, "pager-7-signed-in-servers");
         w.selectBookmark(0);
-        QMetaObject::invokeMethod(w.findChild<QListWidget*>("servers"), "itemClicked", Q_ARG(QListWidgetItem*, w.findChild<QListWidget*>("servers")->item(0)));
+        QMetaObject::invokeMethod(w.findChild<QListWidget*>("servers"), "itemClicked",
+                                  Q_ARG(QListWidgetItem*, w.findChild<QListWidget*>("servers")->item(0)));
         snap(w, "pager-7b-game-tab");
-        w.showSignIn();   // signed in already: the window offers the saved sign-in, no password
+        w.showSignIn();  // signed in already: the window offers the saved sign-in, no password
         snapDialog(w.signInDialog(), "pager-7c-sign-in-saved");
         w.signInDialog()->hide();
-        {   // the gear menu, popped at the gear button
+        {  // the gear menu, popped at the gear button
             QMenu* m = w.gearMenu();
             m->popup(w.mapToGlobal(QPoint(w.width() - 20, 30)));
             app.processEvents();
@@ -108,7 +111,7 @@ int main(int argc, char** argv) {
             std::printf("%s\n", p.toUtf8().constData());
             m->hide();
         }
-        {   // Preferences + the Clear cache confirmation (synthetic cache: one resource file)
+        {  // Preferences + the Clear cache confirmation (synthetic cache: one resource file)
             put(home.path() + "/.fugue/rsc/ab/abcdef01", QByteArray(150000, 'x'));
             w.showPreferences();
             app.processEvents();
@@ -116,7 +119,8 @@ int main(int argc, char** argv) {
             w.preferencesDialog()->grab().save(p);
             std::printf("%s\n", p.toUtf8().constData());
             w.setConfirmHook([&](const QString& title, const QString& text) {
-                QMessageBox box(QMessageBox::Warning, title, "Remove these cached files?", QMessageBox::Yes | QMessageBox::No, &w);
+                QMessageBox box(QMessageBox::Warning, title, "Remove these cached files?",
+                                QMessageBox::Yes | QMessageBox::No, &w);
                 box.setInformativeText(text);
                 box.setDefaultButton(QMessageBox::No);
                 box.show();

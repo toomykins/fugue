@@ -23,7 +23,7 @@ struct FakeHub {
     int port = 0;
     std::thread th;
     Mode mode = Mode::Ok;
-    std::string canonical = "Synthetic Tester";   // the hub's casing
+    std::string canonical = "Synthetic Tester";  // the hub's casing
     std::string password;
     uint32_t nonce = 0x5a17c0de;
     Bytes gotHello, gotRequest;
@@ -44,7 +44,11 @@ struct FakeHub {
     std::string addr() const { return "127.0.0.1:" + std::to_string(port); }
     static bool readN(socket::Handle fd, uint8_t* b, size_t n) {
         size_t o = 0;
-        while (o < n) { auto r = socket::recv(fd, b + o, n - o, 0); if (r <= 0) return false; o += size_t(r); }
+        while (o < n) {
+            auto r = socket::recv(fd, b + o, n - o, 0);
+            if (r <= 0) return false;
+            o += size_t(r);
+        }
         return true;
     }
     static bool readFrame(socket::Handle fd, uint16_t* t, Bytes* p) {
@@ -64,13 +68,20 @@ struct FakeHub {
         if (c < 0) return;
         Bytes ch(20, 0);
         for (int i = 0; i < 12; i++) ch[size_t(i)] = uint8_t(0x30 + i);
-        ch[12] = uint8_t(nonce); ch[13] = uint8_t(nonce >> 8); ch[14] = uint8_t(nonce >> 16); ch[15] = uint8_t(nonce >> 24);
+        ch[12] = uint8_t(nonce);
+        ch[13] = uint8_t(nonce >> 8);
+        ch[14] = uint8_t(nonce >> 16);
+        ch[15] = uint8_t(nonce >> 24);
         writeFrame(c, 0x0042, ch);
         uint16_t t;
         Bytes p;
         if (readFrame(c, &t, &p) && t == 0x00db) gotHello = p;
         if (readFrame(c, &t, &p) && t == 0x0088) gotRequest = p;
-        if (mode == Mode::CloseAfterRequest) { socket::close(c); done = true; return; }
+        if (mode == Mode::CloseAfterRequest) {
+            socket::close(c);
+            done = true;
+            return;
+        }
         if (mode == Mode::HubReply) {
             Bytes body{7};
             for (char ch2 : std::string("try later")) body.push_back(uint8_t(ch2));
@@ -85,7 +96,8 @@ struct FakeHub {
                 Bytes ident(canonical.size() + 13);
                 for (size_t i = 0; i < ident.size(); i++) ident[i] = uint8_t(1 + (i * 37) % 250);
                 Bytes blob = account::buildKeyBlob(ident, 0x00262781, 0x1badb002, Bytes{9, 8, 7});
-                std::string block = "BEGIN KEY " + canonical + "\n" + account::encodeKeyLine1(blob, account::pwordCryptLevel2(pw)) + "\n`\nEND KEY\n";
+                std::string block = "BEGIN KEY " + canonical + "\n" +
+                                    account::encodeKeyLine1(blob, account::pwordCryptLevel2(pw)) + "\n`\nEND KEY\n";
                 plain.insert(plain.end(), block.begin(), block.end());
             }
             plain.push_back(0);
@@ -94,7 +106,7 @@ struct FakeHub {
             writeFrame(c, 0x0088, plain);
         }
         Bytes rest;
-        readFrame(c, &t, &rest);   // wait for the client to hang up
+        readFrame(c, &t, &rest);  // wait for the client to hang up
         socket::close(c);
         done = true;
     }
@@ -105,7 +117,7 @@ struct FakeHub {
 };
 
 const char* kSid = "0123456789abcdef01234567";
-}
+}  // namespace
 
 class PagerSignIn : public QObject {
     Q_OBJECT
@@ -120,7 +132,8 @@ private slots:
     void init() {
         QVERIFY(home_.isValid());
         qputenv("HOME", home_.path().toUtf8());
-        for (auto v : {"FUGUE_PAGER_CONFIG", "FUGUE_IDENTITY", "FUGUE_BYOND_SID", "FUGUE_KEYTXT", "XDG_STATE_HOME"}) qunsetenv(v);
+        for (auto v : {"FUGUE_PAGER_CONFIG", "FUGUE_IDENTITY", "FUGUE_BYOND_SID", "FUGUE_KEYTXT", "XDG_STATE_HOME"})
+            qunsetenv(v);
         QDir(home_.path()).removeRecursively();
         QDir().mkpath(home_.path());
         writeSid();
@@ -139,7 +152,9 @@ private slots:
         // The 0x0088 request carries the username as typed and the password hashes.
         QCOMPARE(hub.gotHello, pager::hubHelloPayload());
         ByteSpan pw(reinterpret_cast<const uint8_t*>(hub.password.data()), hub.password.size());
-        QCOMPARE(hub.gotRequest, account::buildDownloadKeyRequest("synthetic tester", "dantom", account::pwordCryptLevel2(pw), account::pwordCrypt(pw), kSid, hub.nonce));
+        QCOMPARE(hub.gotRequest,
+                 account::buildDownloadKeyRequest("synthetic tester", "dantom", account::pwordCryptLevel2(pw),
+                                                  account::pwordCrypt(pw), kSid, hub.nonce));
         // the identity the client reads
         auto a = account::loadAccount("Synthetic Tester");
         QVERIFY(a.has_value());
@@ -206,7 +221,8 @@ private slots:
             hub.start();
             auto r = pager::signIn("someone", "pw", "", hub.addr(), 5000);
             QCOMPARE(int(r.failure), int(pager::SignInFailure::Refused));
-            QVERIFY2(r.detail.find("code=7") != std::string::npos && r.detail.find("try later") != std::string::npos, r.detail.c_str());
+            QVERIFY2(r.detail.find("code=7") != std::string::npos && r.detail.find("try later") != std::string::npos,
+                     r.detail.c_str());
         }
         {
             FakeHub hub;
@@ -230,7 +246,8 @@ private slots:
         socket::close(s);
         auto r = pager::signIn("someone", "pw", "", "127.0.0.1:" + std::to_string(port), 3000);
         QCOMPARE(int(r.failure), int(pager::SignInFailure::Unreachable));
-        QCOMPARE(pager::plainSignInMessage(r.failure), std::string("Could not reach BYOND. Check your internet connection and try again."));
+        QCOMPARE(pager::plainSignInMessage(r.failure),
+                 std::string("Could not reach BYOND. Check your internet connection and try again."));
         r = pager::signIn("", "pw", "", "127.0.0.1:1", 1000);
         QCOMPARE(int(r.failure), int(pager::SignInFailure::MissingInput));
     }

@@ -12,8 +12,12 @@ namespace fugue::shell {
 
 const char* zoneName(Zone z) {
     switch (z) {
-        case Zone::Map: return "map"; case Zone::Output: return "output"; case Zone::Info: return "info";
-        case Zone::Input: return "input"; case Zone::Browser: return "browser"; default: return "other";
+        case Zone::Map: return "map";
+        case Zone::Output: return "output";
+        case Zone::Info: return "info";
+        case Zone::Input: return "input";
+        case Zone::Browser: return "browser";
+        default: return "other";
     }
 }
 
@@ -29,18 +33,20 @@ std::string macroSpecFor(const QKeyEvent* e, bool modifierKeys) {
         case Qt::Key_Down: k = "SOUTH"; break;
         case Qt::Key_Left: k = "WEST"; break;
         case Qt::Key_Right: k = "EAST"; break;
-        case Qt::Key_Return: case Qt::Key_Enter: k = "RETURN"; break;
+        case Qt::Key_Return:
+        case Qt::Key_Enter: k = "RETURN"; break;
         case Qt::Key_Escape: k = "ESCAPE"; break;
         case Qt::Key_Backspace: k = "BACK"; break;
         case Qt::Key_Space: k = "SPACE"; break;
-        case Qt::Key_Tab: case Qt::Key_Backtab: k = "TAB"; break;
+        case Qt::Key_Tab:
+        case Qt::Key_Backtab: k = "TAB"; break;
         case Qt::Key_Delete: k = "DELETE"; break;
         case Qt::Key_Insert: k = "INSERT"; break;
-        case Qt::Key_Home: k = "NORTHWEST"; break;   // stock names the navigation keys by compass point
+        case Qt::Key_Home: k = "NORTHWEST"; break;  // stock names the navigation keys by compass point
         case Qt::Key_End: k = "SOUTHWEST"; break;
         case Qt::Key_PageUp: k = "NORTHEAST"; break;
         case Qt::Key_PageDown: k = "SOUTHEAST"; break;
-        case Qt::Key_Clear: k = "CENTER"; break;      // numpad 5 without Num Lock
+        case Qt::Key_Clear: k = "CENTER"; break;  // numpad 5 without Num Lock
         default: {
             if (e->key() == Qt::Key_Meta) return "";
             if (e->key() == Qt::Key_Shift || e->key() == Qt::Key_Control || e->key() == Qt::Key_Alt) {
@@ -75,7 +81,10 @@ void FocusFilter::startRepeat(int key) {
 
 void FocusFilter::repeatTick(qint64 now) {
     while (!repeating_.empty() && !pressMods_.contains(repeating_.back())) repeating_.pop_back();
-    if (repeating_.empty()) { repTimer_.stop(); return; }
+    if (repeating_.empty()) {
+        repTimer_.stop();
+        return;
+    }
     int key = repeating_.back();
     const Held h = pressMods_.value(key);
     if (now - h.downMs < tickMs_ * 7 / 4) return;
@@ -87,10 +96,27 @@ void FocusFilter::repeatTick(qint64 now) {
 // A key that types takes its release too; any other key the field took releases as if pressed with no modifiers.
 static bool typesText(int key) {
     switch (key) {
-        case Qt::Key_Left: case Qt::Key_Right: case Qt::Key_Up: case Qt::Key_Down: case Qt::Key_Home: case Qt::Key_End:
-        case Qt::Key_PageUp: case Qt::Key_PageDown: case Qt::Key_Insert: case Qt::Key_Delete: case Qt::Key_Space:
-        case Qt::Key_Backspace: case Qt::Key_Return: case Qt::Key_Enter: case Qt::Key_Shift: case Qt::Key_Control:
-        case Qt::Key_Alt: case Qt::Key_Tab: case Qt::Key_Backtab: case Qt::Key_Escape: case Qt::Key_Pause: return false;
+        case Qt::Key_Left:
+        case Qt::Key_Right:
+        case Qt::Key_Up:
+        case Qt::Key_Down:
+        case Qt::Key_Home:
+        case Qt::Key_End:
+        case Qt::Key_PageUp:
+        case Qt::Key_PageDown:
+        case Qt::Key_Insert:
+        case Qt::Key_Delete:
+        case Qt::Key_Space:
+        case Qt::Key_Backspace:
+        case Qt::Key_Return:
+        case Qt::Key_Enter:
+        case Qt::Key_Shift:
+        case Qt::Key_Control:
+        case Qt::Key_Alt:
+        case Qt::Key_Tab:
+        case Qt::Key_Backtab:
+        case Qt::Key_Escape:
+        case Qt::Key_Pause: return false;
         default: return key < Qt::Key_F1 || key > Qt::Key_F35;
     }
 }
@@ -98,12 +124,27 @@ static bool typesText(int key) {
 static bool inputBarFires(int key, Qt::KeyboardModifiers mods, bool empty) {
     const bool ctrl = mods & Qt::ControlModifier, alt = mods & Qt::AltModifier;
     switch (key) {
-        case Qt::Key_Left: case Qt::Key_Right: case Qt::Key_Up: case Qt::Key_Down: case Qt::Key_Home: case Qt::Key_End:
-        case Qt::Key_PageUp: case Qt::Key_PageDown: case Qt::Key_Insert: return !ctrl;
+        case Qt::Key_Left:
+        case Qt::Key_Right:
+        case Qt::Key_Up:
+        case Qt::Key_Down:
+        case Qt::Key_Home:
+        case Qt::Key_End:
+        case Qt::Key_PageUp:
+        case Qt::Key_PageDown:
+        case Qt::Key_Insert: return !ctrl;
         case Qt::Key_Delete: return !ctrl && empty;
-        case Qt::Key_Space: case Qt::Key_Backspace: case Qt::Key_Return: case Qt::Key_Enter:
-        case Qt::Key_Shift: case Qt::Key_Control: case Qt::Key_Alt: return empty;
-        case Qt::Key_Z: case Qt::Key_C: case Qt::Key_X: case Qt::Key_V: return alt && !ctrl;   // undo, copy, cut, paste
+        case Qt::Key_Space:
+        case Qt::Key_Backspace:
+        case Qt::Key_Return:
+        case Qt::Key_Enter:
+        case Qt::Key_Shift:
+        case Qt::Key_Control:
+        case Qt::Key_Alt: return empty;
+        case Qt::Key_Z:
+        case Qt::Key_C:
+        case Qt::Key_X:
+        case Qt::Key_V: return alt && !ctrl;  // undo, copy, cut, paste
         default: return !typesText(key) || ctrl || alt;
     }
 }
@@ -130,18 +171,23 @@ static std::string releaseSpecFor(const QKeyEvent* k, Qt::KeyboardModifiers pres
     size_t plus = base.rfind('+');
     std::string key = plus == std::string::npos ? base : base.substr(plus + 1);
     if (k->key() == Qt::Key_Plus) key = "+";
-    return std::string((pressMods & Qt::ControlModifier) ? "CTRL+" : "") + ((pressMods & Qt::ShiftModifier) ? "SHIFT+" : "") +
-           ((pressMods & Qt::AltModifier) ? "ALT+" : "") + key;
+    return std::string((pressMods & Qt::ControlModifier) ? "CTRL+" : "") +
+           ((pressMods & Qt::ShiftModifier) ? "SHIFT+" : "") + ((pressMods & Qt::AltModifier) ? "ALT+" : "") + key;
 }
 
 bool FocusFilter::eventFilter(QObject* o, QEvent* ev) {
-    if (ev->type() == QEvent::ApplicationDeactivate) { releaseHeld("application deactivated"); return false; }
+    if (ev->type() == QEvent::ApplicationDeactivate) {
+        releaseHeld("application deactivated");
+        return false;
+    }
     if (ev->type() != QEvent::KeyPress && ev->type() != QEvent::KeyRelease) return false;
-    if (inDispatch_) return false;                           // reroute guard: keys during our own dispatch
+    if (inDispatch_) return false;  // reroute guard: keys during our own dispatch
     auto* k = static_cast<QKeyEvent*>(ev);
     modsNow_ = k->modifiers();
-    const Qt::KeyboardModifier own = k->key() == Qt::Key_Shift ? Qt::ShiftModifier : k->key() == Qt::Key_Control ? Qt::ControlModifier
-                                   : k->key() == Qt::Key_Alt ? Qt::AltModifier : Qt::NoModifier;
+    const Qt::KeyboardModifier own = k->key() == Qt::Key_Shift     ? Qt::ShiftModifier
+                                     : k->key() == Qt::Key_Control ? Qt::ControlModifier
+                                     : k->key() == Qt::Key_Alt     ? Qt::AltModifier
+                                                                   : Qt::NoModifier;
     modsNow_.setFlag(own, ev->type() == QEvent::KeyPress);
     // A release belongs to its press, wherever it lands. Movement is a held-key state machine on the server (a press
     // starts a move, the release stops it), so a routed press without a routed release leaves the mob walking. A popup
@@ -149,22 +195,26 @@ bool FocusFilter::eventFilter(QObject* o, QEvent* ev) {
     // is therefore routed in the zone its press was routed in, whether it reaches the focus widget or the active
     // popup. The pressMods_ entry is taken on the first copy, so the double delivery still fires it once.
     if (ev->type() == QEvent::KeyRelease && !k->isAutoRepeat() && pressMods_.contains(k->key()) &&
-        (o == QApplication::focusWidget() || (QApplication::activePopupWidget() && o == QApplication::activePopupWidget()))) {
+        (o == QApplication::focusWidget() ||
+         (QApplication::activePopupWidget() && o == QApplication::activePopupWidget()))) {
         Held h = pressMods_.take(k->key());
         if (h.typed) return false;
         Zone here = o == QApplication::focusWidget() ? zoneOf(o) : Zone::Other;
         bool routed = route(h.zone, k->key(), k->modifiers(), Ev::Release, releaseSpecFor(k, h.mods));
         return routed && here != Zone::Browser && here != Zone::Other;
     }
-    if (o != QApplication::focusWidget()) return false;      // reroute guard: only the focus widget's copy
+    if (o != QApplication::focusWidget()) return false;  // reroute guard: only the focus widget's copy
     Zone z = zoneOf(o);
-    if (z == Zone::Browser || z == Zone::Other) {   // the page owns its keys
+    if (z == Zone::Browser || z == Zone::Other) {  // the page owns its keys
         std::string sp = macroSpecFor(k);
-        if (ev->type() == QEvent::KeyPress && !sp.empty()) std::fprintf(stderr, "[focus] zone=%s key=%s -> page owns it (not routed)\n", zoneName(z), sp.c_str());
+        if (ev->type() == QEvent::KeyPress && !sp.empty())
+            std::fprintf(stderr, "[focus] zone=%s key=%s -> page owns it (not routed)\n", zoneName(z), sp.c_str());
         return false;
     }
     // A paste chord in a paste-wired editor belongs to the editor (shell/paste.h), so a skin binding on CTRL+V does not take it.
-    if (ev->type() == QEvent::KeyPress && z == Zone::Input && isPasteWired(qobject_cast<QWidget*>(o)) && isPasteChord(k)) return false;
+    if (ev->type() == QEvent::KeyPress && z == Zone::Input && isPasteWired(qobject_cast<QWidget*>(o)) &&
+        isPasteChord(k))
+        return false;
     std::string spec = macroSpecFor(k, true);
     if (spec.empty() || spec.back() == '+') return false;
     // An auto-repeat release is not a release. X11 auto-repeat sends release and press pairs while a key is held, and
@@ -172,7 +222,7 @@ bool FocusFilter::eventFilter(QObject* o, QEvent* ev) {
     // so only the final, real release (isAutoRepeat() false) is a key-up.
     if (ev->type() == QEvent::KeyRelease && k->isAutoRepeat()) return true;
     if (ev->type() == QEvent::KeyRelease) return route(z, k->key(), k->modifiers(), Ev::Release, spec);
-    if (k->isAutoRepeat()) {   // a key a macro took stays taken; REP bindings repeat on repTimer_
+    if (k->isAutoRepeat()) {  // a key a macro took stays taken; REP bindings repeat on repTimer_
         auto h = pressMods_.find(k->key());
         if (h != pressMods_.end() && h->awaitRepeat) {
             h->awaitRepeat = false;
@@ -217,14 +267,16 @@ bool FocusFilter::route(Zone z, int key, Qt::KeyboardModifiers mods, Ev ev, cons
                 h->mods = Qt::NoModifier;
             }
         }
-        if (ev == Ev::Repeat && !inputBarFires(key, mods, emptyBar)) own = false;   // a held key pauses while Ctrl is down
+        if (ev == Ev::Repeat && !inputBarFires(key, mods, emptyBar))
+            own = false;  // a held key pauses while Ctrl is down
         any = any && !(mods & Qt::ControlModifier) && (fkey || nav);
         if (!own && !any) return false;
     }
-    skin::MacroKey mk; bool rep = false;
+    skin::MacroKey mk;
+    bool rep = false;
     if (!skin::parseMacroName(spec, mk, rep)) return false;
     mk.up = up;
-    const bool modifierKey = key == Qt::Key_Shift || key == Qt::Key_Control || key == Qt::Key_Alt;   // never repeats
+    const bool modifierKey = key == Qt::Key_Shift || key == Qt::Key_Control || key == Qt::Key_Alt;  // never repeats
     if (modifierKey) mk.ctrl = mk.shift = mk.alt = false;
     skin::MacroKey held = mk;
     held.ctrl = (mods & Qt::ControlModifier) || key == Qt::Key_Control;
@@ -248,7 +300,9 @@ bool FocusFilter::route(Zone z, int key, Qt::KeyboardModifiers mods, Ev ev, cons
     }
     if (up) repeating_.erase(std::remove(repeating_.begin(), repeating_.end(), key), repeating_.end());
     if (!anyMe && !ownMe) {
-        if (ev != Ev::Repeat) std::fprintf(stderr, "[focus] zone=%s key=%s%s -> no macro (passes on)\n", zoneName(z), spec.c_str(), up ? "+UP" : "");
+        if (ev != Ev::Repeat)
+            std::fprintf(stderr, "[focus] zone=%s key=%s%s -> no macro (passes on)\n", zoneName(z), spec.c_str(),
+                         up ? "+UP" : "");
         return false;
     }
     inDispatch_ = true;
@@ -256,11 +310,12 @@ bool FocusFilter::route(Zone z, int key, Qt::KeyboardModifiers mods, Ev ev, cons
         if (!me) continue;
         fired_++;
         std::string name = me == anyMe ? skin::anyKeyName(mk.key) : "";
-        std::fprintf(stderr, "[focus] zone=%s key=%s%s -> MACRO \"%s\"\n", zoneName(z), spec.c_str(), up ? "+UP" : "", me->command.c_str());
+        std::fprintf(stderr, "[focus] zone=%s key=%s%s -> MACRO \"%s\"\n", zoneName(z), spec.c_str(), up ? "+UP" : "",
+                     me->command.c_str());
         emit macroFired(QString::fromStdString(name), QString::fromStdString(me->command), up);
     }
     inDispatch_ = false;
-    return ownMe || z != Zone::Input;   // Any leaves a command-bar key to the text field
+    return ownMe || z != Zone::Input;  // Any leaves a command-bar key to the text field
 }
 
 }  // namespace fugue::shell

@@ -10,10 +10,11 @@
 namespace fugue::account {
 
 struct AccountLogin {
-    fugue::Bytes record;       // the 0x1a body (a bearer token: never log or print)
-    fugue::Bytes identity;     // len(account)+13 (secret)
-    uint32_t installId = 0, innerKey = 0;   // per-account hub constants from the key block (0 when from the cache w/o them)
-    std::string source;        // "identity cache" | "key.txt" : a label, safe to print
+    fugue::Bytes record;    // the 0x1a body (a bearer token: never log or print)
+    fugue::Bytes identity;  // len(account)+13 (secret)
+    uint32_t installId = 0,
+             innerKey = 0;  // per-account hub constants from the key block (0 when from the cache w/o them)
+    std::string source;     // "identity cache" | "key.txt" : a label, safe to print
 };
 
 // password may be empty when the identity cache holds the account. keytxtPath may be empty (default discovery).

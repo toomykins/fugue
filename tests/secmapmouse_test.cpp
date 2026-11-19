@@ -34,7 +34,13 @@ std::shared_ptr<Sprite> solid() {
 }
 HitAtom atom(const char* name, uint8_t kind, uint32_t ref, int x, int y, bool hover) {
     HitAtom a;
-    a.name = name; a.kind = kind; a.ref = ref; a.worldX = x; a.worldY = y; a.hover = hover; a.wheel = hover;
+    a.name = name;
+    a.kind = kind;
+    a.ref = ref;
+    a.worldX = x;
+    a.worldY = y;
+    a.hover = hover;
+    a.wheel = hover;
     return a;
 }
 void put(HitScene& s, HitAtom a, int col, int rowFromBottom) {
@@ -43,7 +49,9 @@ void put(HitScene& s, HitAtom a, int col, int rowFromBottom) {
 }
 HitScene mainMap() {
     HitScene s;
-    s.cols = s.rows = 13; s.originX = 14; s.originY = 14;
+    s.cols = s.rows = 13;
+    s.originX = 14;
+    s.originY = 14;
     for (int r = 1; r <= 13; r++)
         for (int c = 1; c <= 13; c++) put(s, atom("cell", kAtomTurf, 0, 13 + c, 13 + r, false), c, r);
     put(s, atom("hov", kAtomObj, 0, 22, 20, true), 9, 7);
@@ -130,7 +138,8 @@ private slots:
         one(c.press(at(m, 9, 7, 16, 16, 1000), e), A(8));
         auto r = c.release(at(m, 9, 7, 16, 16, 1050), e);
         QCOMPARE(int(r.size()), 2);
-        QCOMPARE(r[0], A(9)); QCOMPARE(r[1], A(10));
+        QCOMPARE(r[0], A(9));
+        QCOMPARE(r[1], A(10));
         one(t.at(at(m, 9, 7, 18, 14), e), A(11));
         one(t.at(at(m, 1, 12, 32, 16), e), A(12));
         t.forget();
@@ -145,7 +154,8 @@ private slots:
         one(c.move(at(m, 1, 12, 32, 16, 5200, 100), e), A(19));
         r = c.release(at(m, 1, 12, 32, 16, 5300, 100), e);
         QCOMPARE(int(r.size()), 2);
-        QCOMPARE(r[0], A(20)); QCOMPARE(r[1], A(21));
+        QCOMPARE(r[0], A(20));
+        QCOMPARE(r[1], A(21));
         one(t.at(at(m, 4, 12, 6, 16), e), A(22));
     }
     // On main.map2: MouseDown names the short id, MouseUp and Click the full id; the wheel the short id (C1).
@@ -156,7 +166,8 @@ private slots:
         one(c.press(at(m2, 1, 1, 17, 16, 1000), e), A(25));
         auto r = c.release(at(m2, 1, 1, 17, 16, 1050), e);
         QCOMPARE(int(r.size()), 2);
-        QCOMPARE(r[0], A(26)); QCOMPARE(r[1], A(27));
+        QCOMPARE(r[0], A(26));
+        QCOMPARE(r[1], A(27));
         PointerEvent w = at(m2, 1, 1, 17, 16);
         w.button = 0;
         one(wheelFrames(w, e, 0, 120), A(28));
@@ -174,7 +185,8 @@ private slots:
         one(c.move(at(m2, 1, 1, 17, 16, 1200, 100), e2), A(33));
         auto r = c.release(at(m2, 1, 1, 17, 16, 1300, 100), e2);
         QCOMPARE(int(r.size()), 2);
-        QCOMPARE(r[0], A(34)); QCOMPARE(r[1], A(35));
+        QCOMPARE(r[0], A(34));
+        QCOMPARE(r[1], A(35));
         one(t.at(at(m2, 1, 1, 17, 16), e2), A(36));
         one(c.press(at(m2, 1, 1, 17, 16, 3000, 100), e2), A(37));
         t.forget();
@@ -182,7 +194,8 @@ private slots:
         one(c.move(at(m, 4, 10, 6, 11, 3200, 0), em), A(39));
         r = c.release(at(m, 4, 10, 6, 11, 3300, 0), em);
         QCOMPARE(int(r.size()), 2);
-        QCOMPARE(r[0], A(40)); QCOMPARE(r[1], A(41));
+        QCOMPARE(r[0], A(40));
+        QCOMPARE(r[1], A(41));
         one(t.at(at(m, 4, 10, 8, 9), em), A(42));
     }
     // vg's camera console in shape: a runtime map inside a popup, its turfs and objs shown through a screen object's
@@ -190,7 +203,7 @@ private slots:
     // url-encoded (K1, K2).
     void cameraConsole() {
         HitScene m = mainMap(), cam = camera();
-        for (HitAtom& a : m.atoms) a.hover = a.wheel = true;   // ATOM_ALL: every atom declares the Mouse procs
+        for (HitAtom& a : m.atoms) a.hover = a.wheel = true;  // ATOM_ALL: every atom declares the Mouse procs
         ChainEnv em = env(m, "main.map"), ec = env(cam, "campop.cam_[0x3000000]_map");
         HoverTracker t;
         MouseChain c;
@@ -203,7 +216,8 @@ private slots:
         one(c.press(at(cam, 3, 3, 16, 17, 1000), ec), B(6));
         auto r = c.release(at(cam, 3, 3, 16, 17, 1050), ec);
         QCOMPARE(int(r.size()), 2);
-        QCOMPARE(r[0], B(7)); QCOMPARE(r[1], B(8));
+        QCOMPARE(r[0], B(7));
+        QCOMPARE(r[1], B(8));
         PointerEvent w = at(cam, 3, 3, 16, 17);
         w.button = 0;
         one(wheelFrames(w, ec, 0, -120), B(9));
@@ -213,7 +227,8 @@ private slots:
         one(c.move(at(m, 1, 13, 32, 19, 3200, 0), em), B(14));
         r = c.release(at(m, 1, 13, 32, 19, 3300, 0), em);
         QCOMPARE(int(r.size()), 2);
-        QCOMPARE(r[0], B(15)); QCOMPARE(r[1], B(16));
+        QCOMPARE(r[0], B(15));
+        QCOMPARE(r[1], B(16));
         one(t.at(at(m, 2, 13, 2, 17), em), B(17));
     }
     // Over a secondary map's empty area: a null report naming the map, sent only to end a hover.
@@ -224,7 +239,8 @@ private slots:
         QCOMPARE(int(t.at(at(m2, 1, 1, 17, 16), e).size()), 1);
         auto f = t.at(at(m2, 2, 3, 31, 4), e);
         QCOMPARE(int(f.size()), 1);
-        QCOMPARE(f[0], enc::encodeHover(enc::nullRef(), enc::nullRef(), "main.map2", "screen-loc=map2:2:31,3:4", "map2"));
+        QCOMPARE(f[0],
+                 enc::encodeHover(enc::nullRef(), enc::nullRef(), "main.map2", "screen-loc=map2:2:31,3:4", "map2"));
         QVERIFY(t.at(at(m2, 2, 3, 32, 3), e).empty());
     }
     void mapIdParam() {

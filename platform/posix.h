@@ -13,8 +13,7 @@ inline int socket(int domain, int type, int protocol, bool nonblocking = false) 
 #else
     int fd = ::socket(domain, type, protocol);
     if (fd < 0) return fd;
-    if (::fcntl(fd, F_SETFD, FD_CLOEXEC) < 0 ||
-        (nonblocking && ::fcntl(fd, F_SETFL, O_NONBLOCK) < 0)) {
+    if (::fcntl(fd, F_SETFD, FD_CLOEXEC) < 0 || (nonblocking && ::fcntl(fd, F_SETFL, O_NONBLOCK) < 0)) {
         int e = errno;
         ::close(fd);
         errno = e;

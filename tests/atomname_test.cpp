@@ -19,7 +19,7 @@ Bytes unhex(const std::string& h) {
     for (size_t i = 0; i + 1 < h.size(); i += 2) b.push_back(uint8_t(v(h[i]) << 4 | v(h[i + 1])));
     return b;
 }
-}
+}  // namespace
 
 class AtomName : public QObject {
     Q_OBJECT
@@ -57,8 +57,10 @@ private slots:
 
     // The wire must carry the markers, or the checks below prove nothing.
     void wireCarriesTheMarkers() {
-        QVERIFY(frames_.find("ff16" "5363727562626572732070697065") != std::string::npos);
-        QVERIFY(frames_.find("ff15" "7370616365") != std::string::npos);
+        QVERIFY(frames_.find("ff16"
+                             "5363727562626572732070697065") != std::string::npos);
+        QVERIFY(frames_.find("ff15"
+                             "7370616365") != std::string::npos);
     }
 
     // The right-click verb menu and the status bar read these names. Stock DreamSeeker 516 lists the iconless player mob too

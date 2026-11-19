@@ -13,20 +13,29 @@ int g_mut = 0;
 // The matrix's constant row: 255*m[16+c], unit-scaled.
 struct MatrixOp {
     const ColorMatrix& m;
-    double k0, k1, k2, k3;   // the offset added to each output channel
-    Rgba8 z;                    // the result for a fully blank input pixel: the offset alone, clamped
+    double k0, k1, k2, k3;  // the offset added to each output channel
+    Rgba8 z;                // the result for a fully blank input pixel: the offset alone, clamped
     explicit MatrixOp(const ColorMatrix& mm) : m(mm) {
-        if (g_mut == 10) { k0 = m[16]; k1 = m[17]; k2 = m[18]; k3 = m[19]; }
-        else { k0 = 255 * m[16]; k1 = 255 * m[17]; k2 = 255 * m[18]; k3 = 255 * m[19]; }
+        if (g_mut == 10) {
+            k0 = m[16];
+            k1 = m[17];
+            k2 = m[18];
+            k3 = m[19];
+        } else {
+            k0 = 255 * m[16];
+            k1 = 255 * m[17];
+            k2 = 255 * m[18];
+            k3 = 255 * m[19];
+        }
         z = Rgba8{clamp8(k0), clamp8(k1), clamp8(k2), clamp8(k3)};
     }
     Rgba8 operator()(Rgba8 p) const {
         if ((p.r | p.g | p.b | p.a) == 0) return z;
         double r = double(p.r), g = double(p.g), bl = double(p.b), a = double(p.a);
         return Rgba8{clamp8(r * m[0] + g * m[4] + bl * m[8] + a * m[12] + k0),
-                  clamp8(r * m[1] + g * m[5] + bl * m[9] + a * m[13] + k1),
-                  clamp8(r * m[2] + g * m[6] + bl * m[10] + a * m[14] + k2),
-                  clamp8(r * m[3] + g * m[7] + bl * m[11] + a * m[15] + k3)};
+                     clamp8(r * m[1] + g * m[5] + bl * m[9] + a * m[13] + k1),
+                     clamp8(r * m[2] + g * m[6] + bl * m[10] + a * m[14] + k2),
+                     clamp8(r * m[3] + g * m[7] + bl * m[11] + a * m[15] + k3)};
     }
 };
 
@@ -66,7 +75,8 @@ Rgba8 channelwiseMode(Rgba8 s, Rgba8 d, int mode) {
     if (s.a == 255) {
         if (mode == kBlendMultiply) {
             if (d.a == 0) return Rgba8{0, 0, 0, 0};
-            return Rgba8{clamp8(double(s.r) * double(d.r) / 255), clamp8(double(s.g) * double(d.g) / 255), clamp8(double(s.b) * double(d.b) / 255), d.a};
+            return Rgba8{clamp8(double(s.r) * double(d.r) / 255), clamp8(double(s.g) * double(d.g) / 255),
+                         clamp8(double(s.b) * double(d.b) / 255), d.a};
         }
         if (mode == kBlendSubtract && d.a == 255) {
             auto sub = [](uint8_t sc, uint8_t dc) -> uint8_t { return dc <= sc ? 0 : uint8_t(dc - sc); };
@@ -111,7 +121,7 @@ int pixopsMutation() { return g_mut; }
 uint8_t clamp8(double v) {
     if (v <= 0) return 0;
     if (v >= 255) return 255;
-    if (g_mut == 1) return uint8_t(v);   // test-only: truncate
+    if (g_mut == 1) return uint8_t(v);  // test-only: truncate
     return uint8_t(v + 0.5);
 }
 
@@ -127,8 +137,8 @@ Rgba8 overPx(Rgba8 s, Rgba8 d) {
     return Rgba8{ch(s.r, d.r), ch(s.g, d.g), ch(s.b, d.b), clamp8(oa * 255)};
 }
 
-void blendLayer(uint8_t* dst, int dw, int dh, const uint8_t* spx, int sw, int sh, int offX, int offY, const LayerFx& fx, int mode, int dstY0,
-                int dstY1, bool planeSurface) {
+void blendLayer(uint8_t* dst, int dw, int dh, const uint8_t* spx, int sw, int sh, int offX, int offY, const LayerFx& fx,
+                int mode, int dstY0, int dstY1, bool planeSurface) {
     if (dstY1 < 0) dstY1 = dh;
     int x0 = 0, y0 = 0, x1 = sw, y1 = sh;
     if (offX < 0) x0 = -offX;
@@ -143,7 +153,11 @@ void blendLayer(uint8_t* dst, int dw, int dh, const uint8_t* spx, int sw, int sh
     int alpha = std::clamp(fx.alpha, 0, 255);
     bool tintOrAlpha = fx.hasTint || alpha != 255;
     double mr = 1, mg = 1, mb = 1;
-    if (fx.hasTint) { mr = double(fx.tr) / 255; mg = double(fx.tg) / 255; mb = double(fx.tb) / 255; }
+    if (fx.hasTint) {
+        mr = double(fx.tr) / 255;
+        mg = double(fx.tg) / 255;
+        mb = double(fx.tb) / 255;
+    }
     double ma = double(alpha) / 255;
     std::unique_ptr<MatrixOp> mat;
     if (fx.cm) mat = std::make_unique<MatrixOp>(*fx.cm);
@@ -167,10 +181,22 @@ void blendLayer(uint8_t* dst, int dw, int dh, const uint8_t* spx, int sw, int sh
                 if (fast && d[3] == 0) { d[0] = d[1] = d[2] = 0; }
                 continue;
             }
-            if (p.a == 255 && fast) { d[0] = p.r; d[1] = p.g; d[2] = p.b; d[3] = 255; continue; }
+            if (p.a == 255 && fast) {
+                d[0] = p.r;
+                d[1] = p.g;
+                d[2] = p.b;
+                d[3] = 255;
+                continue;
+            }
             Rgba8 dp{d[0], d[1], d[2], d[3]};
-            Rgba8 o = channelwise ? ((planeSurface && mode == kBlendMultiply && p.a != 255) ? blendMulPlane(p, dp) : channelwiseMode(p, dp, mode)) : (mode == kBlendInset ? insetOverlay(p, dp) : overPx(p, dp));
-            d[0] = o.r; d[1] = o.g; d[2] = o.b; d[3] = o.a;
+            Rgba8 o = channelwise
+                          ? ((planeSurface && mode == kBlendMultiply && p.a != 255) ? blendMulPlane(p, dp)
+                                                                                    : channelwiseMode(p, dp, mode))
+                          : (mode == kBlendInset ? insetOverlay(p, dp) : overPx(p, dp));
+            d[0] = o.r;
+            d[1] = o.g;
+            d[2] = o.b;
+            d[3] = o.a;
         }
     }
 }
@@ -179,7 +205,10 @@ void applyColorMatrixInPlace(uint8_t* px, size_t npix, const ColorMatrix& m) {
     MatrixOp op(m);
     for (size_t i = 0; i < npix; i++, px += 4) {
         Rgba8 o = op(Rgba8{px[0], px[1], px[2], px[3]});
-        px[0] = o.r; px[1] = o.g; px[2] = o.b; px[3] = o.a;
+        px[0] = o.r;
+        px[1] = o.g;
+        px[2] = o.b;
+        px[3] = o.a;
     }
 }
 

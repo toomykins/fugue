@@ -23,9 +23,9 @@ std::string slurp(const std::string& p) {
 }
 constexpr int64_t kT0 = 1'000'000'000'000'000'000;
 constexpr uint32_t kFloor = 0x606060, kDrawn = 0x00ff00, kMarker = 0xff00ff;
-constexpr uint32_t kResIDs[] = {0x31476ae9, 0xf2a2bdea, 0xb0ae6a88};   // canvas.dmi, thing.dmi, the drawn icon
-constexpr size_t kImageLine = 34;   // frames.txt line of the 0x0033 that adds the image to client.images
-}
+constexpr uint32_t kResIDs[] = {0x31476ae9, 0xf2a2bdea, 0xb0ae6a88};  // canvas.dmi, thing.dmi, the drawn icon
+constexpr size_t kImageLine = 34;  // frames.txt line of the 0x0033 that adds the image to client.images
+}  // namespace
 
 class Holomap : public QObject {
     Q_OBJECT
@@ -66,14 +66,15 @@ private slots:
         std::ifstream f(dir_ + "/frames.txt");
         QVERIFY(f);
         std::string line;
-        std::getline(f, line);   // header
+        std::getline(f, line);  // header
         while (std::getline(f, line)) {
             QVERIFY(line.rfind("0x", 0) == 0);
             size_t sp = line.find(' ', line.find("len="));
-            frames_.push_back({uint16_t(std::stoul(line.substr(2, 4), nullptr, 16)), sp == std::string::npos ? Bytes{} : unhex(line.substr(sp + 1))});
+            frames_.push_back({uint16_t(std::stoul(line.substr(2, 4), nullptr, 16)),
+                               sp == std::string::npos ? Bytes{} : unhex(line.substr(sp + 1))});
         }
         QCOMPARE(int(frames_.size()), 35);
-        QCOMPARE(frames_[kImageLine - 2].first, uint16_t(0x0033));
+        QCOMPARE(frames_[kImageLine - 2].first, uint16_t(S2C::ImageCreate));
         for (uint32_t id : kResIDs) {
             char n[16];
             std::snprintf(n, sizeof n, "%08x", id);

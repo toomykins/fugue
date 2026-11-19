@@ -11,7 +11,9 @@
 namespace fugue::audio {
 namespace {
 uint16_t rd16(const uint8_t* p) { return uint16_t(p[0] | p[1] << 8); }
-uint32_t rd32(const uint8_t* p) { return uint32_t(p[0]) | uint32_t(p[1]) << 8 | uint32_t(p[2]) << 16 | uint32_t(p[3]) << 24; }
+uint32_t rd32(const uint8_t* p) {
+    return uint32_t(p[0]) | uint32_t(p[1]) << 8 | uint32_t(p[2]) << 16 | uint32_t(p[3]) << 24;
+}
 bool at(ByteSpan b, size_t off, const char* tag) {
     size_t n = std::strlen(tag);
     return b.size() >= off + n && std::memcmp(b.data() + off, tag, n) == 0;
@@ -37,11 +39,13 @@ std::string sniff(ByteSpan b) {
     if (at(b, 0, "IMPM")) return "it";
     if (b.size() >= 0x43c) {
         static const char* tags[] = {"M.K.", "M!K!", "M&K!", "N.T.", "FLT4", "FLT8", "CD81", "OKTA", "OCTA"};
-        for (const char* t : tags) if (at(b, 0x438, t)) return "mod";
+        for (const char* t : tags)
+            if (at(b, 0x438, t)) return "mod";
         const uint8_t* t = b.data() + 0x438;
         auto dig = [](uint8_t c) { return c >= '0' && c <= '9'; };
-        if (dig(t[0]) && t[0] != '0' && std::memcmp(t + 1, "CHN", 3) == 0) return "mod";                    // 1CHN..9CHN
-        if (dig(t[0]) && dig(t[1]) && (std::memcmp(t + 2, "CH", 2) == 0 || std::memcmp(t + 2, "CN", 2) == 0)) return "mod";   // 10CH..32CH
+        if (dig(t[0]) && t[0] != '0' && std::memcmp(t + 1, "CHN", 3) == 0) return "mod";  // 1CHN..9CHN
+        if (dig(t[0]) && dig(t[1]) && (std::memcmp(t + 2, "CH", 2) == 0 || std::memcmp(t + 2, "CN", 2) == 0))
+            return "mod";  // 10CH..32CH
     }
     return "";
 }
@@ -60,7 +64,10 @@ std::shared_ptr<const Clip> decode(ByteSpan b, std::string* err, bool* unsupport
 std::shared_ptr<const Clip> decodeOgg(ByteSpan b, std::string* err) {
     int e = 0;
     stb_vorbis* v = stb_vorbis_open_memory(b.data(), int(b.size()), &e, nullptr);
-    if (!v) { fail(err, nullptr, "ogg: stb_vorbis error " + std::to_string(e), false); return nullptr; }
+    if (!v) {
+        fail(err, nullptr, "ogg: stb_vorbis error " + std::to_string(e), false);
+        return nullptr;
+    }
     stb_vorbis_info info = stb_vorbis_get_info(v);
     auto c = std::make_shared<Clip>();
     c->rate = int(info.sample_rate);
@@ -85,7 +92,10 @@ std::shared_ptr<const Clip> decodeOgg(ByteSpan b, std::string* err) {
 // float32, takes WAVE_FORMAT_EXTENSIBLE's real tag from the SubFormat GUID, and accepts a truncated final chunk as far
 // as it goes. Anything else is refused rather than read as PCM.
 std::shared_ptr<const Clip> decodeWav(ByteSpan b, std::string* err, bool* unsupported) {
-    if (!at(b, 0, "RIFF") || !at(b, 8, "WAVE")) { fail(err, unsupported, "not a RIFF/WAVE file", true); return nullptr; }
+    if (!at(b, 0, "RIFF") || !at(b, 8, "WAVE")) {
+        fail(err, unsupported, "not a RIFF/WAVE file", true);
+        return nullptr;
+    }
     uint16_t format = 0;
     int channels = 0, rate = 0, bits = 0;
     bool haveFmt = false;
@@ -96,7 +106,10 @@ std::shared_ptr<const Clip> decodeWav(ByteSpan b, std::string* err, bool* unsupp
         size_t sz = rd32(h + 4), body = off + 8;
         if (body + sz > b.size()) sz = b.size() - body;
         if (std::memcmp(h, "fmt ", 4) == 0) {
-            if (sz < 16) { fail(err, unsupported, "wav: short fmt chunk", false); return nullptr; }
+            if (sz < 16) {
+                fail(err, unsupported, "wav: short fmt chunk", false);
+                return nullptr;
+            }
             const uint8_t* f = b.data() + body;
             format = rd16(f);
             channels = rd16(f + 2);
@@ -110,7 +123,10 @@ std::shared_ptr<const Clip> decodeWav(ByteSpan b, std::string* err, bool* unsupp
         }
         off = body + sz + (sz & 1);
     }
-    if (!haveFmt || !haveData || channels <= 0 || rate <= 0) { fail(err, unsupported, "wav: missing or nonsense fmt/data", false); return nullptr; }
+    if (!haveFmt || !haveData || channels <= 0 || rate <= 0) {
+        fail(err, unsupported, "wav: missing or nonsense fmt/data", false);
+        return nullptr;
+    }
     auto c = std::make_shared<Clip>();
     c->rate = rate;
     c->channels = channels;
@@ -130,9 +146,15 @@ std::shared_ptr<const Clip> decodeWav(ByteSpan b, std::string* err, bool* unsupp
     } else if (format == 1 && bits == 32) {
         for (size_t i = 0; i + 4 <= n; i += 4) c->samples.push_back(float(double(int32_t(rd32(d + i))) / 2147483648.0));
     } else if (format == 3 && bits == 32) {
-        for (size_t i = 0; i + 4 <= n; i += 4) { uint32_t u = rd32(d + i); float f; std::memcpy(&f, &u, 4); c->samples.push_back(f); }
+        for (size_t i = 0; i + 4 <= n; i += 4) {
+            uint32_t u = rd32(d + i);
+            float f;
+            std::memcpy(&f, &u, 4);
+            c->samples.push_back(f);
+        }
     } else {
-        fail(err, unsupported, "wav: format tag " + std::to_string(format) + " at " + std::to_string(bits) + " bits", true);
+        fail(err, unsupported, "wav: format tag " + std::to_string(format) + " at " + std::to_string(bits) + " bits",
+             true);
         return nullptr;
     }
     c->samples.resize(c->samples.size() - c->samples.size() % size_t(channels));
@@ -148,12 +170,28 @@ int16_t toS16(float s) {
 
 Bytes encodeWav16(int rate, int channels, const std::vector<float>& samples) {
     Bytes o;
-    auto p32 = [&](uint32_t v) { for (int i = 0; i < 4; i++) o.push_back(uint8_t(v >> (8 * i))); };
-    auto p16 = [&](uint16_t v) { o.push_back(uint8_t(v)); o.push_back(uint8_t(v >> 8)); };
+    auto p32 = [&](uint32_t v) {
+        for (int i = 0; i < 4; i++) o.push_back(uint8_t(v >> (8 * i)));
+    };
+    auto p16 = [&](uint16_t v) {
+        o.push_back(uint8_t(v));
+        o.push_back(uint8_t(v >> 8));
+    };
     auto tag = [&](const char* t) { o.insert(o.end(), t, t + 4); };
     uint32_t dataLen = uint32_t(samples.size() * 2);
-    tag("RIFF"); p32(36 + dataLen); tag("WAVE"); tag("fmt "); p32(16); p16(1); p16(uint16_t(channels)); p32(uint32_t(rate));
-    p32(uint32_t(rate * channels * 2)); p16(uint16_t(channels * 2)); p16(16); tag("data"); p32(dataLen);
+    tag("RIFF");
+    p32(36 + dataLen);
+    tag("WAVE");
+    tag("fmt ");
+    p32(16);
+    p16(1);
+    p16(uint16_t(channels));
+    p32(uint32_t(rate));
+    p32(uint32_t(rate * channels * 2));
+    p16(uint16_t(channels * 2));
+    p16(16);
+    tag("data");
+    p32(dataLen);
     o.reserve(o.size() + dataLen);
     for (float s : samples) p16(uint16_t(toS16(s)));
     return o;

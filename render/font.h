@@ -18,8 +18,8 @@ DecodedRune decodeRune(std::string_view s, size_t i);
 
 struct GoFace {
     int ascent = 0, descent = 0, height = 0;
-    int space = 0;        // advance of U+0020: what an uncovered rune advances by
-    int row = 0;          // internal table row
+    int space = 0;  // advance of U+0020: what an uncovered rune advances by
+    int row = 0;    // internal table row
     int advance(char32_t r) const;
     // Sum of advances over s, decoded rune by rune.
     int width(std::string_view s) const;

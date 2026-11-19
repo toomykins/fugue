@@ -46,9 +46,15 @@ public:
 
     // Index lookup only: no read, no verification (optimistic).
     bool has(uint32_t id) const { return index_.count(id) != 0; }
-    bool hasName(uint32_t id) const { auto it = index_.find(id); return it != index_.end() && !it->second.name.empty(); }
+    bool hasName(uint32_t id) const {
+        auto it = index_.find(id);
+        return it != index_.end() && !it->second.name.empty();
+    }
     // The recorded name, or "" if unknown.
-    std::string nameOf(uint32_t id) const { auto it = index_.find(id); return it == index_.end() ? std::string() : it->second.name; }
+    std::string nameOf(uint32_t id) const {
+        auto it = index_.find(id);
+        return it == index_.end() ? std::string() : it->second.name;
+    }
     // Reads + RE-HASHES. A failing/vanished file is dropped from the index and DELETED; returns false. name may be "".
     bool get(uint32_t id, Bytes& data, std::string* name = nullptr);
     // Stores iff resId(data) == id; a mismatch counts as rejected. Empty data and files above the cap are not stored.
@@ -61,7 +67,11 @@ public:
     static void clear(const std::string& dir, uint64_t* files = nullptr, uint64_t* bytes = nullptr);
 
 private:
-    struct Entry { int64_t size = 0; std::string name; time_t used = 0; };
+    struct Entry {
+        int64_t size = 0;
+        std::string name;
+        time_t used = 0;
+    };
     void scan();
     void loadNames();
     void appendName(uint32_t id, const std::string& name);

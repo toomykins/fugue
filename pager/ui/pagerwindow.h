@@ -50,16 +50,22 @@ public:
     void reload(const CheckOptions& opt = {});
 
     // ---- the account row + the Sign in window ----
-    enum Page { SignInPage = 0, ServersPage = 1 };   // SignInPage = not signed in (and not a guest): joins wait for the Sign in window
+    enum Page {
+        SignInPage = 0,
+        ServersPage = 1
+    };  // SignInPage = not signed in (and not a guest): joins wait for the Sign in window
     Page page() const;
-    void showSignIn(const QString& message = {});   // opens the Sign in window (window-modal; does not block)
+    void showSignIn(const QString& message = {});  // opens the Sign in window (window-modal; does not block)
     QDialog* signInDialog() const;
     bool signInVisible() const;
     // While a sign-in runs the window's fields are disabled; on failure the plain message shows in it; on success it closes.
     void setSigningIn(bool busy);
     void setSignInError(const QString& plain);
-    void closeSignIn();   // the caller's sign-in succeeded (after setState): the window closes, a held account is released
-    void setGuestChosen(bool guest);   // "Play as guest" chosen (this run, or remembered: launch.h guestRemembered); else a signed-out pager opens on Sign in
+    void
+    closeSignIn();  // the caller's sign-in succeeded (after setState): the window closes, a held account is released
+    void setGuestChosen(
+        bool
+            guest);  // "Play as guest" chosen (this run, or remembered: launch.h guestRemembered); else a signed-out pager opens on Sign in
     // Preferences / Sign in window "Sign in automatically when Fugue starts" (launch.h autoSignIn). The caller passes the stored
     // value in; a click emits autoSignInChanged. With it off, holdSignIn() makes a saved account wait for the player to confirm
     // it in the Sign in window (no password needed when this computer has its saved sign-in).
@@ -68,20 +74,21 @@ public:
     void holdSignIn();
 
     // ---- the game list (saved servers) ----
-    void setFilter(const QString& text);   // the Filter box: case-insensitive substring of name or address
-    int visibleGameCount() const;          // rows the filter leaves visible
+    void setFilter(const QString& text);  // the Filter box: case-insensitive substring of name or address
+    int visibleGameCount() const;         // rows the filter leaves visible
 
     // ---- Details (the technical half) ----
     enum Tab { SetupTab = 0, LogTab = 1 };
-    void showTab(Tab t);              // opens the Details tab on that page
+    void showTab(Tab t);  // opens the Details tab on that page
     void setDetailsVisible(bool on);
     bool detailsVisible() const;
 
     // ---- the gear menu / Preferences ----
     QMenu* gearMenu() const;
-    QAction* menuAction(const QString& objectName) const;   // "about", "openloc", "logout", "prefs", "resources", "ontop", "exit"
+    QAction* menuAction(
+        const QString& objectName) const;  // "about", "openloc", "logout", "prefs", "resources", "ontop", "exit"
     void showPreferences();
-    QDialog* preferencesDialog() const;   // null until first shown
+    QDialog* preferencesDialog() const;  // null until first shown
     // Preferences > "Use GPU rendering (experimental)" reads and writes the client's own renderer setting in this display.ini
     // (launch.h displaySettingsPath). Empty (the default, and a build without GPU support) hides it, as the client's Renderer
     // menu is absent there.
@@ -92,24 +99,24 @@ public:
     void requestClearCache();
 
     // Introspection hooks (tests and the shot tool).
-    QString joinBlockerText() const;   // the selected server's plain blocker, or "" when it can be joined
-    bool joinEnabled() const;          // the Join button for the selected server
+    QString joinBlockerText() const;  // the selected server's plain blocker, or "" when it can be joined
+    bool joinEnabled() const;         // the Join button for the selected server
     int bookmarkCount() const;
     void selectBookmark(int row);
-    void joinRow(int row);             // = pressing Join with that row selected (or double-clicking it)
-    void warmRow(int row);             // = pressing Download resources with that row selected (Cancel download while one runs)
-    bool warmEnabled() const;          // the Download resources / Cancel download button
-    QString gameNoteText() const;      // the game tab's note line (warm-up state / progress)
+    void joinRow(int row);     // = pressing Join with that row selected (or double-clicking it)
+    void warmRow(int row);     // = pressing Download resources with that row selected (Cancel download while one runs)
+    bool warmEnabled() const;  // the Download resources / Cancel download button
+    QString gameNoteText() const;  // the game tab's note line (warm-up state / progress)
     QString checklistText() const;
     QString statusText() const;
     QString accountText() const;
     QString signInErrorText() const;
-    QString gameTabTitle() const;      // the selected game's tab, "" when closed
+    QString gameTabTitle() const;  // the selected game's tab, "" when closed
     // Opens the Sign in window and fills it. An empty password uses this computer's saved sign-in for that account, if any.
     void submitSignIn(const QString& user, const QString& password);
     // Type into "Open..." (add server) and press Add (tests). Returns the plain error shown, "" on success.
     QString submitAddServer(const QString& text);
-    void showAddServer();              // = Open... / Open Location...
+    void showAddServer();  // = Open... / Open Location...
 
     // The log pane: the joined client's merged stdout/stderr, streamed by the caller. `running` disables Join while a client is up.
     void appendLog(const QString& text);
@@ -128,24 +135,26 @@ public:
     void requestQuit();
     void showPager();
     bool hiddenToTray() const;
-    QSystemTrayIcon* trayIcon() const;   // null until a game first runs with a tray available
-    void setTrayHook(std::function<bool()> available);   // replaces QSystemTrayIcon::isSystemTrayAvailable (tests)
-    void setNoticeHook(std::function<void(const QString& title, const QString& text)> hook);   // replaces the tray balloon (tests)
+    QSystemTrayIcon* trayIcon() const;                  // null until a game first runs with a tray available
+    void setTrayHook(std::function<bool()> available);  // replaces QSystemTrayIcon::isSystemTrayAvailable (tests)
+    void setNoticeHook(
+        std::function<void(const QString& title, const QString& text)> hook);  // replaces the tray balloon (tests)
 
 signals:
     void joinRequested(const QString& addr, bool hub, const QString& account);
-    void warmRequested(const QString& addr, bool hub, const QString& account);   // run the headless prefetch pass for it
-    void warmCancelRequested();                                                  // stop it; what arrived is kept
-    void signInRequested(const QString& user, const QString& password);   // the caller must not keep the password
-    void savedSignInChosen(const QString& account);   // Sign in with no password: this computer already holds that account's identity
-    void autoSignInChanged(bool on);                  // the caller stores it (launch.h setAutoSignIn)
+    void warmRequested(const QString& addr, bool hub, const QString& account);  // run the headless prefetch pass for it
+    void warmCancelRequested();                                                 // stop it; what arrived is kept
+    void signInRequested(const QString& user, const QString& password);         // the caller must not keep the password
+    void savedSignInChosen(
+        const QString& account);      // Sign in with no password: this computer already holds that account's identity
+    void autoSignInChanged(bool on);  // the caller stores it (launch.h setAutoSignIn)
     void guestRequested();
     void signOutRequested();
-    void serverAdded(const QString& addr);    // already parsed (parseTarget); the caller remembers + saves
+    void serverAdded(const QString& addr);  // already parsed (parseTarget); the caller remembers + saves
     void serverRemoved(const QString& addr);
-    void accountApplied(const QString& account);   // Details > Setup: set an account name without signing in
-    void clearCacheRequested();                    // confirmed by the player; the caller runs pager/cache.h clearCache
-    void quitRequested();                          // the caller quits (stopping a running game)
+    void accountApplied(const QString& account);  // Details > Setup: set an account name without signing in
+    void clearCacheRequested();                   // confirmed by the player; the caller runs pager/cache.h clearCache
+    void quitRequested();                         // the caller quits (stopping a running game)
 
 protected:
     void closeEvent(QCloseEvent* e) override;
@@ -217,13 +226,13 @@ private:
     QPlainTextEdit* log_;
     bool running_ = false, guest_ = false, busy_ = false, haveState_ = false, warming_ = false;
     QString warmNote_;
-    bool autoSignIn_ = true, held_ = false;   // held_: holdSignIn() -- a saved account waits for the Sign in window
+    bool autoSignIn_ = true, held_ = false;  // held_: holdSignIn() -- a saved account waits for the Sign in window
     QString runNote_;
     QSystemTrayIcon* tray_ = nullptr;
     QTimer* trayWatch_ = nullptr;
     std::function<bool()> trayHook_;
     std::function<void(const QString&, const QString&)> notice_;
-    bool parked_ = false, trayNoticed_ = false, quitting_ = false;   // parked_: closed while a game runs
+    bool parked_ = false, trayNoticed_ = false, quitting_ = false;  // parked_: closed while a game runs
 };
 
 }  // namespace fugue::pager

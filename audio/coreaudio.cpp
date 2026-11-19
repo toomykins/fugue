@@ -22,7 +22,10 @@ class CoreAudioSink final : public Sink {
 public:
     ~CoreAudioSink() override { close(); }
     bool open(int rate, std::string* err) {
-        if (rate <= 0) { if (err) *err = "invalid sample rate"; return false; }
+        if (rate <= 0) {
+            if (err) *err = "invalid sample rate";
+            return false;
+        }
         AudioStreamBasicDescription format{};
         format.mSampleRate = rate;
         format.mFormatID = kAudioFormatLinearPCM;
@@ -41,7 +44,10 @@ public:
         return true;
     }
     bool write(const float* data, size_t frames, std::string* err) override {
-        if (!queue_) { if (err) *err = "closed"; return false; }
+        if (!queue_) {
+            if (err) *err = "closed";
+            return false;
+        }
         while (frames) {
             AudioQueueBufferRef buffer;
             bool primed;
@@ -70,11 +76,15 @@ public:
     }
     void close() override {
         // Dispose synchronously, without the mutex: an in-flight callback may need it before disposal can finish.
-        if (queue_) { AudioQueueDispose(queue_, true); queue_ = nullptr; }
+        if (queue_) {
+            AudioQueueDispose(queue_, true);
+            queue_ = nullptr;
+        }
         free_.clear();
         started_ = false;
     }
     std::string name() const override { return "coreaudio"; }
+
 private:
     static void returned(void* self, AudioQueueRef, AudioQueueBufferRef buffer) {
         auto& sink = *static_cast<CoreAudioSink*>(self);

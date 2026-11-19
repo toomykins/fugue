@@ -12,7 +12,7 @@
 namespace fugue::net {
 namespace {
 struct Line {
-    std::string name, value;   // value is the raw "key=..;pwd=..;ctime=.." text, kept verbatim for lines we do not touch
+    std::string name, value;  // value is the raw "key=..;pwd=..;ctime=.." text, kept verbatim for lines we do not touch
 };
 
 std::vector<Line> readLines(const std::string& path) {
@@ -20,7 +20,7 @@ std::vector<Line> readLines(const std::string& path) {
     std::ifstream f(path);
     std::string s;
     while (std::getline(f, s)) {
-        if (!s.empty() && s.back() == '\r') s.pop_back();   // DreamSeeker's own file is CRLF
+        if (!s.empty() && s.back() == '\r') s.pop_back();  // DreamSeeker's own file is CRLF
         size_t sp = s.find_first_of(" \t");
         if (s.empty() || s[0] == '#' || sp == std::string::npos) continue;
         size_t v = s.find_first_not_of(" \t", sp);
@@ -81,24 +81,31 @@ void urlEncode(std::string& o, std::string_view s) {
     // Host names, IPv4 literals and port digits are unreserved under any URL encoding, so they come out the same.
     static const char* hx = "0123456789ABCDEF";
     for (unsigned char c : s) {
-        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '.' || c == '_' || c == '~')
+        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '.' ||
+            c == '_' || c == '~')
             o.push_back(char(c));
-        else { o.push_back('%'); o.push_back(hx[c >> 4]); o.push_back(hx[c & 15]); }
+        else {
+            o.push_back('%');
+            o.push_back(hx[c >> 4]);
+            o.push_back(hx[c & 15]);
+        }
     }
 }
 }  // namespace
 
-std::string cauthPath(const std::string& stateDir) { return (std::filesystem::path(stateDir) / "cauth.txt").generic_string(); }
+std::string cauthPath(const std::string& stateDir) {
+    return (std::filesystem::path(stateDir) / "cauth.txt").generic_string();
+}
 
 std::string cauthEntryName(std::string_view account, std::string_view host, std::string_view port) {
     std::string o;
-    for (unsigned char c : account) {   // lowercase, [a-z0-9] only
+    for (unsigned char c : account) {  // lowercase, [a-z0-9] only
         if (c >= 'A' && c <= 'Z') c = char(c + 32);
         if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) o.push_back(char(c));
     }
     o.push_back('@');
     urlEncode(o, host);
-    if (!port.empty()) {   // ':' + port only when the URL's port string is non-null
+    if (!port.empty()) {  // ':' + port only when the URL's port string is non-null
         o.push_back(':');
         urlEncode(o, port);
     }
@@ -111,7 +118,10 @@ std::string cauthEntryName(std::string_view account, std::string_view host, uint
 
 bool cauthLookup(const std::string& stateDir, const std::string& name, CauthEntry* out) {
     for (auto& l : readLines(cauthPath(stateDir)))
-        if (l.name == name) { if (out) *out = parse(l.value); return true; }
+        if (l.name == name) {
+            if (out) *out = parse(l.value);
+            return true;
+        }
     return false;
 }
 
@@ -119,12 +129,15 @@ CauthCache::CauthCache(std::string stateDir, std::string name, uint64_t now)
     : dir_(std::move(stateDir)), name_(std::move(name)), now_(now) {}
 
 uint32_t CauthCache::loginKey(bool engaged, std::string* err) {
-    if (!engaged) return 0;   // not engaged: key 0, the cache is neither read nor written
+    if (!engaged) return 0;  // not engaged: key 0, the cache is neither read nor written
     for (auto& l : readLines(cauthPath(dir_)))
         if (l.name == name_) {
             CauthEntry e = parse(l.value);
             pwd_ = e.pwd;
-            if (hasParam(l.value, "key")) { key_ = e.key; return key_; }   // reused whatever its ctime
+            if (hasParam(l.value, "key")) {
+                key_ = e.key;
+                return key_;
+            }  // reused whatever its ctime
             break;
         }
     mint(false, err);
@@ -132,7 +145,7 @@ uint32_t CauthCache::loginKey(bool engaged, std::string* err) {
 }
 
 void CauthCache::certRequest(uint32_t* key, std::string* certStr, std::string* err) {
-    if (!minted_) mint(true, err);   // a key read from the cache (or none, when not engaged) gets a fresh certStr
+    if (!minted_) mint(true, err);  // a key read from the cache (or none, when not engaged) gets a fresh certStr
     if (key) *key = key_;
     if (certStr) *certStr = pwd_;
 }
@@ -154,7 +167,7 @@ void CauthCache::mint(bool keepKey, std::string* err) {
     // 32-bit unsigned compare, as the stock prune: a ctime in the future wraps and is pruned too.
     std::vector<Line> kept;
     for (auto& l : readLines(path)) {
-        if (l.name == name_) continue;   // this endpoint's line is replaced
+        if (l.name == name_) continue;  // this endpoint's line is replaced
         if (uint32_t(uint32_t(now) - uint32_t(parse(l.value).ctime)) > kCauthMaxAge) continue;
         kept.push_back(l);
     }
@@ -172,10 +185,16 @@ void CauthCache::mint(bool keepKey, std::string* err) {
     const std::string tmp = path + ".tmp";
     {
         std::ofstream f(tmp, std::ios::binary | std::ios::trunc);
-        if (!f) { if (err) *err = "cannot write " + tmp; return; }
+        if (!f) {
+            if (err) *err = "cannot write " + tmp;
+            return;
+        }
         fs::permissions(tmp, fs::perms::owner_read | fs::perms::owner_write, fs::perm_options::replace, ec);
         for (auto& l : kept) f << l.name << ' ' << l.value << '\n';
-        if (!f.flush()) { if (err) *err = "cannot write " + tmp; return; }
+        if (!f.flush()) {
+            if (err) *err = "cannot write " + tmp;
+            return;
+        }
     }
     fs::rename(tmp, path, ec);
     if (ec && err) *err = "cannot replace " + path + ": " + ec.message();

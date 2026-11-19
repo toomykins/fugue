@@ -17,7 +17,10 @@
 using namespace fugue;
 
 namespace {
-struct Row { std::string label, obj, iconX, iconY, screenLoc; int x, y; };
+struct Row {
+    std::string label, obj, iconX, iconY, screenLoc;
+    int x, y;
+};
 
 std::string dir() { return std::string(FUGUE_TEST_DATA_DIR) + "/hudoverlay-world"; }
 
@@ -83,7 +86,10 @@ class HudOverlay : public QObject {
         if (!w.res.add(b, &claimed, &err)) return false;
         w.sess.noteResource(claimed, b, "");
         render::SceneStats st;
-        if (!render::assembleMapControl(w.sess, w.res, 0, w.dl, st, &err, true)) { qWarning("assemble: %s", err.c_str()); return false; }
+        if (!render::assembleMapControl(w.sess, w.res, 0, w.dl, st, &err, true)) {
+            qWarning("assemble: %s", err.c_str());
+            return false;
+        }
         return w.dl.hit != nullptr;
     }
 
@@ -100,7 +106,10 @@ class HudOverlay : public QObject {
                 const uint8_t* a = &img.px[(size_t(y) * size_t(img.w) + size_t(x)) * 4];
                 const uint8_t* b = &ds_.px[(size_t(y) * size_t(ds_.w) + size_t(x)) * 4];
                 for (int c = 0; c < 3; c++)
-                    if (std::abs(int(a[c]) - int(b[c])) > 1) { bad[{x / 32 + 1, 15 - y / 32}]++; break; }
+                    if (std::abs(int(a[c]) - int(b[c])) > 1) {
+                        bad[{x / 32 + 1, 15 - y / 32}]++;
+                        break;
+                    }
             }
         for (const auto& [cell, n] : bad) qWarning("cell %d,%d: %d pixels differ", cell.first, cell.second, n);
         QVERIFY(bad.empty());
@@ -114,13 +123,21 @@ class HudOverlay : public QObject {
         for (const Row& r : rows_) {
             int px = r.x, py = sc.pixH() - 1 - r.y;
             render::Naming n;
-            if (!render::nameMouse(sc, px, py, n)) { qWarning("%s: we name nothing; DS named %s", r.label.c_str(), r.obj.c_str()); continue; }
+            if (!render::nameMouse(sc, px, py, n)) {
+                qWarning("%s: we name nothing; DS named %s", r.label.c_str(), r.obj.c_str());
+                continue;
+            }
             proto::enc::ClickCmd c = render::clickCmdFrom(n, 1, {}, "mapwindow.map");
-            std::string obj = n.hit.kind == render::kAtomTurf ? "turf " + std::to_string(n.overX) + "," + std::to_string(n.overY) : n.hit.name;
+            std::string obj = n.hit.kind == render::kAtomTurf
+                                  ? "turf " + std::to_string(n.overX) + "," + std::to_string(n.overY)
+                                  : n.hit.name;
             std::string sl = screenLocOf(proto::enc::clickParams(c));
-            if (obj == r.obj && std::to_string(n.iconX) == r.iconX && std::to_string(n.iconY) == r.iconY && sl == r.screenLoc) agree++;
-            else qWarning("%s: DS %s %s,%s %s | ours %s %d,%d %s", r.label.c_str(), r.obj.c_str(), r.iconX.c_str(), r.iconY.c_str(),
-                          r.screenLoc.c_str(), obj.c_str(), n.iconX, n.iconY, sl.c_str());
+            if (obj == r.obj && std::to_string(n.iconX) == r.iconX && std::to_string(n.iconY) == r.iconY &&
+                sl == r.screenLoc)
+                agree++;
+            else
+                qWarning("%s: DS %s %s,%s %s | ours %s %d,%d %s", r.label.c_str(), r.obj.c_str(), r.iconX.c_str(),
+                         r.iconY.c_str(), r.screenLoc.c_str(), obj.c_str(), n.iconX, n.iconY, sl.c_str());
         }
         QCOMPARE(agree, int(rows_.size()));
     }
@@ -131,7 +148,9 @@ private slots:
         QCOMPARE(int(rows_.size()), 14);
         std::string png = slurp(dir() + "/dreamseeker-map.png");
         std::string why;
-        QVERIFY2(render::decodePng(reinterpret_cast<const uint8_t*>(png.data()), png.size(), ds_, why) == render::PngStatus::Ok, why.c_str());
+        QVERIFY2(render::decodePng(reinterpret_cast<const uint8_t*>(png.data()), png.size(), ds_, why) ==
+                     render::PngStatus::Ok,
+                 why.c_str());
         QCOMPARE(ds_.w, 480);
     }
     void drawnPlaneMaster() { drawn("frames-pm.txt"); }

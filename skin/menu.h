@@ -16,18 +16,18 @@
 namespace fugue::skin {
 
 struct MenuItem {
-    std::string name;       // the .dmf elem name (what winset addresses); may be empty
-    std::string label;      // display text, '&' removed
-    std::string shortcut;   // text after '\t'
-    int accel = -1;         // index in label of the accelerator letter
+    std::string name;      // the .dmf elem name (what winset addresses); may be empty
+    std::string label;     // display text, '&' removed
+    std::string shortcut;  // text after '\t'
+    int accel = -1;        // index in label of the accelerator letter
     std::string command;
-    std::string group;      // radio group
+    std::string group;  // radio group
     bool canCheck = false, checked = false, separator = false;
     bool disabled = false;  // the file's is-disabled (LiveSkin::snapshot() applies the live overlay)
 };
 
 struct MenuCat {
-    std::string name;       // the declaring elem's name, "" when a category exists only as a `category=` value
+    std::string name;  // the declaring elem's name, "" when a category exists only as a `category=` value
     std::string label;
     int accel = -1;
     bool disabled = false;

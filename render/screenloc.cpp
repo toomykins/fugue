@@ -31,31 +31,22 @@ struct Axis {
 
 struct Keyword {
     bool setX = false, setY = false;
-    int xCell = 0, yCell = 0;      // 1 = min edge, 2 = max edge, 0 = use fraction
+    int xCell = 0, yCell = 0;  // 1 = min edge, 2 = max edge, 0 = use fraction
     double xFrac = 0, yFrac = 0;
     bool terminal = false;
 };
 
 const std::map<std::string, Keyword>& keywords() {
     static const std::map<std::string, Keyword> k = {
-        {"NORTH", {false, true, 0, 2, 0, 0, false}},
-        {"SOUTH", {false, true, 0, 1, 0, 0, false}},
-        {"WEST", {true, false, 1, 0, 0, 0, false}},
-        {"EAST", {true, false, 2, 0, 0, 0, false}},
-        {"NORTHEAST", {true, true, 2, 2, 0, 0, true}},
-        {"SOUTHEAST", {true, true, 2, 1, 0, 0, true}},
-        {"NORTHWEST", {true, true, 1, 2, 0, 0, true}},
-        {"SOUTHWEST", {true, true, 1, 1, 0, 0, true}},
-        {"CENTER", {true, true, 0, 0, 0.5, 0.5, false}},
-        {"MIDDLE", {true, true, 0, 0, 0.5, 0.5, false}},
-        {"TOP", {false, true, 0, 0, 0, 1, false}},
-        {"BOTTOM", {false, true, 0, 0, 0, 0, false}},
-        {"LEFT", {true, false, 0, 0, 0, 0, false}},
-        {"RIGHT", {true, false, 0, 0, 1, 0, false}},
-        {"TOPRIGHT", {true, true, 0, 0, 1, 1, true}},
-        {"TOPLEFT", {true, true, 0, 0, 0, 1, true}},
-        {"BOTTOMRIGHT", {true, true, 0, 0, 1, 0, true}},
-        {"BOTTOMLEFT", {true, true, 0, 0, 0, 0, true}},
+        {"NORTH", {false, true, 0, 2, 0, 0, false}},     {"SOUTH", {false, true, 0, 1, 0, 0, false}},
+        {"WEST", {true, false, 1, 0, 0, 0, false}},      {"EAST", {true, false, 2, 0, 0, 0, false}},
+        {"NORTHEAST", {true, true, 2, 2, 0, 0, true}},   {"SOUTHEAST", {true, true, 2, 1, 0, 0, true}},
+        {"NORTHWEST", {true, true, 1, 2, 0, 0, true}},   {"SOUTHWEST", {true, true, 1, 1, 0, 0, true}},
+        {"CENTER", {true, true, 0, 0, 0.5, 0.5, false}}, {"MIDDLE", {true, true, 0, 0, 0.5, 0.5, false}},
+        {"TOP", {false, true, 0, 0, 0, 1, false}},       {"BOTTOM", {false, true, 0, 0, 0, 0, false}},
+        {"LEFT", {true, false, 0, 0, 0, 0, false}},      {"RIGHT", {true, false, 0, 0, 1, 0, false}},
+        {"TOPRIGHT", {true, true, 0, 0, 1, 1, true}},    {"TOPLEFT", {true, true, 0, 0, 0, 1, true}},
+        {"BOTTOMRIGHT", {true, true, 0, 0, 1, 0, true}}, {"BOTTOMLEFT", {true, true, 0, 0, 0, 0, true}},
     };
     return k;
 }
@@ -85,9 +76,19 @@ bool parseFloatFull(const std::string& s, double& v) {
 
 void applyKeywordAxis(Axis& a, int cellCode, double frac, int extent) {
     switch (cellCode) {
-        case 1: a.cell = 1; a.useFrac = false; break;
-        case 2: a.cell = extent; a.useFrac = false; break;
-        default: a.cell = 1; a.frac = frac; a.useFrac = true; break;
+        case 1:
+            a.cell = 1;
+            a.useFrac = false;
+            break;
+        case 2:
+            a.cell = extent;
+            a.useFrac = false;
+            break;
+        default:
+            a.cell = 1;
+            a.frac = frac;
+            a.useFrac = true;
+            break;
     }
     a.set = true;
 }
@@ -104,9 +105,22 @@ bool parseToken(const std::string& s, int own, Axis* axes[2], const int tiles[2]
     size_t i = 0, n = s.size();
     while (i < n) {
         char c = s[i];
-        if (c == ' ' || c == '\t' || c == ')' || c == '(') { i++; continue; }
-        if (c == '+') { sign = 1; cont = true; i++; continue; }
-        if (c == '-') { sign = -1; cont = true; i++; continue; }
+        if (c == ' ' || c == '\t' || c == ')' || c == '(') {
+            i++;
+            continue;
+        }
+        if (c == '+') {
+            sign = 1;
+            cont = true;
+            i++;
+            continue;
+        }
+        if (c == '-') {
+            sign = -1;
+            cont = true;
+            i++;
+            continue;
+        }
         if (c == ':') {
             size_t j = i + 1;
             if (j < n && (s[j] == '+' || s[j] == '-')) j++;
@@ -116,7 +130,7 @@ bool parseToken(const std::string& s, int own, Axis* axes[2], const int tiles[2]
             std::string num = s.substr(i + 1, k - (i + 1));
             errno = 0;
             long v = std::strtol(num.c_str(), nullptr, 10);
-            if (errno == ERANGE || v > INT_MAX || v < INT_MIN) return false;   // Range error
+            if (errno == ERANGE || v > INT_MAX || v < INT_MIN) return false;  // Range error
             cur->px += double(v);
             i = k;
             continue;
@@ -128,17 +142,27 @@ bool parseToken(const std::string& s, int own, Axis* axes[2], const int tiles[2]
             if (!parseFloatFull(s.substr(i, j - i), v)) return false;
             // A bare coordinate is x if x is unwritten, else y.
             int idx = own;
-            if (cont) idx = -1;
-            else if (numbered) idx = 1 - own;
-            else if (axes[own]->set && !axes[1 - own]->set) idx = 1 - own;
+            if (cont)
+                idx = -1;
+            else if (numbered)
+                idx = 1 - own;
+            else if (axes[own]->set && !axes[1 - own]->set)
+                idx = 1 - own;
             Axis* a = cur;
             int tile = curTile;
-            if (idx >= 0) { a = axes[idx]; tile = tiles[idx]; }
+            if (idx >= 0) {
+                a = axes[idx];
+                tile = tiles[idx];
+            }
             double whole = std::trunc(v);
             a->cell += int(sign * whole);
             a->px += sign * (v - whole) * double(tile);
             a->set = true;
-            cur = a; curTile = tile; sign = 1; cont = false; numbered = true;
+            cur = a;
+            curTile = tile;
+            sign = 1;
+            cont = false;
+            numbered = true;
             i = j;
             continue;
         }
@@ -147,12 +171,22 @@ bool parseToken(const std::string& s, int own, Axis* axes[2], const int tiles[2]
         while (j < n && std::string(" ,)+-:").find(s[j]) == std::string::npos) j++;
         auto it = keywords().find(upper(s.substr(i, j - i)));
         if (it == keywords().end()) return false;
-        const Keyword& kw = it->second;
+        Keyword kw = it->second;
+        // A two-axis keyword in the y token, after an x token that set only y (`TOP:-13,CENTER:-58`), is the x
+        // coordinate: it and its offset go to x, and y keeps the first token's value.
+        if (own == 1 && kw.setX && kw.setY && !kw.terminal && axes[1]->set && !axes[0]->set) kw.setY = false;
         if (kw.setX && (own == 0 || !axes[0]->set)) applyKeywordAxis(*axes[0], kw.xCell, kw.xFrac, cols);
         if (kw.setY && (own == 1 || !axes[1]->set)) applyKeywordAxis(*axes[1], kw.yCell, kw.yFrac, rows);
-        if ((own == 0 && kw.setX) || (own == 1 && kw.setY)) { cur = axes[own]; curTile = tiles[own]; }
-        else if (kw.setX) { cur = axes[0]; curTile = tiles[0]; }
-        else if (kw.setY) { cur = axes[1]; curTile = tiles[1]; }
+        if ((own == 0 && kw.setX) || (own == 1 && kw.setY)) {
+            cur = axes[own];
+            curTile = tiles[own];
+        } else if (kw.setX) {
+            cur = axes[0];
+            curTile = tiles[0];
+        } else if (kw.setY) {
+            cur = axes[1];
+            curTile = tiles[1];
+        }
         if (kw.terminal) {
             // A CORNER keyword takes no modifier and ends the whole spec: anything but whitespace or parens after it
             // makes the screen_loc invalid, so it draws nothing.
@@ -163,13 +197,16 @@ bool parseToken(const std::string& s, int own, Axis* axes[2], const int tiles[2]
             terminal = true;
             return true;
         }
-        sign = 1; cont = false;
+        sign = 1;
+        cont = false;
         i = j;
     }
     return true;
 }
 
-struct Corner { int x, y; };
+struct Corner {
+    int x, y;
+};
 
 bool parseCorner(const std::string& s, int cols, int rows, int tileW, int tileH, Corner& out) {
     Axis x, y;
@@ -181,7 +218,10 @@ bool parseCorner(const std::string& s, int cols, int rows, int tileW, int tileH,
         size_t a = 0;
         for (;;) {
             size_t c = s.find(',', a);
-            if (c == std::string::npos) { toks.push_back(s.substr(a)); break; }
+            if (c == std::string::npos) {
+                toks.push_back(s.substr(a));
+                break;
+            }
             toks.push_back(s.substr(a, c - a));
             a = c + 1;
         }
@@ -197,8 +237,20 @@ bool parseCorner(const std::string& s, int cols, int rows, int tileW, int tileH,
         sawTerminal = sawTerminal || terminal;
     }
     if (!x.set && !y.set) return false;
-    if (!x.set) { x = Axis{}; x.cell = 1; x.frac = 0.5; x.useFrac = true; x.set = true; }
-    if (!y.set) { y = Axis{}; y.cell = 1; y.frac = 0.5; y.useFrac = true; y.set = true; }
+    if (!x.set) {
+        x = Axis{};
+        x.cell = 1;
+        x.frac = 0.5;
+        x.useFrac = true;
+        x.set = true;
+    }
+    if (!y.set) {
+        y = Axis{};
+        y.cell = 1;
+        y.frac = 0.5;
+        y.useFrac = true;
+        y.set = true;
+    }
     out = Corner{x.pixels(cols, tileW), y.pixels(rows, tileH)};
     return true;
 }
@@ -218,9 +270,16 @@ bool splitRange(const std::string& s, std::string& lo, std::string& hi) {
     }
     for (size_t i = 0; i < f.size(); i++) {
         if (upper(f[i]) == "TO" && i > 0 && i + 1 < f.size()) {
-            lo.clear(); hi.clear();
-            for (size_t k = 0; k < i; k++) { if (k) lo += ' '; lo += f[k]; }
-            for (size_t k = i + 1; k < f.size(); k++) { if (k > i + 1) hi += ' '; hi += f[k]; }
+            lo.clear();
+            hi.clear();
+            for (size_t k = 0; k < i; k++) {
+                if (k) lo += ' ';
+                lo += f[k];
+            }
+            for (size_t k = i + 1; k < f.size(); k++) {
+                if (k > i + 1) hi += ' ';
+                hi += f[k];
+            }
             return true;
         }
     }
@@ -269,7 +328,10 @@ bool parseScreenLoc(const std::string& loc, int cols, int rows, int tileW, int t
     if (s.empty()) return false;
     out = ParsedScreenLoc{};
     std::string name, rest;
-    if (splitMapCtrl(s, name, rest)) { out.mapCtrl = name; s = rest; }
+    if (splitMapCtrl(s, name, rest)) {
+        out.mapCtrl = name;
+        s = rest;
+    }
     if (upper(s).find("SCREEN_") != std::string::npos || s.find('%') != std::string::npos) return false;
 
     std::string lo, hi;
@@ -277,13 +339,17 @@ bool parseScreenLoc(const std::string& loc, int cols, int rows, int tileW, int t
     if (!isRange) lo = s;
     Corner p;
     if (!parseCorner(lo, cols, rows, tileW, tileH, p)) return false;
-    out.x = p.x; out.y = p.y; out.spanCols = 1; out.spanRows = 1;
+    out.x = p.x;
+    out.y = p.y;
+    out.spanCols = 1;
+    out.spanRows = 1;
     if (!isRange) return true;
     Corner q;
     if (!parseCorner(hi, cols, rows, tileW, tileH, q)) return false;
     int x0 = std::min(p.x, q.x), x1 = std::max(p.x, q.x);
     int y0 = std::min(p.y, q.y), y1 = std::max(p.y, q.y);
-    out.x = x0; out.y = y0;
+    out.x = x0;
+    out.y = y0;
     out.spanCols = spanTiles(x1 - x0, tileW);
     out.spanRows = spanTiles(y1 - y0, tileH);
     return true;
@@ -310,7 +376,10 @@ CellSet visibleCells(int ex, int ey, int rng, const std::function<bool(int, int)
                         if (cheb(nx, ny) != d - 1) continue;
                         if (std::abs(nx - ex) > ax || std::abs(ny - ey) > ay) continue;
                         if (nx != x && ny != y && blocks(nx, y) && blocks(x, ny)) continue;
-                        if (vis.count({nx, ny}) && !blocks(nx, ny)) { seen = true; break; }
+                        if (vis.count({nx, ny}) && !blocks(nx, ny)) {
+                            seen = true;
+                            break;
+                        }
                     }
                 }
                 if (seen) vis.insert({x, y});

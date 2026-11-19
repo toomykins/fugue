@@ -10,8 +10,10 @@ using namespace fugue::pager;
 namespace {
 // The client's own option names: the table app/main.cpp checks its QCommandLineOptions against at startup.
 FugueOptions opts(bool keepUnknown) { return clientOptions(!keepUnknown); }
-DsArgv p(std::vector<std::string> a) { return parseDsArgv(a, opts(true)); }    // invoked as fugue-qt
-DsArgv ds(std::vector<std::string> a, std::vector<bool> taken = {}) { return parseDsArgv(a, opts(false), taken); }   // as dreamseeker
+DsArgv p(std::vector<std::string> a) { return parseDsArgv(a, opts(true)); }  // invoked as fugue-qt
+DsArgv ds(std::vector<std::string> a, std::vector<bool> taken = {}) {
+    return parseDsArgv(a, opts(false), taken);
+}  // as dreamseeker
 // Qt's argv compaction, simulated: `before` is argv[1..]; Qt removes the indices in `removed` by moving POINTERS
 // (QCoreApplicationPrivate: argv[j++] = argv[i]). Returns takenByHost over the real pointers, as app/main.cpp computes it.
 std::vector<bool> qtTakes(const std::vector<std::string>& before, const std::set<size_t>& removed) {
@@ -22,17 +24,18 @@ std::vector<bool> qtTakes(const std::vector<std::string>& before, const std::set
     }
     return takenByHost(b, a);
 }
-std::string dial(const DsArgv& d) {   // what Fugue dials for that target ("" = refused / none)
+std::string dial(const DsArgv& d) {  // what Fugue dials for that target ("" = refused / none)
     if (d.target.empty()) return {};
     auto t = parseTarget(d.target);
     return t ? *t : std::string("REFUSED");
 }
-}
+}  // namespace
 
 class PagerDsArgv : public QObject {
     Q_OBJECT
 private slots:
-    void pagerLaunchShape() {  // byond.exe pager launch shape: "<bin>\dreamseeker.exe" "<target>" -pager [+ "-trace"] [+ "-trusted"]
+    void
+    pagerLaunchShape() {  // byond.exe pager launch shape: "<bin>\dreamseeker.exe" "<target>" -pager [+ "-trace"] [+ "-trusted"]
         DsArgv d = p({"byond://127.0.0.1:6000", "-pager", "-trace", "-trusted"});
         QCOMPARE(d.target, std::string("byond://127.0.0.1:6000"));
         QVERIFY(d.pager);
@@ -42,12 +45,12 @@ private slots:
         QVERIFY(d.fugue.empty());
         QCOMPARE(dial(d), std::string("127.0.0.1:6000"));
     }
-    void flagsAreCaseInsensitive() {   // -TRUSTED, -Pager, -TrAcE and -Is-Server match case-insensitively
+    void flagsAreCaseInsensitive() {  // -TRUSTED, -Pager, -TrAcE and -Is-Server match case-insensitively
         DsArgv d = p({"-TRUSTED", "-Pager", "-TrAcE", "-Is-Server", "BYOND://h:1"});
         QCOMPARE(d.security, 0);
         QVERIFY(d.pager && d.trace && d.isServer);
-        QCOMPARE(d.target, std::string("BYOND://h:1"));   // a bare target is stored RAW
-        QCOMPARE(dial(d), std::string("h:1"));          // DreamSeeker dials an upper-case bare BYOND:// target
+        QCOMPARE(d.target, std::string("BYOND://h:1"));  // a bare target is stored RAW
+        QCOMPARE(dial(d), std::string("h:1"));           // DreamSeeker dials an upper-case bare BYOND:// target
         QVERIFY(p({"-ISSERVER"}).isServer);
     }
     void securityLastWins() {
@@ -56,57 +59,61 @@ private slots:
         QCOMPARE(p({"-ultrasafe", "-trusted"}).security, 0);
         QCOMPARE(p({"h:1"}).security, -1);
     }
-    void debugIsCaseSensitive() {   // -debug is compared byte for byte, not case-insensitively
+    void debugIsCaseSensitive() {  // -debug is compared byte for byte, not case-insensitively
         QVERIFY(p({"-debug"}).debug);
         DsArgv d = p({"-DEBUG"});
         QVERIFY(!d.debug);
         QCOMPARE(d.dropped, (std::vector<std::string>{"-DEBUG"}));
     }
-    void bareTargetAfterFlags() {   // a bare host:port, and one after an unknown flag
+    void bareTargetAfterFlags() {  // a bare host:port, and one after an unknown flag
         DsArgv d = p({"-trace", "-foo", "game.example:7777"});
         QCOMPARE(d.target, std::string("game.example:7777"));
-        QCOMPARE(d.dropped, (std::vector<std::string>{"-foo"}));   // an unknown -flag is never the target
+        QCOMPARE(d.dropped, (std::vector<std::string>{"-foo"}));  // an unknown -flag is never the target
         QCOMPARE(dial(d), std::string("game.example:7777"));
     }
-    void firstBareWins() {   // the second bare argument is dropped
+    void firstBareWins() {  // the second bare argument is dropped
         DsArgv d = p({"127.0.0.1:1", "127.0.0.1:6000"});
         QCOMPARE(d.target, std::string("127.0.0.1:1"));
         QCOMPARE(d.dropped, (std::vector<std::string>{"127.0.0.1:6000"}));
     }
-    void connectPrependsScheme() {   // +connect host:port with an argument after it
+    void connectPrependsScheme() {  // +connect host:port with an argument after it
         DsArgv d = p({"+connect", "h:6000", "-trace"});
         QCOMPARE(d.target, std::string("byond://h:6000"));
         QCOMPARE(dial(d), std::string("h:6000"));
         QCOMPARE(p({"+connect", "byond://h:6000", "-x"}).target, std::string("byond://h:6000"));
     }
-    void connectSchemeTestIsCaseSensitive() {   // the scheme test is case-sensitive: BYOND:// is prefixed again, as DreamSeeker does
+    void
+    connectSchemeTestIsCaseSensitive() {  // the scheme test is case-sensitive: BYOND:// is prefixed again, as DreamSeeker does
         DsArgv d = p({"+connect", "BYOND://h:6000", "-trace"});
         QCOMPARE(d.target, std::string("byond://BYOND://h:6000"));
         QCOMPARE(dial(d), std::string("REFUSED"));
     }
-    void connectNeedsAFollowingArgument() {   // `+connect h:p` as the last two arguments joins nothing (i+2 < argc)
+    void connectNeedsAFollowingArgument() {  // `+connect h:p` as the last two arguments joins nothing (i+2 < argc)
         DsArgv d = p({"+connect", "h:6000"});
         QVERIFY(d.target.empty());
         QCOMPARE(d.dropped, (std::vector<std::string>{"+connect", "h:6000"}));
     }
-    void connectIsCaseSensitiveAndPlusSwallows() {   // +CONNECT and +foo swallow the next argument, which is not a target
+    void
+    connectIsCaseSensitiveAndPlusSwallows() {  // +CONNECT and +foo swallow the next argument, which is not a target
         DsArgv d = p({"+CONNECT", "h:6000", "-trace"});
         QVERIFY(d.target.empty());
         QVERIFY(d.trace);
         QCOMPARE(d.dropped, (std::vector<std::string>{"+CONNECT", "h:6000"}));
         DsArgv e = p({"+foo", "h:6000"});
         QVERIFY(e.target.empty());
-        DsArgv f = p({"+foo", "h:1", "h:2"});   // the argument after the swallowed one is a bare target again
+        DsArgv f = p({"+foo", "h:1", "h:2"});  // the argument after the swallowed one is a bare target again
         QCOMPARE(f.target, std::string("h:2"));
     }
-    void connectReplacesEarlierTarget() {   // a bare target, then +connect: the +connect target wins
-        QCOMPARE(p({"127.0.0.1:1", "+connect", "127.0.0.1:6000", "-trace"}).target, std::string("byond://127.0.0.1:6000"));
+    void connectReplacesEarlierTarget() {  // a bare target, then +connect: the +connect target wins
+        QCOMPARE(p({"127.0.0.1:1", "+connect", "127.0.0.1:6000", "-trace"}).target,
+                 std::string("byond://127.0.0.1:6000"));
         QCOMPARE(p({"+connect", "a:1", "+connect", "b:2", "-x"}).target, std::string("byond://b:2"));
-        DsArgv d = p({"+connect", "a:1", "b:2"});   // a bare argument after it is dropped
+        DsArgv d = p({"+connect", "a:1", "b:2"});  // a bare argument after it is dropped
         QCOMPARE(d.target, std::string("byond://a:1"));
         QCOMPARE(d.dropped, (std::vector<std::string>{"b:2"}));
     }
-    void updaterLinesAreUnknownFlags() {   // inert in stock dreamseeker.exe (only a standalone hub-game build acts on them)
+    void
+    updaterLinesAreUnknownFlags() {  // inert in stock dreamseeker.exe (only a standalone hub-game build acts on them)
         DsArgv d = p({"-install", "h:1", "x", "y"});
         QCOMPARE(d.target, std::string("h:1"));
         QCOMPARE(d.dropped, (std::vector<std::string>{"-install", "x", "y"}));
@@ -115,10 +122,12 @@ private slots:
         QCOMPARE(e.dropped, (std::vector<std::string>{"-updated"}));
     }
     void fugueOptionsPassThrough() {
-        DsArgv d = p({"--state-dir", "/tmp/x", "byond://h:1", "-pager", "--audio=none", "--no-pacing", "--connect", "c:2"});
-        QCOMPARE(d.target, std::string("byond://h:1"));   // a value of a Fugue option is never the target
+        DsArgv d =
+            p({"--state-dir", "/tmp/x", "byond://h:1", "-pager", "--audio=none", "--no-pacing", "--connect", "c:2"});
+        QCOMPARE(d.target, std::string("byond://h:1"));  // a value of a Fugue option is never the target
         QVERIFY(d.pager);
-        QCOMPARE(d.fugue, (std::vector<std::string>{"--state-dir", "/tmp/x", "--audio=none", "--no-pacing", "--connect", "c:2"}));
+        QCOMPARE(d.fugue, (std::vector<std::string>{"--state-dir", "/tmp/x", "--audio=none", "--no-pacing", "--connect",
+                                                    "c:2"}));
         DsArgv e = p({"--audio", "none"});
         QVERIFY(e.target.empty());
     }
@@ -137,7 +146,8 @@ private slots:
         QCOMPARE(d.target, std::string("byond://h:1"));
         QCOMPARE(d.dropped, (std::vector<std::string>{"--bogus", "--frobnicate=3"}));
         QCOMPARE(d.fugue, (std::vector<std::string>{"--audio", "none"}));
-        DsArgv u = ds({"--bogus", "h:1"});   // the argument after an unknown --word is not swallowed: DS reads it as usual
+        DsArgv u =
+            ds({"--bogus", "h:1"});  // the argument after an unknown --word is not swallowed: DS reads it as usual
         QCOMPARE(u.target, std::string("h:1"));
         // Invoked as fugue-qt: an unknown --word goes to Fugue's parser, which refuses it (a typo is reported, not ignored).
         QCOMPARE(p({"--bogus", "h:1"}).fugue, (std::vector<std::string>{"--bogus"}));
@@ -152,7 +162,7 @@ private slots:
         DsArgv d = ds(before, t);
         QCOMPARE(d.target, std::string("byond://h:1"));
         QVERIFY(d.dropped.empty());
-        QVERIFY(ds({"+connect", "h:1"}).target.empty());   // without the mask the bound would fail
+        QVERIFY(ds({"+connect", "h:1"}).target.empty());  // without the mask the bound would fail
         // a Qt argument is never the target either
         std::vector<std::string> st{"-style", "fusion", "h:2"};
         DsArgv e = ds(st, qtTakes(st, {0, 1}));
@@ -173,24 +183,26 @@ private slots:
         QVERIFY(noTargetAction(before.size() + 1, d) == NoTarget::QuietExit);
     }
     void noTarget() {
-        QVERIFY(noTargetAction(1, ds({})) == NoTarget::OpenLocation);              // no argument: the Open Location box
+        QVERIFY(noTargetAction(1, ds({})) == NoTarget::OpenLocation);  // no argument: the Open Location box
         QVERIFY(noTargetAction(2, ds({"-trace"})) == NoTarget::QuietExit);
         QVERIFY(noTargetAction(2, ds({"-updated"})) == NoTarget::QuietExit);
-        QVERIFY(noTargetAction(3, ds({"+connect", "h:1"})) == NoTarget::QuietExit);   // no window at all
-        QVERIFY(noTargetAction(3, ds({"--bogus"})) == NoTarget::QuietExit);        // dropped as DS drops it
+        QVERIFY(noTargetAction(3, ds({"+connect", "h:1"})) == NoTarget::QuietExit);  // no window at all
+        QVERIFY(noTargetAction(3, ds({"--bogus"})) == NoTarget::QuietExit);          // dropped as DS drops it
         // only Qt's arguments: DreamSeeker would have had arguments, so no box either
         QVERIFY(noTargetAction(3, ds({"-platform", "offscreen"}, {true, true})) == NoTarget::QuietExit);
-        QVERIFY(noTargetAction(3, p({"--audio", "none"})) == NoTarget::Usage);     // Fugue's own options: not a DS line
+        QVERIFY(noTargetAction(3, p({"--audio", "none"})) == NoTarget::Usage);  // Fugue's own options: not a DS line
     }
     void modeSwitch() {
         // Installed as DreamSeeker: the client even in a FUGUE_RELEASE build, and no subcommand is read.
-        for (const char* argv0 : {"dreamseeker", "DreamSeeker.exe", "/usr/bin/dreamseeker", "C:\\BYOND\\bin\\DREAMSEEKER.EXE"}) {
+        for (const char* argv0 :
+             {"dreamseeker", "DreamSeeker.exe", "/usr/bin/dreamseeker", "C:\\BYOND\\bin\\DREAMSEEKER.EXE"}) {
             Mode m = chooseMode(argv0, {"byond://h:1", "-pager"}, true);
             QCOMPARE(m.mode, std::string("client"));
             QVERIFY(m.asDreamSeeker);
             QCOMPARE(m.rest, (std::vector<std::string>{"byond://h:1", "-pager"}));
-            QCOMPARE(chooseMode(argv0, {}, true).mode, std::string("client"));   // no argument -> the client's Open Location
-            Mode pg = chooseMode(argv0, {"pager"}, true);                        // `pager` is a target to DreamSeeker
+            QCOMPARE(chooseMode(argv0, {}, true).mode,
+                     std::string("client"));               // no argument -> the client's Open Location
+            Mode pg = chooseMode(argv0, {"pager"}, true);  // `pager` is a target to DreamSeeker
             QCOMPARE(pg.mode, std::string("client"));
             QCOMPARE(pg.rest, (std::vector<std::string>{"pager"}));
             QCOMPARE(chooseMode(argv0, {"version"}, false).mode, std::string("client"));
@@ -206,7 +218,7 @@ private slots:
         QCOMPARE(chooseMode("fugue-qt", {"pager", "-list"}, false).mode, std::string("pager"));
         QCOMPARE(chooseMode("fugue-qt", {"version"}, true).mode, std::string("version"));
         QCOMPARE(chooseMode("fugue-qt", {"webcheck"}, true).mode, std::string("webcheck"));
-        QCOMPARE(chooseMode("dreamseeker", {"webcheck"}, true).mode, std::string("client"));   // a target to DreamSeeker
+        QCOMPARE(chooseMode("dreamseeker", {"webcheck"}, true).mode, std::string("client"));  // a target to DreamSeeker
         // --version wins in every mode; as DreamSeeker only when it is the sole argument.
         for (bool rel : {true, false}) {
             QCOMPARE(chooseMode("fugue-qt", {"--version"}, rel).mode, std::string("version"));
@@ -218,7 +230,8 @@ private slots:
     }
     void emptyAndNothing() {
         QVERIFY(p({}).target.empty());
-        QVERIFY(p({""}).target.empty());   // DS: an empty argument leaves the target empty, so the next bare one is taken
+        QVERIFY(
+            p({""}).target.empty());  // DS: an empty argument leaves the target empty, so the next bare one is taken
         QCOMPARE(p({"", "h:1"}).target, std::string("h:1"));
     }
     void invokedAs() {

@@ -1,6 +1,7 @@
 // Page bodies and a skin for browse_test.cpp (in a header so moc never has to lex the raw strings).
 #pragma once
-inline const char* kPopupPage = R"HTML(<html><head><link rel="stylesheet" href="app.css"><script src="app.js"></script></head>
+inline const char* kPopupPage =
+    R"HTML(<html><head><link rel="stylesheet" href="app.css"><script src="app.js"></script></head>
 <body><img id="im" src="px.png"><div id="out">init</div><a id="lnk" href="?src=7;action=clicked">go</a></body></html>)HTML";
 inline const char* kAppJs = R"JS(
 window.Byond = { __callbacks__: [] };

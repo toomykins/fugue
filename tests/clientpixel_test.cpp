@@ -25,11 +25,11 @@ std::string slurp(const std::string& p) {
 constexpr int64_t kT0 = 1'000'000'000'000'000'000;
 constexpr int64_t kDs = 100'000'000;
 constexpr int kLogin = -20;
-constexpr int kMarks[] = {10, 20, 30, 50, 60, 65, 200};   // T10 .. T65, END
+constexpr int kMarks[] = {10, 20, 30, 50, 60, 65, 200};  // T10 .. T65, END
 constexpr uint32_t kRes = 0x163d55fd;
 constexpr uint32_t kFloor = 0x606060, kPlayer = 0xc82828, kHud = 0x2828dc;
 int64_t at(int ds) { return kT0 + ds * kDs; }
-}
+}  // namespace
 
 class ClientPixel : public QObject {
     Q_OBJECT
@@ -46,7 +46,7 @@ class ClientPixel : public QObject {
         if (!fresh) return it->second;
         int seg = 0;
         for (const auto& [typ, body] : frames_) {
-            if (typ == 0x0027 && ++seg > last) break;
+            if (typ == S2C::Text && ++seg > last) break;
             it->second.setIngestClockNs(at(seg == 0 ? kLogin : kMarks[seg - 1]));
             it->second.ingest(typ, body);
         }
@@ -76,7 +76,7 @@ class ClientPixel : public QObject {
         QCOMPARE(px(ds, x - 1, y), kFloor);
         QCOMPARE(px(ds, x, y - 1), kFloor);
         QCOMPARE(px(ds, x + 32, y + 31), kFloor);
-        QCOMPARE(px(ds, 0, 320), kHud);   // the screen object at 1,1 never moves
+        QCOMPARE(px(ds, 0, 320), kHud);  // the screen object at 1,1 never moves
         QCOMPARE(px(ds, 31, 351), kHud);
         QCOMPARE(px(ds, 32, 351), kFloor);
     }
@@ -87,11 +87,12 @@ private slots:
         std::ifstream f(dir + "/frames.txt");
         QVERIFY(f);
         std::string line;
-        std::getline(f, line);   // header
+        std::getline(f, line);  // header
         while (std::getline(f, line)) {
             QVERIFY(line.rfind("0x", 0) == 0);
             size_t sp = line.find(' ', line.find("len="));
-            frames_.push_back({uint16_t(std::stoul(line.substr(2, 4), nullptr, 16)), sp == std::string::npos ? Bytes{} : unhex(line.substr(sp + 1))});
+            frames_.push_back({uint16_t(std::stoul(line.substr(2, 4), nullptr, 16)),
+                               sp == std::string::npos ? Bytes{} : unhex(line.substr(sp + 1))});
         }
         QCOMPARE(int(frames_.size()), 68);
         char n[16];

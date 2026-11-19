@@ -1,7 +1,7 @@
-// maptext: the SIZE half of the maptext layout (markup parse + layout) and the 0x00fc MeasureText reply.
+// maptext: the SIZE half of the maptext layout (markup parse + layout) and the MeasureText reply.
 // Colour, alignment, outline and href do not change a measured width or height, so they are not modelled.
 //
-// The client answers 0x00fc from dsmaptext.h, which reproduces DreamSeeker's own layout.
+// The client answers MeasureText from dsmaptext.h, which reproduces DreamSeeker's own layout.
 //
 // Metric: Regular at a CSS-px to em ladder (5/6/7/8 px map to 8/9/11/13). Not DreamSeeker's own metric (see dsmaptext.h);
 // the painter (maptextpaint) uses dsmaptext's layout, not this one.
@@ -22,11 +22,13 @@
 #include <string>
 #include <string_view>
 
+#include "proto/messages.h"
+
 namespace fugue::render {
 
 struct MaptextMeasure {
-    int width = 0;    // widest line, px
-    int height = 0;   // sum of line heights (ascent + descent + 1 leading, per line)
+    int width = 0;   // widest line, px
+    int height = 0;  // sum of line heights (ascent + descent + 1 leading, per line)
 };
 
 // Measures markup under a style sheet at the given width; width 0 = no wrap limit.
@@ -39,15 +41,8 @@ struct MeasureTextAnswer {
 };
 MeasureTextAnswer measureTextAnswer(std::string_view text, std::string_view style, uint16_t width);
 
-// Decodes a server->client 0x00fc body: [text\0][style\0][width u16][id u32].
-// Quirks are kept: an unterminated second string reads as "" and the tail must be exactly 6 bytes.
-// nullopt = malformed (no reply is sent).
-struct MeasureTextRequest {
-    std::string text, style;
-    uint16_t width = 0;
-    uint32_t id = 0;
-};
-std::optional<MeasureTextRequest> decodeMeasureTextRequest(const uint8_t* body, size_t n);
+// A decoded S2C::MeasureText (proto::decodeMeasureText).
+using MeasureTextRequest = proto::MeasureText;
 
 // Encodes the 8-byte reply to req, echoing req.id.
 std::string measureTextReplyBody(const MeasureTextRequest& req);

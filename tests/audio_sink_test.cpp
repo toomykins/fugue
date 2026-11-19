@@ -55,7 +55,8 @@ private slots:
         QVERIFY(!err.empty());
     }
     void coreAudioDevice() {
-        if (!qEnvironmentVariableIsSet("FUGUE_TEST_COREAUDIO")) QSKIP("Set FUGUE_TEST_COREAUDIO=1 to test a real output device");
+        if (!qEnvironmentVariableIsSet("FUGUE_TEST_COREAUDIO"))
+            QSKIP("Set FUGUE_TEST_COREAUDIO=1 to test a real output device");
         std::string err;
         auto sink = fugue::audio::openSink("auto", 44100, &err);
         QCOMPARE(sink->name(), std::string("coreaudio"));
@@ -69,7 +70,8 @@ private slots:
 #ifndef _WIN32
         QSKIP("Windows audio backend");
 #else
-        if (qgetenv("FUGUE_TEST_AUDIO") != "1") QSKIP("Set FUGUE_TEST_AUDIO=1 to exercise a real Windows output device");
+        if (qgetenv("FUGUE_TEST_AUDIO") != "1")
+            QSKIP("Set FUGUE_TEST_AUDIO=1 to exercise a real Windows output device");
         std::string err;
         auto sink = fugue::audio::openSink("auto", 44100, &err);
         QVERIFY2(err.empty(), err.c_str());

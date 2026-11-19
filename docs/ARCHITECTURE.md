@@ -5,8 +5,8 @@
 | Directory | Contents |
 |---|---|
 | `net/` | wire protocol: framing, sequence numbers, body cipher, handshake, resource ids and cipher, the session, resource cache and download pump. No Qt GUI. |
-| `proto/` | message decoder registry; one `dec_<dir>_<type>_<name>.cpp` per message type |
-| `model/` | the world model built from decoded messages (map, atoms, appearances, HUD, stat panel, verbs, browsers, chat) |
+| `proto/` | message decoders: one struct per message in `messages.h`, read in wire order by one `dec_<dir>_<type>_<name>.cpp` per message type, which also renders it as canonical JSON for the decoder registry and the development tools |
+| `model/` | the world model built from the decoded message structs (map, atoms, appearances, HUD, stat panel, verbs, browsers, chat) |
 | `skin/` | `.dmf` skin parser, layout, `winset` / `winget` rules, macros |
 | `render/` | icon (`.dmi`) decoding and the compositor: planes and layers, overlays, colour and alpha, transforms, animation, maptext, filters |
 | `rendergpu/` | the optional QRhi executor for the same draw list, and its GPU/CPU differential tests (`-DFUGUE_BUILD_GPU=ON`; [README](../rendergpu/README.md)) |

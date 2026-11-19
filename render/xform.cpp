@@ -10,7 +10,9 @@ namespace fugue::render {
 
 namespace {
 
-struct Px { uint8_t r = 0, g = 0, b = 0, a = 0; };
+struct Px {
+    uint8_t r = 0, g = 0, b = 0, a = 0;
+};
 
 // clamp8: uint8(v+0.5) once 0 < v < 255 is established.
 uint8_t clamp8(double v) {
@@ -36,7 +38,9 @@ Px sampleBilinear(const Sprite& s, double x, double y) {
     int x0 = int(std::floor(x)), y0 = int(std::floor(y));
     double fx = x - double(x0), fy = y - double(y0);
     Px c00 = at(s, x0, y0), c10 = at(s, x0 + 1, y0), c01 = at(s, x0, y0 + 1), c11 = at(s, x0 + 1, y0 + 1);
-    struct F { double r, g, b, a; };
+    struct F {
+        double r, g, b, a;
+    };
     auto pm = [](Px c) {
         double a = double(c.a) / 255;
         return F{double(c.r) * a, double(c.g) * a, double(c.b) * a, a};
@@ -68,7 +72,9 @@ void apply(const Mat& m, double x, double y, double& ox, double& oy) {
     oy = m.d * x + m.e * y + m.f;
 }
 
-struct Decomposed { double scaleX = 0, scaleY = 0, shear = 0, angle = 0, tx = 0, ty = 0; };
+struct Decomposed {
+    double scaleX = 0, scaleY = 0, shear = 0, angle = 0, tx = 0, ty = 0;
+};
 
 bool decompose(const Mat& m, Decomposed& out) {
     double scaleX = gomath::hypot(m.a, m.d);
@@ -91,12 +97,8 @@ Mat recompose(const Decomposed& s) {
 bool invertMat(const Mat& m, Mat& out) { return invert(m, out); }
 
 Mat matMul(const Mat& m, const Mat& n) {
-    return Mat{m.a * n.a + m.b * n.d,
-               m.a * n.b + m.b * n.e,
-               m.a * n.c + m.b * n.f + m.c,
-               m.d * n.a + m.e * n.d,
-               m.d * n.b + m.e * n.e,
-               m.d * n.c + m.e * n.f + m.f};
+    return Mat{m.a * n.a + m.b * n.d, m.a * n.b + m.b * n.e, m.a * n.c + m.b * n.f + m.c,
+               m.d * n.a + m.e * n.d, m.d * n.b + m.e * n.e, m.d * n.c + m.e * n.f + m.f};
 }
 
 Mat dmMatrixToImage(const std::array<float, 6>& t) {
@@ -106,7 +108,11 @@ Mat dmMatrixToImage(const std::array<float, 6>& t) {
 SpritePtr applyTransform(const Sprite& src, const Mat& m, Sampling s) {
     int w = src.w, h = src.h;
     auto out = std::make_shared<Sprite>();
-    if (w == 0 || h == 0) { out->w = w; out->h = h; return out; }
+    if (w == 0 || h == 0) {
+        out->w = w;
+        out->h = h;
+        return out;
+    }
     double cx = double(w) / 2, cy = double(h) / 2;
     Mat linear{m.a, m.b, 0, m.d, m.e, 0};
     double corners[4][2] = {{-cx, -cy}, {cx, -cy}, {-cx, cy}, {cx, cy}};
@@ -114,24 +120,27 @@ SpritePtr applyTransform(const Sprite& src, const Mat& m, Sampling s) {
     for (auto& c : corners) {
         double x, y;
         apply(linear, c[0], c[1], x, y);
-        minX = std::fmin(minX, x); maxX = std::fmax(maxX, x);
-        minY = std::fmin(minY, y); maxY = std::fmax(maxY, y);
+        minX = std::fmin(minX, x);
+        maxX = std::fmax(maxX, x);
+        minY = std::fmin(minY, y);
+        maxY = std::fmax(maxY, y);
     }
     int newW = int(std::ceil(maxX - minX - 1e-9));
     int newH = int(std::ceil(maxY - minY - 1e-9));
     if (newW < 1) newW = 1;
     if (newH < 1) newH = 1;
-    const int maxGrowSrcDim = 256;   // the plane-surface performance guard
+    const int maxGrowSrcDim = 256;  // the plane-surface performance guard
     if (w > maxGrowSrcDim || h > maxGrowSrcDim) {
         if (newW > w) newW = w;
         if (newH > h) newH = h;
     }
-    out->w = newW; out->h = newH;
+    out->w = newW;
+    out->h = newH;
     out->px.assign(size_t(newW) * size_t(newH) * 4, 0);
     double dcx = double(newW) / 2, dcy = double(newH) / 2;
     Mat full = matMul(matMul(translate(dcx, dcy), m), translate(-cx, -cy));
     Mat inv;
-    if (!invert(full, inv)) return out;   // degenerate transform collapses to nothing
+    if (!invert(full, inv)) return out;  // degenerate transform collapses to nothing
     for (int y = 0; y < newH; y++)
         for (int x = 0; x < newW; x++) {
             double sx, sy;
@@ -140,14 +149,19 @@ SpritePtr applyTransform(const Sprite& src, const Mat& m, Sampling s) {
             sy -= 0.5;
             Px c = (s == Sampling::Bilinear) ? sampleBilinear(src, sx, sy) : sampleNearest(src, sx, sy);
             uint8_t* d = &out->px[(size_t(y) * size_t(newW) + size_t(x)) * 4];
-            d[0] = c.r; d[1] = c.g; d[2] = c.b; d[3] = c.a;
+            d[0] = c.r;
+            d[1] = c.g;
+            d[2] = c.b;
+            d[3] = c.a;
         }
     return out;
 }
 
-void warpAboutCentre(std::vector<uint8_t>& px, int w, int h, double a, double b, double d, double e, double tx, double ty) {
+void warpAboutCentre(std::vector<uint8_t>& px, int w, int h, double a, double b, double d, double e, double tx,
+                     double ty) {
     Sprite src;
-    src.w = w; src.h = h;
+    src.w = w;
+    src.h = h;
     src.px = px;
     std::fill(px.begin(), px.end(), uint8_t(0));
     double det = a * e - b * d;
@@ -166,7 +180,10 @@ void warpAboutCentre(std::vector<uint8_t>& px, int w, int h, double a, double b,
             Px c = sampleBilinear(src, u, v);
             if (c.a != 0) {
                 uint8_t* o = &px[(size_t(y) * size_t(w) + size_t(x)) * 4];
-                o[0] = c.r; o[1] = c.g; o[2] = c.b; o[3] = c.a;
+                o[0] = c.r;
+                o[1] = c.g;
+                o[2] = c.b;
+                o[3] = c.a;
             }
         }
 }
@@ -175,7 +192,7 @@ bool lerpMatrix(const Mat& from, const Mat& to, double t, Mat& out) {
     Decomposed fs, ts;
     if (!decompose(from, fs) || !decompose(to, ts)) return false;
     double delta = ts.angle - fs.angle;
-    while (delta > 180) delta -= 360;   // angles are in radians, so these never fire
+    while (delta > 180) delta -= 360;  // angles are in radians, so these never fire
     while (delta < -180) delta += 360;
     Decomposed s;
     s.scaleX = fs.scaleX + (ts.scaleX - fs.scaleX) * t;

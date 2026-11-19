@@ -38,24 +38,28 @@ bool PropStore::get(const std::string& target, const std::string& key, std::stri
     return true;
 }
 
-bool PropStore::controlProp(const std::string& window, const std::string& name, const std::string& key, std::string& out) const {
+bool PropStore::controlProp(const std::string& window, const std::string& name, const std::string& key,
+                            std::string& out) const {
     if (!window.empty() && get(window + "." + name, key, out)) return true;
     return !name.empty() && get(name, key, out);
 }
 
-bool PropStore::controlBool(const std::string& window, const std::string& name, const std::string& key, bool& out) const {
+bool PropStore::controlBool(const std::string& window, const std::string& name, const std::string& key,
+                            bool& out) const {
     std::string v;
     if (!controlProp(window, name, key, v)) return false;
     out = winsetBool(v);
     return true;
 }
 
-bool PropStore::controlPoint(const std::string& window, const std::string& name, const std::string& key, long long& a, long long& b) const {
+bool PropStore::controlPoint(const std::string& window, const std::string& name, const std::string& key, long long& a,
+                             long long& b) const {
     std::string v;
     return controlProp(window, name, key, v) && parsePair(v, ",", a, b);
 }
 
-bool PropStore::controlSize(const std::string& window, const std::string& name, const std::string& key, long long& a, long long& b) const {
+bool PropStore::controlSize(const std::string& window, const std::string& name, const std::string& key, long long& a,
+                            long long& b) const {
     std::string v;
     return controlProp(window, name, key, v) && parsePair(v, "x,", a, b);
 }

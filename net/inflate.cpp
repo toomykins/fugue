@@ -21,7 +21,10 @@ struct Inf {
     int bits(int need) {
         uint32_t v = bitbuf;
         while (bitcnt < need) {
-            if (pos >= in.size()) { err = true; return 0; }
+            if (pos >= in.size()) {
+                err = true;
+                return 0;
+            }
             v |= uint32_t(in[pos++]) << bitcnt;
             bitcnt += 8;
         }
@@ -65,10 +68,13 @@ int construct(Huff& h, const short* length, int n) {
     return left;
 }
 
-const short kLenBase[29] = {3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258};
+const short kLenBase[29] = {3,  4,  5,  6,  7,  8,  9,  10, 11,  13,  15,  17,  19,  23, 27,
+                            31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258};
 const short kLenExtra[29] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0};
-const short kDistBase[30] = {1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577};
-const short kDistExtra[30] = {0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13};
+const short kDistBase[30] = {1,   2,   3,   4,   5,   7,    9,    13,   17,   25,   33,   49,   65,    97,    129,
+                             193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577};
+const short kDistExtra[30] = {0, 0, 0, 0, 1, 1, 2, 2,  3,  3,  4,  4,  5,  5,  6,
+                              6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13};
 
 bool codes(Inf& s, const Huff& lencode, const Huff& distcode) {
     for (;;) {
@@ -145,8 +151,10 @@ bool dynamicBlock(Inf& s) {
                 if (idx == 0) return false;
                 len = lengths[idx - 1];
                 rep = 3 + s.bits(2);
-            } else if (sym == 17) rep = 3 + s.bits(3);
-            else rep = 11 + s.bits(7);
+            } else if (sym == 17)
+                rep = 3 + s.bits(3);
+            else
+                rep = 11 + s.bits(7);
             if (s.err || idx + rep > nlen + ndist) return false;
             while (rep--) lengths[idx++] = short(len);
         }
@@ -215,10 +223,19 @@ bool gunzip(ByteSpan in, Bytes& out, size_t maxOut) {
     if (flg & 2) p += 2;
     if (p >= in.size()) return false;
     size_t used = 0;
-    if (!inflateImpl(in.subspan(p), out, maxOut, &used)) { out.clear(); return false; }
+    if (!inflateImpl(in.subspan(p), out, maxOut, &used)) {
+        out.clear();
+        return false;
+    }
     p += used;
-    if (p + 8 > in.size()) { out.clear(); return false; }
-    if (le32(&in[p]) != crc32Gzip(out) || le32(&in[p + 4]) != uint32_t(out.size())) { out.clear(); return false; }
+    if (p + 8 > in.size()) {
+        out.clear();
+        return false;
+    }
+    if (le32(&in[p]) != crc32Gzip(out) || le32(&in[p + 4]) != uint32_t(out.size())) {
+        out.clear();
+        return false;
+    }
     return true;
 }
 }  // namespace fugue::net

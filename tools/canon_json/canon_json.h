@@ -57,6 +57,7 @@ public:
     Object& bytes(std::string_view name, std::span<const uint8_t> v) { return set(name, canon::bytes(v)); }
     // Sorted by name; throws std::logic_error on a duplicate name.
     Json build() const;
+
 private:
     std::vector<std::pair<std::string, Json>> m_;
 };

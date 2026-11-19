@@ -1,23 +1,36 @@
-// s2c 0x0062: input() prompt request (blocking).
+// S2C::Input: input() prompt request (blocking).
 #include "proto/registry.h"
 
 namespace fugue::proto {
-namespace {
 
 // Layout [title\0][default\0][message\0][typeMask u32][filter u8][filterKind u8][id u32]. typeMask is passed through
 //   uninterpreted.
-canon::Json decode(State&, ByteSpan body) {
+InputPrompt decodeInputPrompt(ByteSpan body) {
     Reader r(body);
-    std::string title = r.cstr(), def = r.cstr(), message = r.cstr();
-    uint32_t mask = r.u32();
-    uint8_t filter = r.u8(), kind = r.u8();
-    uint32_t id = r.u32();
+    InputPrompt m;
+    m.title = r.cstr();
+    m.defaultValue = r.cstr();
+    m.message = r.cstr();
+    m.typeMask = r.u32();
+    m.filter = r.u8();
+    m.filterKind = r.u8();
+    m.id = r.u32();
     r.expectEnd();
-    return canon::Object().str("title", title).str("default", def).str("message", message)
-        .u("typeMask", mask).u("filter", filter).u("filterKind", kind).u("id", id).build();
+    return m;
 }
 
-FUGUE_REGISTER_DECODER(Dir::S2C, 0x0062, "cpp:stock-dd-wire", decode);
+canon::Json toJson(const InputPrompt& m) {
+    return canon::Object()
+        .str("title", m.title)
+        .str("default", m.defaultValue)
+        .str("message", m.message)
+        .u("typeMask", m.typeMask)
+        .u("filter", m.filter)
+        .u("filterKind", m.filterKind)
+        .u("id", m.id)
+        .build();
+}
 
-}  // namespace
+FUGUE_REGISTER_DECODER(Dir::S2C, S2C::Input, "cpp:stock-dd-wire", jsonOf<decodeInputPrompt>);
+
 }  // namespace fugue::proto

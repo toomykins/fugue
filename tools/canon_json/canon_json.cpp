@@ -51,14 +51,14 @@ static size_t utf8Len(const unsigned char* p, size_t n) {
     if (c >= 0xC2 && c <= 0xDF) return (n >= 2 && (p[1] & 0xC0) == 0x80) ? 2 : 0;
     if (c >= 0xE0 && c <= 0xEF) {
         if (n < 3 || (p[1] & 0xC0) != 0x80 || (p[2] & 0xC0) != 0x80) return 0;
-        if (c == 0xE0 && p[1] < 0xA0) return 0;   // overlong
-        if (c == 0xED && p[1] > 0x9F) return 0;   // surrogates
+        if (c == 0xE0 && p[1] < 0xA0) return 0;  // overlong
+        if (c == 0xED && p[1] > 0x9F) return 0;  // surrogates
         return 3;
     }
     if (c >= 0xF0 && c <= 0xF4) {
         if (n < 4 || (p[1] & 0xC0) != 0x80 || (p[2] & 0xC0) != 0x80 || (p[3] & 0xC0) != 0x80) return 0;
-        if (c == 0xF0 && p[1] < 0x90) return 0;   // overlong
-        if (c == 0xF4 && p[1] > 0x8F) return 0;   // > U+10FFFF
+        if (c == 0xF0 && p[1] < 0x90) return 0;  // overlong
+        if (c == 0xF4 && p[1] > 0x8F) return 0;  // > U+10FFFF
         return 4;
     }
     return 0;
@@ -93,13 +93,21 @@ static void escapeInto(std::string& out, std::string_view s) {
 }
 
 void writeString(std::string& out, std::string_view s) {
-    if (validUtf8(s)) { escapeInto(out, s); return; }
+    if (validUtf8(s)) {
+        escapeInto(out, s);
+        return;
+    }
     std::string clean;
     auto* p = reinterpret_cast<const unsigned char*>(s.data());
     for (size_t k = 0; k < s.size();) {
         size_t l = utf8Len(p + k, s.size() - k);
-        if (!l) { clean += "\xEF\xBF\xBD"; k++; }
-        else { clean.append(s.substr(k, l)); k += l; }
+        if (!l) {
+            clean += "\xEF\xBF\xBD";
+            k++;
+        } else {
+            clean.append(s.substr(k, l));
+            k += l;
+        }
     }
     escapeInto(out, clean);
 }
@@ -159,8 +167,11 @@ std::string fieldName(std::string_view n) {
     std::string o(n);
     auto low = [](char c) { return char(c - 'A' + 'a'); };
     if (k == 0) return o;
-    if (k == n.size()) { for (auto& c : o) c = low(c); return o; }
-    size_t lowerUpTo = (k == 1) ? 1 : k - 1;   // run of 1: lowercase it; longer: last letter starts next word
+    if (k == n.size()) {
+        for (auto& c : o) c = low(c);
+        return o;
+    }
+    size_t lowerUpTo = (k == 1) ? 1 : k - 1;  // run of 1: lowercase it; longer: last letter starts next word
     for (size_t x = 0; x < lowerUpTo; x++) o[x] = low(o[x]);
     return o;
 }
@@ -189,7 +200,8 @@ Json Object::build() const {
 static std::string envelope(size_t index, std::string_view dir, uint16_t typ, size_t len, std::string_view sha,
                             std::string_view dec) {
     char b[160];
-    std::snprintf(b, sizeof b, "{\"v\":1,\"level\":\"L1\",\"i\":%zu,\"dir\":\"%.*s\",\"typ\":\"0x%04x\",\"len\":%zu,\"sha256\":\"",
+    std::snprintf(b, sizeof b,
+                  "{\"v\":1,\"level\":\"L1\",\"i\":%zu,\"dir\":\"%.*s\",\"typ\":\"0x%04x\",\"len\":%zu,\"sha256\":\"",
                   index, int(dir.size()), dir.data(), typ, len);
     std::string o = b;
     o.append(sha);

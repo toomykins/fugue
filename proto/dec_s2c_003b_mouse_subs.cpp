@@ -1,22 +1,27 @@
-// s2c 0x003b: global config - the FormatFlags word (mouse subscriptions).
+// S2C::MouseSubs: global config - the FormatFlags word (mouse subscriptions).
 #include "proto/registry.h"
 
 namespace fugue::proto {
-namespace {
 
 // Body [12:16) is the FormatFlags word verbatim; a second word at [16:20) is present iff flags bit 31 is set.
 //   Bytes [0:12) (per-flag bytes, resource count) are not decoded. A body shorter than 16 (or 20 with bit 31) throws.
-canon::Json decode(State&, ByteSpan body) {
+MouseSubs decodeMouseSubs(ByteSpan body) {
     if (body.size() < 16) throw DecodeError("0x3b shorter than 16 bytes");
-    uint32_t flags = le32(&body[12]), extra = 0;
-    if (flags & 0x80000000u) {
+    Reader r(body);
+    r.take(12);
+    MouseSubs m;
+    m.flags = r.u32();
+    if (m.flags & 0x80000000u) {
         if (body.size() < 20) throw DecodeError("0x3b bit31 set but no second word");
-        extra = le32(&body[16]);
+        m.extra = r.u32();
     }
-    return canon::Object().u("flags", flags).u("extra", extra).boolean("known", true).build();
+    return m;
 }
 
-FUGUE_REGISTER_DECODER(Dir::S2C, 0x003b, "cpp:stock-dd-wire", decode);
+canon::Json toJson(const MouseSubs& m) {
+    return canon::Object().u("flags", m.flags).u("extra", m.extra).boolean("known", true).build();
+}
 
-}  // namespace
+FUGUE_REGISTER_DECODER(Dir::S2C, S2C::MouseSubs, "cpp:stock-dd-wire", jsonOf<decodeMouseSubs>);
+
 }  // namespace fugue::proto

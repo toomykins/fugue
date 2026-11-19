@@ -5,8 +5,9 @@
 
 namespace fugue::pager {
 
-std::optional<std::vector<std::string>> worldLinkArgs(const std::vector<std::string>& args, const std::vector<bool>& hostTaken,
-                                                      bool asDreamSeeker, const std::string& url, std::string* err) {
+std::optional<std::vector<std::string>> worldLinkArgs(const std::vector<std::string>& args,
+                                                      const std::vector<bool>& hostTaken, bool asDreamSeeker,
+                                                      const std::string& url, std::string* err) {
     std::optional<std::string> t = parseTarget(url, err);
     if (!t) return std::nullopt;
     const FugueOptions fo = clientOptions(asDreamSeeker);
@@ -14,21 +15,33 @@ std::optional<std::vector<std::string>> worldLinkArgs(const std::vector<std::str
     auto taken = [&](size_t j) { return j < hostTaken.size() && hostTaken[j]; };
     std::vector<std::string> out;
     std::vector<bool> outTaken;
-    auto keep = [&](size_t j, std::string v) { out.push_back(std::move(v)); outTaken.push_back(taken(j)); };
+    auto keep = [&](size_t j, std::string v) {
+        out.push_back(std::move(v));
+        outTaken.push_back(taken(j));
+    };
     bool connect = false;
     for (size_t j = 0; j < args.size(); j++) {
         const std::string& a = args[j];
-        if (taken(j)) { keep(j, a); continue; }
+        if (taken(j)) {
+            keep(j, a);
+            continue;
+        }
         if (int(j) == ds.targetArg) {
             if (a == "+connect") keep(j++, a);
             keep(j, "byond://" + *t);
         } else if (a.size() > 2 && a[0] == '-' && a[1] == '-') {
             const size_t eq = a.find('=');
             const std::string name = a.substr(2, eq == std::string::npos ? std::string::npos : eq - 2);
-            const bool withNext = eq == std::string::npos && fo.value.count(name) && j + 1 < args.size() && !taken(j + 1);
-            if (name == "connect") connect = true;
-            else keep(j, a);
-            if (withNext) { j++; if (name != "connect") keep(j, args[j]); }
+            const bool withNext =
+                eq == std::string::npos && fo.value.count(name) && j + 1 < args.size() && !taken(j + 1);
+            if (name == "connect")
+                connect = true;
+            else
+                keep(j, a);
+            if (withNext) {
+                j++;
+                if (name != "connect") keep(j, args[j]);
+            }
         } else if (a[0] == '+' && j + 1 < args.size()) {
             keep(j, a);
             j++;

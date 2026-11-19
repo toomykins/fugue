@@ -77,7 +77,7 @@ struct OneFrameServer {
             plain.insert(plain.end(), {1, 1, 1});
             Bytes nonce(16, 0);
             plain.insert(plain.end(), nonce.begin(), nonce.end());
-            sendS2c(0x0001, plain, base);
+            sendS2c(S2C::Handshake, plain, base);
             uint32_t k = loginKey(base, nonce);
             Bytes login;
             if (readN(fd, h, 6)) {
@@ -109,7 +109,7 @@ private slots:
         QCOMPARE(c.next, t0 + MapCadence::kIdle);
         QVERIFY(c.ingested());
         QCOMPARE(c.next, t0 + MapCadence::kMotion);
-        QVERIFY(!c.ingested());   // once per idle period: the rest of the burst wakes nothing
+        QVERIFY(!c.ingested());  // once per idle period: the rest of the burst wakes nothing
         QCOMPARE(c.next, t0 + MapCadence::kMotion);
 
         // A frame arriving long after the last assembly is due at once (next is already past).
@@ -125,7 +125,7 @@ private slots:
         QCOMPARE(c.next, t0 + MapCadence::kMotion);
         QVERIFY(!c.ingested());
         QCOMPARE(c.next, t0 + MapCadence::kMotion);
-        c.assembled(t0 + MapCadence::kMotion, false);   // the motion ended: idle again
+        c.assembled(t0 + MapCadence::kMotion, false);  // the motion ended: idle again
         QCOMPARE(c.next, t0 + MapCadence::kMotion + MapCadence::kIdle);
     }
 
@@ -149,7 +149,9 @@ private slots:
         s.run(5000ms);
         auto took = std::chrono::steady_clock::now() - t;
         QVERIFY(seen);
-        QVERIFY2(took < 2000ms, qPrintable(QString("run() took %1 ms after the waking frame").arg(std::chrono::duration_cast<std::chrono::milliseconds>(took).count())));
+        QVERIFY2(took < 2000ms,
+                 qPrintable(QString("run() took %1 ms after the waking frame")
+                                .arg(std::chrono::duration_cast<std::chrono::milliseconds>(took).count())));
 
         // Without a wake, run() keeps its budget.
         t = std::chrono::steady_clock::now();

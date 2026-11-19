@@ -1,17 +1,21 @@
-// s2c 0x0009: ref -> appearance bind. 9 bytes: [ref u32 LE][appid u32 LE][pad 00].
+// S2C::MobBind: mob ref -> appearance bind. 9 bytes: [ref u32 LE][appid u32 LE][pad 00].
 #include "proto/registry.h"
 
-namespace fugue::proto::g1 {
-namespace {
+namespace fugue::proto {
 
-// Framing: the client reads exactly two u32 ids (8 bytes). The 9th byte is pad and is ignored. The appid is a 0x0026
-//   appearance id.
-canon::Json decode(State&, ByteSpan body) {
+// Framing: the client reads exactly two u32 ids (8 bytes). The 9th byte is pad and is ignored. The appid names an
+//   S2C::Appearance.
+RefBind decodeMobBind(ByteSpan body) {
     if (body.size() < 8) throw DecodeError("0x09 body is " + std::to_string(body.size()) + " bytes, want >= 8");
-    return canon::Object().u("ref", le32(&body[0])).u("appid", le32(&body[4])).build();
+    Reader r(body);
+    RefBind m;
+    m.ref = r.u32();
+    m.appid = r.u32();
+    return m;
 }
 
-FUGUE_REGISTER_DECODER(Dir::S2C, 0x0009, "cpp:stock-dd-wire", decode);
+canon::Json toJson(const RefBind& m) { return canon::Object().u("ref", m.ref).u("appid", m.appid).build(); }
 
-}  // namespace
-}  // namespace fugue::proto::g1
+FUGUE_REGISTER_DECODER(Dir::S2C, S2C::MobBind, "cpp:stock-dd-wire", jsonOf<decodeMobBind>);
+
+}  // namespace fugue::proto

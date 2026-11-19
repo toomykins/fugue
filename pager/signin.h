@@ -11,7 +11,7 @@
 
 namespace fugue::pager {
 
-constexpr int kSignInTimeoutMs = 30000;                      // sign-in deadline
+constexpr int kSignInTimeoutMs = 30000;  // sign-in deadline
 
 enum class SignInFailure { None, MissingInput, WrongPassword, Unreachable, NoAnswer, Refused, BadKey, Disk };
 

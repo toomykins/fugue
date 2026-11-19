@@ -1,6 +1,7 @@
 #include "model/browsing.h"
 #include "model/htmltext.h"
 #include "net/textmacro.h"
+#include "proto/messages.h"
 
 namespace fugue::model {
 namespace {
@@ -23,25 +24,35 @@ int boolOf(const std::string& v) {
     for (char c : v) l += char(c >= 'A' && c <= 'Z' ? c - 'A' + 'a' : c);
     if (l == "1" || l == "true" || l == "yes" || l == "on") return 1;
     if (l == "0" || l == "false" || l == "no" || l == "off") return 0;
-    return -1;   // unrecognised = unstated, never "false"
+    return -1;  // unrecognised = unstated, never "false"
 }
 bool pair(const std::string& v, char sep, int& a, int& b) {
     size_t p = v.find(sep);
     if (p == std::string::npos) return false;
-    try { a = std::stoi(trim(v.substr(0, p))); b = std::stoi(trim(v.substr(p + 1))); } catch (...) { return false; }
+    try {
+        a = std::stoi(trim(v.substr(0, p)));
+        b = std::stoi(trim(v.substr(p + 1)));
+    } catch (...) { return false; }
     return true;
 }
-int hexv(char c) { return c >= '0' && c <= '9' ? c - '0' : c >= 'a' && c <= 'f' ? c - 'a' + 10 : c >= 'A' && c <= 'F' ? c - 'A' + 10 : -1; }
+int hexv(char c) {
+    return c >= '0' && c <= '9'   ? c - '0'
+           : c >= 'a' && c <= 'f' ? c - 'a' + 10
+           : c >= 'A' && c <= 'F' ? c - 'A' + 10
+                                  : -1;
+}
 }  // namespace
 
 std::string unescapeQuery(const std::string& s) {
     std::string o;
     for (size_t i = 0; i < s.size(); i++) {
-        if (s[i] == '+') o += ' ';
+        if (s[i] == '+')
+            o += ' ';
         else if (s[i] == '%' && i + 2 < s.size() + 0 && hexv(s[i + 1]) >= 0 && hexv(s[i + 2]) >= 0) {
             o += char(hexv(s[i + 1]) * 16 + hexv(s[i + 2]));
             i += 2;
-        } else o += s[i];
+        } else
+            o += s[i];
     }
     return o;
 }
@@ -53,9 +64,11 @@ BrowseParams parseBrowseParams(const std::string& s) {
     size_t start = 0;
     for (size_t i = 0; i < s.size(); i++) {
         char c = s[i];
-        if (c == ';' || c == '&') {}
-        else if (c == ',') { if (!startsPair(s, i + 1)) continue; }
-        else continue;
+        if (c == ';' || c == '&') {
+        } else if (c == ',') {
+            if (!startsPair(s, i + 1)) continue;
+        } else
+            continue;
         parts.push_back(s.substr(start, i - start));
         start = i + 1;
     }
@@ -66,17 +79,41 @@ BrowseParams parseBrowseParams(const std::string& s) {
         size_t eq = part.find('=');
         if (eq == std::string::npos) continue;
         std::string k = trim(part.substr(0, eq)), v = trim(part.substr(eq + 1));
-        for (auto& ch : k) { if (ch >= 'A' && ch <= 'Z') ch = char(ch - 'A' + 'a'); else if (ch == '_') ch = '-'; }
-        if (k == "window") p.window = v;
-        else if (k == "file") p.file = v;
-        else if (k == "size") { int a, b; if (pair(v, 'x', a, b)) { p.w = a; p.h = b; } }
-        else if (k == "pos") { int a = 0, b = 0; if (pair(v, ',', a, b)) { p.x = a; p.y = b; } p.posSet = true; }
-        else if (k == "can-resize") p.canResize = boolOf(v);
-        else if (k == "can-minimize") p.canMinimize = boolOf(v);
-        else if (k == "titlebar") p.titlebar = boolOf(v);
-        else if (k == "auto-format") p.autoFormat = boolOf(v);
-        else if (k == "display") p.display = boolOf(v);
-        else p.extra[k] = v;
+        for (auto& ch : k) {
+            if (ch >= 'A' && ch <= 'Z')
+                ch = char(ch - 'A' + 'a');
+            else if (ch == '_')
+                ch = '-';
+        }
+        if (k == "window")
+            p.window = v;
+        else if (k == "file")
+            p.file = v;
+        else if (k == "size") {
+            int a, b;
+            if (pair(v, 'x', a, b)) {
+                p.w = a;
+                p.h = b;
+            }
+        } else if (k == "pos") {
+            int a = 0, b = 0;
+            if (pair(v, ',', a, b)) {
+                p.x = a;
+                p.y = b;
+            }
+            p.posSet = true;
+        } else if (k == "can-resize")
+            p.canResize = boolOf(v);
+        else if (k == "can-minimize")
+            p.canMinimize = boolOf(v);
+        else if (k == "titlebar")
+            p.titlebar = boolOf(v);
+        else if (k == "auto-format")
+            p.autoFormat = boolOf(v);
+        else if (k == "display")
+            p.display = boolOf(v);
+        else
+            p.extra[k] = v;
     }
     return p;
 }
@@ -92,9 +129,12 @@ bool browseFileOptions(const std::string& offerParams, std::string& opts) {
         if (e == std::string::npos) e = rest.size();
         std::string kv = rest.substr(st, e - st);
         size_t eq = kv.find('=');
-        std::string k = trim(eq == std::string::npos ? kv : kv.substr(0, eq)), v = eq == std::string::npos ? "" : kv.substr(eq + 1);
-        if (k == "action") isBF = v == "browse_file";
-        else if (k == "options") raw = v;
+        std::string k = trim(eq == std::string::npos ? kv : kv.substr(0, eq)),
+                    v = eq == std::string::npos ? "" : kv.substr(eq + 1);
+        if (k == "action")
+            isBF = v == "browse_file";
+        else if (k == "options")
+            raw = v;
         st = e + 1;
     }
     if (!isBF) return false;
@@ -115,9 +155,12 @@ bool outputFileControl(const std::string& offerParams, std::string& control) {
         if (e == std::string::npos) e = rest.size();
         std::string kv = rest.substr(st, e - st);
         size_t eq = kv.find('=');
-        std::string k = trim(eq == std::string::npos ? kv : kv.substr(0, eq)), v = eq == std::string::npos ? "" : kv.substr(eq + 1);
-        if (k == "action") isOF = v == "output_file";
-        else if (k == "window") raw = v;
+        std::string k = trim(eq == std::string::npos ? kv : kv.substr(0, eq)),
+                    v = eq == std::string::npos ? "" : kv.substr(eq + 1);
+        if (k == "action")
+            isOF = v == "output_file";
+        else if (k == "window")
+            raw = v;
         st = e + 1;
     }
     control = decodeChatHTML(raw);
@@ -137,57 +180,59 @@ std::string browseFileAlias(const std::string& opts) {
     return "";
 }
 
-static bool cstr(ByteSpan b, size_t& p, std::string& out) {
-    size_t q = p;
-    while (q < b.size() && b[q] != 0) q++;
-    if (q >= b.size()) return false;
-    out.assign(reinterpret_cast<const char*>(b.data()) + p, q - p);
-    p = q + 1;
-    return true;
-}
-
 bool parseBrowseFrame(ByteSpan body, BrowseFrame& out) {
-    size_t p = 0;
-    if (!cstr(body, p, out.html) || !cstr(body, p, out.params) || p + 1 != body.size() || body[p] > 1) return false;
-    out.close = body[p] == 1;
+    proto::Browse m;
+    try {
+        m = proto::decodeBrowse(body);
+    } catch (const std::exception&) { return false; }
+    out.close = m.close;
     // Stock drops every text-macro marker from both strings before the page is built (an output() to a browser
     // control keeps them).
-    out.html = net::plainText(out.html);
-    out.params = net::plainText(out.params);
+    out.html = net::plainText(m.html);
+    out.params = net::plainText(m.params);
     return true;
 }
 
 bool parseOutputFrame(ByteSpan body, OutputFrame& out) {
-    size_t p = 0;
-    if (!cstr(body, p, out.value) || !cstr(body, p, out.control) || p != body.size()) return false;
-    if (!out.value.empty() && out.value.back() == '\n') out.value.pop_back();
+    proto::Output m;
+    try {
+        m = proto::decodeOutput(body);
+    } catch (const std::exception&) { return false; }
+    out.value = std::move(m.value);
+    out.control = std::move(m.control);
     return true;
 }
 
 bool parseLinkFrame(ByteSpan body, LinkFrame& out) {
-    size_t p = 0;
-    if (!cstr(body, p, out.url) || p != body.size()) return false;
+    try {
+        out.url = proto::decodeLink(body).url;
+    } catch (const std::exception&) { return false; }
     std::string scheme;
     size_t colon = out.url.find(':');
     if (colon != std::string::npos && out.url.find_first_of("/?#") > colon)
         for (char c : out.url.substr(0, colon)) scheme += char(c >= 'A' && c <= 'Z' ? c - 'A' + 'a' : c);
-    if (out.url.rfind("?", 0) == 0 || (scheme == "byond" && out.url.compare(colon, 4, "://?") == 0)) out.kind = LinkFrame::Topic;
-    else if (scheme == "byond") out.kind = LinkFrame::World;
-    else if (scheme == "http" || scheme == "https" || scheme == "ftp" || scheme == "mailto") out.kind = LinkFrame::External;
-    else out.kind = LinkFrame::Refused;
+    if (out.url.rfind("?", 0) == 0 || (scheme == "byond" && out.url.compare(colon, 4, "://?") == 0))
+        out.kind = LinkFrame::Topic;
+    else if (scheme == "byond")
+        out.kind = LinkFrame::World;
+    else if (scheme == "http" || scheme == "https" || scheme == "ftp" || scheme == "mailto")
+        out.kind = LinkFrame::External;
+    else
+        out.kind = LinkFrame::Refused;
     return true;
 }
 
 std::vector<RscRecord> parseBrowseRscFrame(ByteSpan body) {
     std::vector<RscRecord> v;
-    size_t p = 0;
-    while (p + 4 <= body.size()) {
-        RscRecord r;
-        r.ordinal = uint32_t(body[p]) | uint32_t(body[p + 1]) << 8 | uint32_t(body[p + 2]) << 16 | uint32_t(body[p + 3]) << 24;
-        p += 4;
-        if (!cstr(body, p, r.name)) break;
-        v.push_back(std::move(r));
-    }
+    proto::Reader r(body);
+    try {
+        while (r.remaining() >= 4) {
+            RscRecord rec;
+            rec.ordinal = r.u32();
+            rec.name = r.cstr();
+            v.push_back(std::move(rec));
+        }
+    } catch (const proto::DecodeError&) {}
     return v;
 }
 
@@ -215,14 +260,24 @@ bool parsePageCall(const std::string& control, const std::string& rawValue, Page
     return true;
 }
 
-bool ByondUrl::has(const std::string& k) const { for (auto& kv : params) if (kv.first == k) return true; return false; }
-std::string ByondUrl::get(const std::string& k) const { for (auto& kv : params) if (kv.first == k) return kv.second; return ""; }
+bool ByondUrl::has(const std::string& k) const {
+    for (auto& kv : params)
+        if (kv.first == k) return true;
+    return false;
+}
+std::string ByondUrl::get(const std::string& k) const {
+    for (auto& kv : params)
+        if (kv.first == k) return kv.second;
+    return "";
+}
 
 ByondUrl parseByondUrl(const std::string& href) {
     ByondUrl u;
     std::string s = href;
-    if (s.rfind("byond://", 0) == 0) s = s.substr(8);
-    else if (s.rfind("byond:", 0) == 0) s = s.substr(6);
+    if (s.rfind("byond://", 0) == 0)
+        s = s.substr(8);
+    else if (s.rfind("byond:", 0) == 0)
+        s = s.substr(6);
     u.raw = "byond://" + s;
     size_t q = s.find('?');
     std::string path = q == std::string::npos ? s : s.substr(0, q);

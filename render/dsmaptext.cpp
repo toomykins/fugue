@@ -18,7 +18,7 @@ using std::string_view;
 
 struct GdiStrike {
     int pt, h, ascent, il, first, defaultChar;
-    uint8_t adv[224];   // firstChar (32) .. 255, cp1252
+    uint8_t adv[224];  // firstChar (32) .. 255, cp1252
 };
 #include "render/gdifont_tables.inc"
 
@@ -26,8 +26,12 @@ struct GdiStrike {
 // estimated from the 7pt widths scaled by the ascent ratio.
 GdiStrike scaledSmallFonts(int pt, int h, int ascent) {
     GdiStrike s = kFaceSmallFonts_7;
-    s.pt = pt; s.h = h; s.ascent = ascent; s.il = h - ascent;
-    for (int i = 0; i < 224; i++) s.adv[i] = uint8_t(std::max(1, int(std::floor(kFaceSmallFonts_7.adv[i] * ascent / 9.0 + 0.5))));
+    s.pt = pt;
+    s.h = h;
+    s.ascent = ascent;
+    s.il = h - ascent;
+    for (int i = 0; i < 224; i++)
+        s.adv[i] = uint8_t(std::max(1, int(std::floor(kFaceSmallFonts_7.adv[i] * ascent / 9.0 + 0.5))));
     return s;
 }
 const GdiStrike kWinSmallFonts5 = scaledSmallFonts(5, 8, 7);
@@ -37,12 +41,12 @@ enum class Bitmap { None, SmallFonts, MsSansSerif, Courier };
 
 std::vector<const GdiStrike*> strikesOf(Bitmap b, GdiProfile p) {
     switch (b) {
-    case Bitmap::SmallFonts:
-        if (p == GdiProfile::Windows) return {&kWinSmallFonts5, &kWinSmallFonts6, &kFaceSmallFonts_7};
-        return {&kFaceSmallFonts_7};
-    case Bitmap::MsSansSerif: return {&kFaceMsSansSerif_8, &kFaceMsSansSerif_10, &kFaceMsSansSerif_12};
-    case Bitmap::Courier: return {&kFaceCourier_10};
-    default: return {};
+        case Bitmap::SmallFonts:
+            if (p == GdiProfile::Windows) return {&kWinSmallFonts5, &kWinSmallFonts6, &kFaceSmallFonts_7};
+            return {&kFaceSmallFonts_7};
+        case Bitmap::MsSansSerif: return {&kFaceMsSansSerif_8, &kFaceMsSansSerif_10, &kFaceMsSansSerif_12};
+        case Bitmap::Courier: return {&kFaceCourier_10};
+        default: return {};
     }
 }
 
@@ -50,7 +54,8 @@ std::vector<const GdiStrike*> strikesOf(Bitmap b, GdiProfile p) {
 
 string lower(string_view s) {
     string o(s);
-    for (char& c : o) if (c >= 'A' && c <= 'Z') c = char(c + 32);
+    for (char& c : o)
+        if (c >= 'A' && c <= 'Z') c = char(c + 32);
     return o;
 }
 bool isWs(char c) { return c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == '\f' || c == '\v'; }
@@ -75,7 +80,11 @@ std::u32string decodeUtf8(string_view s) {
             if ((d & 0xc0) != 0x80) ok = false;
             cp = (cp << 6) | (d & 0x3f);
         }
-        if (!ok) { o.push_back(0xFFFD); i++; continue; }
+        if (!ok) {
+            o.push_back(0xFFFD);
+            i++;
+            continue;
+        }
         o.push_back(cp);
         i += size_t(n);
     }
@@ -100,21 +109,25 @@ int cp1252(char32_t cp) {
 // punctuation; anything else counts as unknown.
 const std::map<string, char32_t>& namedEntities() {
     static const std::map<string, char32_t> m = [] {
-        std::map<string, char32_t> e = {{"quot", 34}, {"amp", 38}, {"apos", 39}, {"lt", 60}, {"gt", 62},
-            {"oelig", 0x153}, {"OElig", 0x152}, {"scaron", 0x161}, {"Scaron", 0x160}, {"Yuml", 0x178}, {"fnof", 0x192},
-            {"circ", 0x2c6}, {"tilde", 0x2dc}, {"ensp", 0x2002}, {"emsp", 0x2003}, {"thinsp", 0x2009}, {"ndash", 0x2013},
-            {"mdash", 0x2014}, {"lsquo", 0x2018}, {"rsquo", 0x2019}, {"sbquo", 0x201a}, {"ldquo", 0x201c},
-            {"rdquo", 0x201d}, {"bdquo", 0x201e}, {"dagger", 0x2020}, {"Dagger", 0x2021}, {"bull", 0x2022},
-            {"hellip", 0x2026}, {"permil", 0x2030}, {"lsaquo", 0x2039}, {"rsaquo", 0x203a}, {"euro", 0x20ac},
-            {"trade", 0x2122}};
-        static const char* latin1[96] = {"nbsp", "iexcl", "cent", "pound", "curren", "yen", "brvbar", "sect", "uml", "copy",
-            "ordf", "laquo", "not", "shy", "reg", "macr", "deg", "plusmn", "sup2", "sup3", "acute", "micro", "para", "middot",
-            "cedil", "sup1", "ordm", "raquo", "frac14", "frac12", "frac34", "iquest", "Agrave", "Aacute", "Acirc", "Atilde",
-            "Auml", "Aring", "AElig", "Ccedil", "Egrave", "Eacute", "Ecirc", "Euml", "Igrave", "Iacute", "Icirc", "Iuml",
-            "ETH", "Ntilde", "Ograve", "Oacute", "Ocirc", "Otilde", "Ouml", "times", "Oslash", "Ugrave", "Uacute", "Ucirc",
-            "Uuml", "Yacute", "THORN", "szlig", "agrave", "aacute", "acirc", "atilde", "auml", "aring", "aelig", "ccedil",
-            "egrave", "eacute", "ecirc", "euml", "igrave", "iacute", "icirc", "iuml", "eth", "ntilde", "ograve", "oacute",
-            "ocirc", "otilde", "ouml", "divide", "oslash", "ugrave", "uacute", "ucirc", "uuml", "yacute", "thorn", "yuml"};
+        std::map<string, char32_t> e = {
+            {"quot", 34},       {"amp", 38},       {"apos", 39},       {"lt", 60},         {"gt", 62},
+            {"oelig", 0x153},   {"OElig", 0x152},  {"scaron", 0x161},  {"Scaron", 0x160},  {"Yuml", 0x178},
+            {"fnof", 0x192},    {"circ", 0x2c6},   {"tilde", 0x2dc},   {"ensp", 0x2002},   {"emsp", 0x2003},
+            {"thinsp", 0x2009}, {"ndash", 0x2013}, {"mdash", 0x2014},  {"lsquo", 0x2018},  {"rsquo", 0x2019},
+            {"sbquo", 0x201a},  {"ldquo", 0x201c}, {"rdquo", 0x201d},  {"bdquo", 0x201e},  {"dagger", 0x2020},
+            {"Dagger", 0x2021}, {"bull", 0x2022},  {"hellip", 0x2026}, {"permil", 0x2030}, {"lsaquo", 0x2039},
+            {"rsaquo", 0x203a}, {"euro", 0x20ac},  {"trade", 0x2122}};
+        static const char* latin1[96] = {
+            "nbsp",   "iexcl",  "cent",   "pound",  "curren", "yen",    "brvbar", "sect",   "uml",    "copy",
+            "ordf",   "laquo",  "not",    "shy",    "reg",    "macr",   "deg",    "plusmn", "sup2",   "sup3",
+            "acute",  "micro",  "para",   "middot", "cedil",  "sup1",   "ordm",   "raquo",  "frac14", "frac12",
+            "frac34", "iquest", "Agrave", "Aacute", "Acirc",  "Atilde", "Auml",   "Aring",  "AElig",  "Ccedil",
+            "Egrave", "Eacute", "Ecirc",  "Euml",   "Igrave", "Iacute", "Icirc",  "Iuml",   "ETH",    "Ntilde",
+            "Ograve", "Oacute", "Ocirc",  "Otilde", "Ouml",   "times",  "Oslash", "Ugrave", "Uacute", "Ucirc",
+            "Uuml",   "Yacute", "THORN",  "szlig",  "agrave", "aacute", "acirc",  "atilde", "auml",   "aring",
+            "aelig",  "ccedil", "egrave", "eacute", "ecirc",  "euml",   "igrave", "iacute", "icirc",  "iuml",
+            "eth",    "ntilde", "ograve", "oacute", "ocirc",  "otilde", "ouml",   "divide", "oslash", "ugrave",
+            "uacute", "ucirc",  "uuml",   "yacute", "thorn",  "yuml"};
         for (int i = 0; i < 96; i++) e[latin1[i]] = char32_t(0xa0 + i);
         return e;
     }();
@@ -123,10 +136,21 @@ const std::map<string, char32_t>& namedEntities() {
 
 void appendUtf8(string& o, char32_t r) {
     if (r > 0x10FFFF || (r >= 0xD800 && r < 0xE000)) r = 0xFFFD;
-    if (r < 0x80) o.push_back(char(r));
-    else if (r < 0x800) { o.push_back(char(0xC0 | (r >> 6))); o.push_back(char(0x80 | (r & 0x3F))); }
-    else if (r < 0x10000) { o.push_back(char(0xE0 | (r >> 12))); o.push_back(char(0x80 | ((r >> 6) & 0x3F))); o.push_back(char(0x80 | (r & 0x3F))); }
-    else { o.push_back(char(0xF0 | (r >> 18))); o.push_back(char(0x80 | ((r >> 12) & 0x3F))); o.push_back(char(0x80 | ((r >> 6) & 0x3F))); o.push_back(char(0x80 | (r & 0x3F))); }
+    if (r < 0x80)
+        o.push_back(char(r));
+    else if (r < 0x800) {
+        o.push_back(char(0xC0 | (r >> 6)));
+        o.push_back(char(0x80 | (r & 0x3F)));
+    } else if (r < 0x10000) {
+        o.push_back(char(0xE0 | (r >> 12)));
+        o.push_back(char(0x80 | ((r >> 6) & 0x3F)));
+        o.push_back(char(0x80 | (r & 0x3F)));
+    } else {
+        o.push_back(char(0xF0 | (r >> 18)));
+        o.push_back(char(0x80 | ((r >> 12) & 0x3F)));
+        o.push_back(char(0x80 | ((r >> 6) & 0x3F)));
+        o.push_back(char(0x80 | (r & 0x3F)));
+    }
 }
 
 bool isEntityName(string_view s) {
@@ -152,11 +176,19 @@ string decodeEntities(string_view s) {
                     long v = 0;
                     bool good = !digits.empty();
                     for (char c : digits) {
-                        int d = (c >= '0' && c <= '9') ? c - '0' : hex && c >= 'a' && c <= 'f' ? c - 'a' + 10
-                              : hex && c >= 'A' && c <= 'F' ? c - 'A' + 10 : -1;
-                        if (d < 0) { good = false; break; }
+                        int d = (c >= '0' && c <= '9')        ? c - '0'
+                                : hex && c >= 'a' && c <= 'f' ? c - 'a' + 10
+                                : hex && c >= 'A' && c <= 'F' ? c - 'A' + 10
+                                                              : -1;
+                        if (d < 0) {
+                            good = false;
+                            break;
+                        }
                         v = v * (hex ? 16 : 10) + d;
-                        if (v > 0x10FFFF) { good = false; break; }
+                        if (v > 0x10FFFF) {
+                            good = false;
+                            break;
+                        }
                     }
                     if (good) {
                         if (v > 0) appendUtf8(o, char32_t(v));
@@ -180,27 +212,30 @@ string decodeEntities(string_view s) {
 // ---- style ------------------------------------------------------------------------------------------------------
 
 struct Style {
-    string family;   // lower-case first entry of font-family; "" = DreamSeeker's default face
+    string family;  // lower-case first entry of font-family; "" = DreamSeeker's default face
     int pt = 10;
     bool bold = false, italic = false;
     double lh = 1.2;  // line-height multiplier; DreamSeeker's default is 1.2 (MS Sans Serif pitch 15 = floor(1.2 * 13))
     // Paint-only properties: they never change a measured width or height (see applyProps).
-    uint32_t color = 0xffffffffu;          // 0xRRGGBBAA
-    int align = 0;                         // 0 left, 1 center, 2 right
-    int valign = 2;                        // valign / vertical-align: 0 top, 1 middle, 2 bottom
+    uint32_t color = 0xffffffffu;  // 0xRRGGBBAA
+    int align = 0;                 // 0 left, 1 center, 2 right
+    int valign = 2;                // valign / vertical-align: 0 top, 1 middle, 2 bottom
     bool outline = false;
     uint32_t outlineColor = 0x000000ffu;
 };
 using Decls = std::vector<std::pair<string, string>>;
-struct Rule { string sel; Decls decls; };
+struct Rule {
+    string sel;
+    Decls decls;
+};
 
 // HTML <font size=1..7> and the CSS size keywords (xx-small 8pt ... xx-large 48pt).
 constexpr int kTierPt[8] = {0, 8, 10, 12, 18, 24, 36, 48};
 
 std::optional<int> parseSize(string_view v0, int cur) {
     string v = lower(trim(v0));
-    static const std::map<string, int> kw = {{"xx-small", 8}, {"x-small", 10}, {"small", 12}, {"medium", 18},
-                                             {"large", 24}, {"x-large", 36}, {"xx-large", 48}};
+    static const std::map<string, int> kw = {{"xx-small", 8}, {"x-small", 10}, {"small", 12},   {"medium", 18},
+                                             {"large", 24},   {"x-large", 36}, {"xx-large", 48}};
     if (auto it = kw.find(v); it != kw.end()) return it->second;
     if (v == "smaller") return int(cur * 0.8);  // 0.8 of the current size
     if (v == "larger") return int(cur * 1.25);  // 1.25 of the current size
@@ -208,7 +243,9 @@ std::optional<int> parseSize(string_view v0, int cur) {
     while (i < v.size() && ((v[i] >= '0' && v[i] <= '9') || v[i] == '.' || v[i] == '+' || v[i] == '-')) i++;
     if (i == 0) return std::nullopt;
     double f = 0;
-    try { f = std::stod(v.substr(0, i)); } catch (...) { return std::nullopt; }
+    try {
+        f = std::stod(v.substr(0, i));
+    } catch (...) { return std::nullopt; }
     string unit(trim(string_view(v).substr(i)));
     if (unit == "px" || unit == "pt") return roundHalfUp(f);  // px and pt are the same, rounded half up (8.5 -> 9)
     // em and %: 0.9 * cur * f.
@@ -229,9 +266,12 @@ double parseLineHeight(string_view v0) {
     bool pct = !v.empty() && v.back() == '%';
     if (pct) v.pop_back();
     if (v.empty()) return 0;
-    for (char c : v) if (!((c >= '0' && c <= '9') || c == '.')) return 0;
+    for (char c : v)
+        if (!((c >= '0' && c <= '9') || c == '.')) return 0;
     double f = 0;
-    try { f = std::stod(v); } catch (...) { return 0; }
+    try {
+        f = std::stod(v);
+    } catch (...) { return 0; }
     return pct ? f / 100 : f;
 }
 
@@ -239,11 +279,12 @@ double parseLineHeight(string_view v0) {
 std::optional<uint32_t> parseCssColor(string_view v0) {
     string v = lower(trim(v0));
     static const std::map<string, uint32_t> named = {
-        {"black", 0x000000ff}, {"white", 0xffffffff}, {"red", 0xff0000ff}, {"green", 0x008000ff}, {"lime", 0x00ff00ff},
-        {"blue", 0x0000ffff}, {"yellow", 0xffff00ff}, {"cyan", 0x00ffffff}, {"aqua", 0x00ffffff}, {"magenta", 0xff00ffff},
-        {"fuchsia", 0xff00ffff}, {"silver", 0xc0c0c0ff}, {"gray", 0x808080ff}, {"grey", 0x808080ff}, {"maroon", 0x800000ff},
-        {"olive", 0x808000ff}, {"purple", 0x800080ff}, {"teal", 0x008080ff}, {"navy", 0x000080ff}, {"orange", 0xffa500ff},
-        {"pink", 0xffc0cbff}, {"brown", 0xa52a2aff}, {"gold", 0xffd700ff}, {"transparent", 0x00000000}};
+        {"black", 0x000000ff},  {"white", 0xffffffff},   {"red", 0xff0000ff},     {"green", 0x008000ff},
+        {"lime", 0x00ff00ff},   {"blue", 0x0000ffff},    {"yellow", 0xffff00ff},  {"cyan", 0x00ffffff},
+        {"aqua", 0x00ffffff},   {"magenta", 0xff00ffff}, {"fuchsia", 0xff00ffff}, {"silver", 0xc0c0c0ff},
+        {"gray", 0x808080ff},   {"grey", 0x808080ff},    {"maroon", 0x800000ff},  {"olive", 0x808000ff},
+        {"purple", 0x800080ff}, {"teal", 0x008080ff},    {"navy", 0x000080ff},    {"orange", 0xffa500ff},
+        {"pink", 0xffc0cbff},   {"brown", 0xa52a2aff},   {"gold", 0xffd700ff},    {"transparent", 0x00000000}};
     if (auto it = named.find(v); it != named.end()) return it->second;
     if (v.rfind("rgb", 0) == 0) {
         size_t open = v.find('('), close = v.rfind(')');
@@ -251,8 +292,11 @@ std::optional<uint32_t> parseCssColor(string_view v0) {
         std::vector<string> parts;
         string cur;
         for (char c : v.substr(open + 1, close - open - 1)) {
-            if (c == ',' || c == '/' || c == ' ') { if (!cur.empty()) parts.push_back(cur); cur.clear(); }
-            else cur.push_back(c);
+            if (c == ',' || c == '/' || c == ' ') {
+                if (!cur.empty()) parts.push_back(cur);
+                cur.clear();
+            } else
+                cur.push_back(c);
         }
         if (!cur.empty()) parts.push_back(cur);
         if (parts.size() < 3) return std::nullopt;
@@ -260,17 +304,30 @@ std::optional<uint32_t> parseCssColor(string_view v0) {
         for (int i = 0; i < 3; i++) {
             bool pct = parts[size_t(i)].back() == '%';
             double f = 0;
-            try { f = std::stod(pct ? parts[size_t(i)].substr(0, parts[size_t(i)].size() - 1) : parts[size_t(i)]); } catch (...) { return std::nullopt; }
+            try {
+                f = std::stod(pct ? parts[size_t(i)].substr(0, parts[size_t(i)].size() - 1) : parts[size_t(i)]);
+            } catch (...) { return std::nullopt; }
             if (pct) f = f * 255 / 100;
             out = (out << 8) | uint32_t(std::clamp(roundHalfUp(f), 0, 255));
         }
         double a = 1;
-        if (parts.size() >= 4) { try { a = std::stod(parts[3]); } catch (...) { return std::nullopt; } }
+        if (parts.size() >= 4) {
+            try {
+                a = std::stod(parts[3]);
+            } catch (...) { return std::nullopt; }
+        }
         return (out << 8) | uint32_t(std::clamp(roundHalfUp(a * 255), 0, 255));
     }
     if (v.empty() || v[0] != '#') return std::nullopt;
     string h = v.substr(1);
-    if (h.size() == 3 || h.size() == 4) { string d; for (char c : h) { d.push_back(c); d.push_back(c); } h = d; }
+    if (h.size() == 3 || h.size() == 4) {
+        string d;
+        for (char c : h) {
+            d.push_back(c);
+            d.push_back(c);
+        }
+        h = d;
+    }
     if (h.size() != 6 && h.size() != 8) return std::nullopt;
     uint32_t n = 0;
     for (char c : h) {
@@ -296,7 +353,8 @@ string firstFamily(string_view v) {
 
 bool isBoldWeight(string_view v) {
     string t = lower(trim(v));
-    return t == "bold" || t == "bolder" || (!t.empty() && t.size() < 5 && t.find_first_not_of("0123456789") == string::npos && std::stoi(t) >= 600);
+    return t == "bold" || t == "bolder" ||
+           (!t.empty() && t.size() < 5 && t.find_first_not_of("0123456789") == string::npos && std::stoi(t) >= 600);
 }
 
 constexpr int kShorthandPt = 12;
@@ -324,10 +382,13 @@ void applyProps(Style& st, const Decls& props) {
                 size_t e = 0;
                 while (e < rest.size() && !isWs(rest[e])) e++;
                 string t = lower(rest.substr(0, e));
-                if (t == "italic" || t == "oblique") italic = true;
-                else if (isBoldWeight(t)) bold = true;
-                else if (t == "normal" || t == "lighter" || t == "small-caps" || (t.size() == 3 && t[1] == '0' && t[2] == '0')) {}
-                else {
+                if (t == "italic" || t == "oblique")
+                    italic = true;
+                else if (isBoldWeight(t))
+                    bold = true;
+                else if (t == "normal" || t == "lighter" || t == "small-caps" ||
+                         (t.size() == 3 && t[1] == '0' && t[2] == '0')) {
+                } else {
                     string sz = t.substr(0, t.find('/'));
                     if (auto p = parseSize(sz, st.pt); p && *p > 0) {
                         pt = *p;
@@ -348,9 +409,12 @@ void applyProps(Style& st, const Decls& props) {
             if (auto c = parseCssColor(v)) st.color = *c;
         } else if (k == "text-align") {
             string t = lower(trim(v));
-            if (t == "center") st.align = 1;
-            else if (t == "right") st.align = 2;
-            else if (t == "left") st.align = 0;
+            if (t == "center")
+                st.align = 1;
+            else if (t == "right")
+                st.align = 2;
+            else if (t == "left")
+                st.align = 0;
         } else if (k == "vertical-align") {
             st.valign = parseValign(v, st.valign);
         } else if (k == "-dm-text-outline" || k == "-dm-text-outline-color") {
@@ -392,7 +456,8 @@ Decls parseDecls(string_view body) {
         string k = lower(trim(d.substr(0, c)));
         string v(trim(d.substr(c + 1)));
         string lv = lower(v);
-        if (lv.size() >= 10 && lv.compare(lv.size() - 10, 10, "!important") == 0) v = string(trim(string_view(v).substr(0, v.size() - 10)));
+        if (lv.size() >= 10 && lv.compare(lv.size() - 10, 10, "!important") == 0)
+            v = string(trim(string_view(v).substr(0, v.size() - 10)));
         if (!k.empty() && !v.empty()) out.emplace_back(k, v);
     }
     return out;
@@ -430,9 +495,13 @@ std::map<string, string> parseAttrs(string_view rest) {
     std::map<string, string> a;
     size_t i = 0;
     while (i < rest.size()) {
-        while (i < rest.size() && !((rest[i] >= 'a' && rest[i] <= 'z') || (rest[i] >= 'A' && rest[i] <= 'Z') || rest[i] == '-')) i++;
+        while (i < rest.size() &&
+               !((rest[i] >= 'a' && rest[i] <= 'z') || (rest[i] >= 'A' && rest[i] <= 'Z') || rest[i] == '-'))
+            i++;
         size_t ks = i;
-        while (i < rest.size() && ((rest[i] >= 'a' && rest[i] <= 'z') || (rest[i] >= 'A' && rest[i] <= 'Z') || rest[i] == '-')) i++;
+        while (i < rest.size() &&
+               ((rest[i] >= 'a' && rest[i] <= 'z') || (rest[i] >= 'A' && rest[i] <= 'Z') || rest[i] == '-'))
+            i++;
         string key = lower(rest.substr(ks, i - ks));
         size_t j = i;
         while (j < rest.size() && isWs(rest[j])) j++;
@@ -461,14 +530,18 @@ bool isAlpha(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'); 
 
 std::vector<Token> tokenize(string_view markup, const std::vector<Rule>& rules) {
     Style base;
-    for (const Rule& r : rules) if (r.sel == "body") applyProps(base, r.decls);
+    for (const Rule& r : rules)
+        if (r.sel == "body") applyProps(base, r.decls);
     std::vector<Style> stack{base};
     std::vector<Token> toks;
     auto text = [&](string_view s) { toks.push_back({TokKind::Text, decodeEntities(s), stack.back()}); };
     size_t i = 0;
     while (i < markup.size()) {
         size_t lt = markup.find('<', i);
-        if (lt == string_view::npos) { text(markup.substr(i)); break; }
+        if (lt == string_view::npos) {
+            text(markup.substr(i));
+            break;
+        }
         if (lt > i) text(markup.substr(i, lt - i));
         // A '<' that does not open a tag (e.g. "<<<<") is literal text.
         if (lt + 1 >= markup.size() || !(isAlpha(markup[lt + 1]) || markup[lt + 1] == '/' || markup[lt + 1] == '!')) {
@@ -477,7 +550,10 @@ std::vector<Token> tokenize(string_view markup, const std::vector<Rule>& rules) 
             continue;
         }
         size_t gt = markup.find('>', lt);
-        if (gt == string_view::npos) { text(markup.substr(lt)); break; }
+        if (gt == string_view::npos) {
+            text(markup.substr(lt));
+            break;
+        }
         string_view tag = trim(markup.substr(lt + 1, gt - lt - 1));
         i = gt + 1;
         bool closing = !tag.empty() && tag[0] == '/';
@@ -486,18 +562,29 @@ std::vector<Token> tokenize(string_view markup, const std::vector<Rule>& rules) 
         while (n < tag.size() && (isAlpha(tag[n]) || (tag[n] >= '0' && tag[n] <= '9'))) n++;
         if (n == 0) continue;
         string name = lower(tag.substr(0, n));
-        if (name == "br") { toks.push_back({TokKind::Br, {}, stack.back()}); continue; }
-        if (name == "p") toks.push_back({TokKind::Para, {}, stack.back()});   // <p> breaks the line; <div> does not
-        if (name == "img" || name == "beep") continue;   // <IMG> measures 0
-        if (closing) { if (stack.size() > 1) stack.pop_back(); continue; }
+        if (name == "br") {
+            toks.push_back({TokKind::Br, {}, stack.back()});
+            continue;
+        }
+        if (name == "p") toks.push_back({TokKind::Para, {}, stack.back()});  // <p> breaks the line; <div> does not
+        if (name == "img" || name == "beep") continue;                       // <IMG> measures 0
+        if (closing) {
+            if (stack.size() > 1) stack.pop_back();
+            continue;
+        }
         auto attrs = parseAttrs(tag.substr(n));
         Style st = stack.back();
         if (auto a = attrs.find("valign"); a != attrs.end()) st.valign = parseValign(a->second, st.valign);
-        if (name == "b" || name == "strong") st.bold = true;
-        else if (name == "i" || name == "em") st.italic = true;
-        else if (name == "tt" || name == "code" || name == "pre" || name == "kbd" || name == "samp") st.family = "monospace";
-        else if (name == "big") st.pt = int(st.pt * 1.25);
-        else if (name == "small") st.pt = int(st.pt * 0.8);
+        if (name == "b" || name == "strong")
+            st.bold = true;
+        else if (name == "i" || name == "em")
+            st.italic = true;
+        else if (name == "tt" || name == "code" || name == "pre" || name == "kbd" || name == "samp")
+            st.family = "monospace";
+        else if (name == "big")
+            st.pt = int(st.pt * 1.25);
+        else if (name == "small")
+            st.pt = int(st.pt * 0.8);
         else if (name == "font") {
             if (auto f = attrs.find("face"); f != attrs.end()) applyProps(st, {{"font-family", f->second}});
             if (auto f = attrs.find("color"); f != attrs.end()) applyProps(st, {{"color", f->second}});
@@ -505,11 +592,14 @@ std::vector<Token> tokenize(string_view markup, const std::vector<Rule>& rules) 
                 string_view zs = trim(z->second);
                 bool rel = !zs.empty() && (zs[0] == '+' || zs[0] == '-');
                 int v = 0;
-                try { v = std::stoi(string(zs)); } catch (...) { zs = {}; }
+                try {
+                    v = std::stoi(string(zs));
+                } catch (...) { zs = {}; }
                 if (!zs.empty()) {
                     // size=7 is 48pt anywhere. Relative sizes count from the tier at or below the current size.
                     int tier = 1;
-                    for (int t = 1; t <= 7; t++) if (kTierPt[t] <= st.pt) tier = t;
+                    for (int t = 1; t <= 7; t++)
+                        if (kTierPt[t] <= st.pt) tier = t;
                     int to = std::clamp(rel ? tier + v : v, 1, 7);
                     st.pt = kTierPt[to];
                 }
@@ -554,14 +644,14 @@ struct Face {
     bool bold = false;
     std::shared_ptr<TrueTypeFace> tt;
     int ascent = 0, height = 0;
-    DsFace desc;   // what the painter asks its glyph rasterizer for (render/maptextpaint.h)
+    DsFace desc;  // what the painter asks its glyph rasterizer for (render/maptextpaint.h)
 
     int adv(char32_t cp) const {
         if (tt) return tt->advance ? tt->advance(cp) : 0;
         int c = cp1252(cp);
         if (c < bm->first || c > 255) c = bm->defaultChar;
         int one = bm->adv[c - bm->first] * k + (bold ? 1 : 0);  // a bitmap bold adds 1 px per character
-        return cp > 0xFFFF ? 2 * one : one;  // a supplementary character is two default characters
+        return cp > 0xFFFF ? 2 * one : one;                     // a supplementary character is two default characters
     }
     int overhang(char32_t cp) const { return tt && tt->overhang ? tt->overhang(cp) : 0; }
     int defaultAdv() const {
@@ -574,7 +664,8 @@ struct Face {
 const GdiStrike* mapStrike(Bitmap b, int em, GdiProfile prof) {
     auto ss = strikesOf(b, prof);
     const GdiStrike* best = ss.front();
-    for (const GdiStrike* s : ss) if (s->h - s->il <= em) best = s;
+    for (const GdiStrike* s : ss)
+        if (s->h - s->il <= em) best = s;
     return best;
 }
 
@@ -598,7 +689,11 @@ Face bitmapFace(Bitmap b, int em, bool bold, GdiProfile prof) {
 Face resolveFace(const Style& st, GdiProfile prof, bool draw) {
     int em = emOfPt(st.pt, draw);
     const string& fam = st.family;
-    auto bitmap = [&](Bitmap b) { Face f = bitmapFace(b, em, st.bold, prof); f.desc.italic = st.italic; return f; };
+    auto bitmap = [&](Bitmap b) {
+        Face f = bitmapFace(b, em, st.bold, prof);
+        f.desc.italic = st.italic;
+        return f;
+    };
     if (fam.empty() || fam == "ms sans serif" || fam == "sans-serif") return bitmap(Bitmap::MsSansSerif);
     if (fam == "small fonts") return bitmap(Bitmap::SmallFonts);
     if (fam == "monospace" || fam == "courier") return bitmap(Bitmap::Courier);
@@ -622,7 +717,7 @@ Face resolveFace(const Style& st, GdiProfile prof, bool draw) {
             }
         }
     }
-    return bitmap(Bitmap::MsSansSerif);   // no TrueType stack: DreamSeeker's default face
+    return bitmap(Bitmap::MsSansSerif);  // no TrueType stack: DreamSeeker's default face
 }
 
 // ---- layout ------------------------------------------------------------------------------------------------------
@@ -633,8 +728,8 @@ struct Cell {
     char32_t cp = 0;
     int face = 0;
     double lh = 1.2;
-    bool marker = false;   // carries the style in effect where a line starts (an empty line still has a height)
-    int paint = 0;         // index into Built::paints (colour, outline, align): paint only, never a measurement
+    bool marker = false;  // carries the style in effect where a line starts (an empty line still has a height)
+    int paint = 0;        // index into Built::paints (colour, outline, align): paint only, never a measurement
 };
 using Line = std::vector<Cell>;
 
@@ -653,20 +748,26 @@ int widthOf(const Line& l, const std::vector<Face>& faces) {
     return w;
 }
 bool hasGlyph(const Line& l) {
-    for (const Cell& c : l) if (!c.marker && !isBreakSpace(c.cp)) return true;
+    for (const Cell& c : l)
+        if (!c.marker && !isBreakSpace(c.cp)) return true;
     return false;
 }
 bool hasAny(const Line& l) {
-    for (const Cell& c : l) if (!c.marker) return true;
+    for (const Cell& c : l)
+        if (!c.marker) return true;
     return false;
 }
 
-struct OutLine { int w = 0; Line cells; };
+struct OutLine {
+    int w = 0;
+    Line cells;
+};
 
 // One hard line, unwrapped: the sum of advances. A trailing run of n plain spaces or tabs counts n-1 of them.
 OutLine layoutUnwrapped(Line l, const std::vector<Face>& faces) {
     Line real;
-    for (const Cell& c : l) if (!c.marker) real.push_back(c);
+    for (const Cell& c : l)
+        if (!c.marker) real.push_back(c);
     if (real.empty()) return OutLine{0, l.empty() ? l : Line{l.front()}};
     if (real.front().cp == '\t') real.front().cp = kTabAtStart;
     size_t j = real.size();
@@ -679,7 +780,10 @@ OutLine layoutUnwrapped(Line l, const std::vector<Face>& faces) {
 
 std::vector<OutLine> wrapLine(const Line& chars, int width, const std::vector<Face>& faces) {
     // Items: runs of break-spaces, and words (split after '-', not '/').
-    struct Item { bool space; Line cells; };
+    struct Item {
+        bool space;
+        Line cells;
+    };
     std::vector<Item> items;
     Line cur;
     int curKind = -1;
@@ -687,24 +791,45 @@ std::vector<OutLine> wrapLine(const Line& chars, int width, const std::vector<Fa
     for (const Cell& c : chars) {
         if (c.marker) markers.push_back(c);
         int k = isBreakSpace(c.cp) && !c.marker ? 1 : 0;
-        if (k != curKind && !cur.empty()) { items.push_back({curKind == 1, cur}); cur.clear(); }
+        if (k != curKind && !cur.empty()) {
+            items.push_back({curKind == 1, cur});
+            cur.clear();
+        }
         cur.push_back(c);
         curKind = k;
-        if (!c.marker && c.cp == '-' && k == 0) { items.push_back({false, cur}); cur.clear(); curKind = -1; }
+        if (!c.marker && c.cp == '-' && k == 0) {
+            items.push_back({false, cur});
+            cur.clear();
+            curKind = -1;
+        }
     }
     if (!cur.empty()) items.push_back({curKind == 1, cur});
 
     std::vector<OutLine> out;
     Line line, pend;
     int lw = 0;
-    auto flush = [&] { out.push_back(OutLine{lw, line}); line.clear(); lw = 0; pend.clear(); };
+    auto flush = [&] {
+        out.push_back(OutLine{lw, line});
+        line.clear();
+        lw = 0;
+        pend.clear();
+    };
     for (const Item& it : items) {
-        if (it.space) { pend.insert(pend.end(), it.cells.begin(), it.cells.end()); continue; }
+        if (it.space) {
+            pend.insert(pend.end(), it.cells.begin(), it.cells.end());
+            continue;
+        }
         int ww = widthOf(it.cells, faces);
         int pw = widthOf(pend, faces);
         bool has = hasGlyph(line);
-        if (has && lw + pw + ww > width) { flush(); pw = 0; }
-        if (!has && lw + pw + ww > width) { pend.clear(); pw = 0; }   // leading spaces go when the word would overflow
+        if (has && lw + pw + ww > width) {
+            flush();
+            pw = 0;
+        }
+        if (!has && lw + pw + ww > width) {
+            pend.clear();
+            pw = 0;
+        }  // leading spaces go when the word would overflow
         line.insert(line.end(), pend.begin(), pend.end());
         lw += pw;
         pend.clear();
@@ -730,7 +855,7 @@ std::vector<OutLine> wrapLine(const Line& chars, int width, const std::vector<Fa
 // One layout, read by both the MeasureText reply (measureLocked) and the map painter (dsLayoutMaptext), so a box
 // sized from the reply holds exactly the lines drawn.
 struct Built {
-    bool ok = false;          // false = "cannot measure" (empty text)
+    bool ok = false;  // false = "cannot measure" (empty text)
     bool anyGlyph = false;
     std::vector<Face> faces;
     std::vector<DsPaint> paints;
@@ -766,15 +891,26 @@ Built buildLocked(string_view text, string_view mapStyle, string_view style, int
         b.paintValign.push_back(st.valign);
         return paintIdx[key] = int(b.paints.size()) - 1;
     };
-    auto marker = [&](const Style& st) { Cell c; c.marker = true; c.face = faceOf(st); c.lh = st.lh; c.paint = paintOf(st); return c; };
+    auto marker = [&](const Style& st) {
+        Cell c;
+        c.marker = true;
+        c.face = faceOf(st);
+        c.lh = st.lh;
+        c.paint = paintOf(st);
+        return c;
+    };
 
     // Hard lines. kinds: 0 start, 1 <br>/<p>, 2 a newline character.
     std::vector<Line> lines{Line{marker(toks.empty() ? Style{} : toks.front().style)}};
     std::vector<int> ends{0};
-    auto emptyLine = [](const Line& l) { for (const Cell& c : l) if (!c.marker) return false; return true; };
+    auto emptyLine = [](const Line& l) {
+        for (const Cell& c : l)
+            if (!c.marker) return false;
+        return true;
+    };
     for (const Token& t : toks) {
         if (t.kind != TokKind::Text) {
-            if (t.kind == TokKind::Para && emptyLine(lines.back())) continue;   // <p></p><p>: one break, not two
+            if (t.kind == TokKind::Para && emptyLine(lines.back())) continue;  // <p></p><p>: one break, not two
             lines.push_back(Line{marker(t.style)});
             ends.push_back(1);
             continue;
@@ -786,7 +922,11 @@ Built buildLocked(string_view text, string_view mapStyle, string_view style, int
                 if (i + 1 < cps.size() && cps[i + 1] == '\n') continue;
                 c = '\n';
             }
-            if (c == '\n') { lines.push_back(Line{marker(t.style)}); ends.push_back(2); continue; }
+            if (c == '\n') {
+                lines.push_back(Line{marker(t.style)});
+                ends.push_back(2);
+                continue;
+            }
             Cell cell;
             cell.cp = c;
             cell.face = faceOf(t.style);
@@ -796,17 +936,26 @@ Built buildLocked(string_view text, string_view mapStyle, string_view style, int
         }
     }
     // A leading <br> is ignored, but a leading newline is not. Trailing empty lines of either kind are ignored.
-    if (lines.size() > 1 && emptyLine(lines[0]) && ends[1] == 1) { lines.erase(lines.begin()); ends.erase(ends.begin()); }
-    while (lines.size() > 1 && emptyLine(lines.back())) { lines.pop_back(); ends.pop_back(); }
+    if (lines.size() > 1 && emptyLine(lines[0]) && ends[1] == 1) {
+        lines.erase(lines.begin());
+        ends.erase(ends.begin());
+    }
+    while (lines.size() > 1 && emptyLine(lines.back())) {
+        lines.pop_back();
+        ends.pop_back();
+    }
 
     for (const Line& l : lines)
-        for (const Cell& c : l) if (!c.marker && c.cp != ' ' && c.cp != '\t') b.anyGlyph = true;
+        for (const Cell& c : l)
+            if (!c.marker && c.cp != ' ' && c.cp != '\t') b.anyGlyph = true;
     b.ok = true;
     if (!b.anyGlyph) return b;
 
     for (const Line& l : lines) {
-        if (width <= 0) b.out.push_back(layoutUnwrapped(l, faces));
-        else for (OutLine& o : wrapLine(l, width, faces)) b.out.push_back(std::move(o));
+        if (width <= 0)
+            b.out.push_back(layoutUnwrapped(l, faces));
+        else
+            for (OutLine& o : wrapLine(l, width, faces)) b.out.push_back(std::move(o));
     }
     return b;
 }
@@ -814,7 +963,8 @@ Built buildLocked(string_view text, string_view mapStyle, string_view style, int
 // One output line's vertical metrics: its ascent, descent and the pitch to the next line. false = no cells at all.
 bool lineMetrics(const OutLine& o, const std::vector<Face>& faces, int& asc, int& desc, int& pitch) {
     Line use;
-    for (const Cell& c : o.cells) if (!c.marker) use.push_back(c);
+    for (const Cell& c : o.cells)
+        if (!c.marker) use.push_back(c);
     if (use.empty()) use = o.cells;
     if (use.empty()) return false;
     asc = desc = pitch = 0;
@@ -876,8 +1026,14 @@ DsLayout layoutLocked(string_view text, string_view mapStyle, int width, GdiProf
         for (const Cell& c : o.cells) {
             if (c.marker) continue;
             // The line takes the alignment of its first run, and the block the vertical alignment of its first glyph.
-            if (!alignSet) { ln.align = b.paintAlign[size_t(c.paint)]; alignSet = true; }
-            if (!valignSet && !isBreakSpace(c.cp)) { L.valign = b.paintValign[size_t(c.paint)]; valignSet = true; }
+            if (!alignSet) {
+                ln.align = b.paintAlign[size_t(c.paint)];
+                alignSet = true;
+            }
+            if (!valignSet && !isBreakSpace(c.cp)) {
+                L.valign = b.paintValign[size_t(c.paint)];
+                valignSet = true;
+            }
             if (!isBreakSpace(c.cp) && c.cp != '\t') ln.glyphs.push_back(DsGlyph{c.cp, x, c.face, c.paint});
             x += advOf(c, b.faces);
         }
@@ -888,11 +1044,14 @@ DsLayout layoutLocked(string_view text, string_view mapStyle, int width, GdiProf
             break;
         }
         L.lines.push_back(std::move(ln));
-        if (i + 1 == b.out.size()) top += (width > 0 && o.w > width) ? 0 : asc + desc;
-        else top += pitch;
+        if (i + 1 == b.out.size())
+            top += (width > 0 && o.w > width) ? 0 : asc + desc;
+        else
+            top += pitch;
     }
     L.width = width > 0 ? width : 0;
-    for (const DsLine& ln : L.lines) if (width <= 0) L.width = std::max(L.width, ln.width);
+    for (const DsLine& ln : L.lines)
+        if (width <= 0) L.width = std::max(L.width, ln.width);
     L.height = top;
     return L;
 }
@@ -903,8 +1062,9 @@ int cp1252Byte(char32_t cp) { return cp1252(cp); }
 
 int dsBitmapAdvance(const DsFace& face, int b, GdiProfile profile) {
     if (!face.bitmap) return -1;
-    const Bitmap bm = face.family == "small fonts" ? Bitmap::SmallFonts : face.family == "courier" ? Bitmap::Courier
-                    : Bitmap::MsSansSerif;
+    const Bitmap bm = face.family == "small fonts" ? Bitmap::SmallFonts
+                      : face.family == "courier"   ? Bitmap::Courier
+                                                   : Bitmap::MsSansSerif;
     const GdiStrike* s = mapStrike(bm, face.em, profile);
     if (b < 0) b = s->defaultChar;
     return b < s->first || b > 255 ? -1 : s->adv[b - s->first];
@@ -926,7 +1086,8 @@ DsLayout dsLayoutMaptext(string_view text, string_view mapStyle, int width, GdiP
     return layoutLocked(text, mapStyle, width, profile);
 }
 
-MeasureTextAnswer dsMeasureTextAnswer(string_view text, string_view mapStyle, string_view style, int width, GdiProfile profile) {
+MeasureTextAnswer dsMeasureTextAnswer(string_view text, string_view mapStyle, string_view style, int width,
+                                      GdiProfile profile) {
     DsMeasure m = dsMeasureText(text, mapStyle, style, width, profile);
     if (!m.ok || m.width > 0xffff || m.height > 0xffff || m.width < 0 || m.height < 0) return {0xffff, 0xffff};
     return {uint16_t(m.width), uint16_t(m.height)};
@@ -934,8 +1095,10 @@ MeasureTextAnswer dsMeasureTextAnswer(string_view text, string_view mapStyle, st
 
 namespace {
 Bitmap bitmapOf(string_view family) {
-    return family == "ms sans serif" ? Bitmap::MsSansSerif : family == "small fonts" ? Bitmap::SmallFonts
-         : family == "courier"       ? Bitmap::Courier     : Bitmap::None;
+    return family == "ms sans serif" ? Bitmap::MsSansSerif
+           : family == "small fonts" ? Bitmap::SmallFonts
+           : family == "courier"     ? Bitmap::Courier
+                                     : Bitmap::None;
 }
 }  // namespace
 
@@ -961,8 +1124,10 @@ int dsBitmapAdvancePx(const DsFace& face, char32_t cp, GdiProfile profile) {
 string dsMeasureTextReplyBody(const MeasureTextRequest& req, string_view mapStyle, GdiProfile profile) {
     MeasureTextAnswer a = dsMeasureTextAnswer(req.text, mapStyle, req.style, req.width, profile);
     string o(8, '\0');
-    o[0] = char(a.width & 0xff);  o[1] = char(a.width >> 8);
-    o[2] = char(a.height & 0xff); o[3] = char(a.height >> 8);
+    o[0] = char(a.width & 0xff);
+    o[1] = char(a.width >> 8);
+    o[2] = char(a.height & 0xff);
+    o[3] = char(a.height >> 8);
     for (int i = 0; i < 4; i++) o[4 + i] = char((req.id >> (8 * i)) & 0xff);
     return o;
 }

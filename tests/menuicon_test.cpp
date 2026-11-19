@@ -23,7 +23,7 @@ Bytes unhex(const std::string& h) {
     return b;
 }
 using Grid = std::vector<std::string>;
-}
+}  // namespace
 
 class MenuIcon : public QObject {
     Q_OBJECT
@@ -55,13 +55,19 @@ class MenuIcon : public QObject {
         render::DrawList dl;
         render::SceneStats st;
         std::string err;
-        if (!render::assembleMapControl(sess_, res_, 0, dl, st, &err, true)) { qWarning("assemble: %s", err.c_str()); return false; }
+        if (!render::assembleMapControl(sess_, res_, 0, dl, st, &err, true)) {
+            qWarning("assemble: %s", err.c_str());
+            return false;
+        }
         sc_ = dl.hit;
         std::ifstream g(dir + "/dreamseeker-icons.txt");
         std::string name;
         while (std::getline(g, line)) {
             if (line.empty() || line[0] == '#') continue;
-            if (line.size() != 16) { name = line; continue; }
+            if (line.size() != 16) {
+                name = line;
+                continue;
+            }
             ds_[name].push_back(line);
         }
         return bool(sc_);
@@ -87,9 +93,12 @@ class MenuIcon : public QObject {
             std::string r;
             for (int x = 0; x < 16; x++) {
                 const uint8_t* p = &px[(size_t(y * ih / 16) * size_t(iw) + size_t(x * iw / 16)) * 4];
-                if (p[3] == 255 && p[0] == 208 && p[1] == 112 && p[2] == 32) r += 'O';
-                else if (p[3] == 255 && p[0] == 0 && p[1] == 255 && p[2] == 0) r += 'G';
-                else r += '.';
+                if (p[3] == 255 && p[0] == 208 && p[1] == 112 && p[2] == 32)
+                    r += 'O';
+                else if (p[3] == 255 && p[0] == 0 && p[1] == 255 && p[2] == 0)
+                    r += 'G';
+                else
+                    r += '.';
             }
             g.push_back(r);
         }
@@ -100,10 +109,14 @@ class MenuIcon : public QObject {
         int agree = 0;
         for (const auto& [name, want] : ds_) {
             Grid got = ours(name);
-            if (got == want) { agree++; continue; }
+            if (got == want) {
+                agree++;
+                continue;
+            }
             if (!bad) continue;
             std::string d = name + ": DreamSeeker | ours";
-            for (size_t i = 0; i < want.size(); i++) d += "\n  " + want[i] + " | " + (i < got.size() ? got[i] : std::string("(no icon)"));
+            for (size_t i = 0; i < want.size(); i++)
+                d += "\n  " + want[i] + " | " + (i < got.size() ? got[i] : std::string("(no icon)"));
             bad->push_back(d);
         }
         return agree;
@@ -159,7 +172,8 @@ private slots:
         int agree = grade(nullptr);
         render::setSceneMutation(0);
         qInfo("negative control (mutation %d): %d/%zu", mutation, agree, ds_.size());
-        QVERIFY2(agree < int(ds_.size()), "the broken icon rule still matches every DreamSeeker icon: the world does not separate it");
+        QVERIFY2(agree < int(ds_.size()),
+                 "the broken icon rule still matches every DreamSeeker icon: the world does not separate it");
     }
 };
 

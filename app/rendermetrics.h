@@ -15,14 +15,14 @@ using MetricsClock = std::chrono::steady_clock;
 struct TimingSummary {
     size_t samples = 0;
     double last = 0, average = 0, p95 = 0, maximum = 0;
-    double ageMs = -1; // time since the latest observation, NOT the age of a delayed GPU frame
+    double ageMs = -1;  // time since the latest observation, NOT the age of a delayed GPU frame
 };
 
 class TimingWindow {
 public:
     static constexpr size_t capacity = 120;
     void add(double ms, MetricsClock::time_point now = MetricsClock::now()) {
-        if (!std::isfinite(ms) || ms < 0) return; // unavailable is not a zero-time sample
+        if (!std::isfinite(ms) || ms < 0) return;  // unavailable is not a zero-time sample
         values_[next_] = ms;
         next_ = (next_ + 1) % capacity;
         count_ = std::min(count_ + 1, capacity);
@@ -37,11 +37,12 @@ public:
         result.samples = count_;
         result.last = last_;
         result.average = std::accumulate(sorted.begin(), sorted.begin() + count_, 0.0) / count_;
-        result.p95 = sorted[(95 * count_ + 99) / 100 - 1]; // nearest-rank percentile
+        result.p95 = sorted[(95 * count_ + 99) / 100 - 1];  // nearest-rank percentile
         result.maximum = sorted[count_ - 1];
         result.ageMs = std::max(0.0, std::chrono::duration<double, std::milli>(now - lastAt_).count());
         return result;
     }
+
 private:
     std::array<double, capacity> values_{};
     size_t count_ = 0, next_ = 0;
@@ -98,6 +99,6 @@ struct EventLoopHealth {
         if (excess >= stallThresholdMs) ++stalls;
     }
 };
-} // namespace fugue::app
+}  // namespace fugue::app
 
 Q_DECLARE_METATYPE(fugue::app::RenderPhases)

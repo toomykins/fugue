@@ -30,9 +30,9 @@ struct Clip {
     int rate = 0;
     int channels = 0;
     std::vector<float> samples;
-    std::string format;   // "ogg", "wav", "mod", ... - reporting only
+    std::string format;  // "ogg", "wav", "mod", ... - reporting only
     std::function<std::unique_ptr<Stream>(bool loop)> open;
-    size_t sourceBytes = 0;   // what `open` holds (the module file), for the clip cache's budget
+    size_t sourceBytes = 0;  // what `open` holds (the module file), for the clip cache's budget
     bool streamed() const { return bool(open); }
     size_t frames() const { return channels > 0 ? samples.size() / size_t(channels) : 0; }
 };
@@ -51,7 +51,7 @@ std::shared_ptr<const Clip> decodeOgg(ByteSpan b, std::string* err);
 // A tracker module as a streamed Clip. Refused as unsupported when this build has no libopenmpt (FUGUE_OPENMPT,
 // audio/CMakeLists.txt).
 std::shared_ptr<const Clip> decodeModule(ByteSpan b, const std::string& kind, std::string* err, bool* unsupported);
-bool moduleDecoder();   // this build plays tracker modules
+bool moduleDecoder();  // this build plays tracker modules
 
 // 16-bit PCM RIFF/WAVE of interleaved float samples. Tests assert against the file, not a sound card.
 Bytes encodeWav16(int rate, int channels, const std::vector<float>& samples);

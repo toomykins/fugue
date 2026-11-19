@@ -10,6 +10,7 @@
 #include "net/resource.h"
 #include "net/respump.h"
 #include "net/rscstore.h"
+#include "proto/msg.h"
 
 using namespace fugue;
 using namespace fugue::net;
@@ -17,21 +18,49 @@ namespace fs = std::filesystem;
 
 namespace {
 Bytes bytesOf(const std::string& s) { return Bytes(s.begin(), s.end()); }
-Bytes bigFile(int seed, size_t n = 3000) { Bytes b(n); for (size_t i = 0; i < n; i++) b[i] = uint8_t(i * 31 + seed + (i >> 7)); return b; }
-std::string slurpS(const std::string& p) { std::ifstream f(p, std::ios::binary); return std::string((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>()); }
-unsigned modeOf(const std::string& p) { struct stat sb; return ::stat(p.c_str(), &sb) == 0 ? (sb.st_mode & 07777) : 0; }
-Bytes listOf(std::initializer_list<uint32_t> ids) { Bytes b; for (uint32_t id : ids) { putLe32(b, id); b.push_back(2); } return b; }
+Bytes bigFile(int seed, size_t n = 3000) {
+    Bytes b(n);
+    for (size_t i = 0; i < n; i++) b[i] = uint8_t(i * 31 + seed + (i >> 7));
+    return b;
+}
+std::string slurpS(const std::string& p) {
+    std::ifstream f(p, std::ios::binary);
+    return std::string((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+}
+unsigned modeOf(const std::string& p) {
+    struct stat sb;
+    return ::stat(p.c_str(), &sb) == 0 ? (sb.st_mode & 07777) : 0;
+}
+Bytes listOf(std::initializer_list<uint32_t> ids) {
+    Bytes b;
+    for (uint32_t id : ids) {
+        putLe32(b, id);
+        b.push_back(2);
+    }
+    return b;
+}
 Bytes offerFrame(uint32_t rid, uint32_t total, uint32_t size, const std::string& name, const std::string& params) {
     Bytes b;
-    putLe32(b, rid); putLe32(b, 0xffffffffu); putLe32(b, 0); putLe32(b, total);
-    b.push_back(1); putLe32(b, size); b.push_back(2);
-    b.insert(b.end(), name.begin(), name.end()); b.push_back(0);
-    b.insert(b.end(), params.begin(), params.end()); b.push_back(0);
+    putLe32(b, rid);
+    putLe32(b, 0xffffffffu);
+    putLe32(b, 0);
+    putLe32(b, total);
+    b.push_back(1);
+    putLe32(b, size);
+    b.push_back(2);
+    b.insert(b.end(), name.begin(), name.end());
+    b.push_back(0);
+    b.insert(b.end(), params.begin(), params.end());
+    b.push_back(0);
     return b;
 }
 Bytes dataFrame(uint32_t rid, uint32_t pkt, uint32_t total, uint32_t offset, ByteSpan payload) {
     Bytes b;
-    putLe32(b, rid); putLe32(b, 0xffffffffu); putLe32(b, pkt); putLe32(b, total); putLe32(b, offset);
+    putLe32(b, rid);
+    putLe32(b, 0xffffffffu);
+    putLe32(b, pkt);
+    putLe32(b, total);
+    putLe32(b, offset);
     b.insert(b.end(), payload.begin(), payload.end());
     return b;
 }
@@ -39,9 +68,20 @@ struct Rig {
     std::vector<std::pair<uint16_t, Bytes>> sent;
     std::unique_ptr<ResourcePump> p;
     explicit Rig(const std::string& dir) {
-        p = std::make_unique<ResourcePump>(dir, [this](uint16_t t, ByteSpan b) { sent.push_back({t, Bytes(b.begin(), b.end())}); return true; }, [](const std::string&) {});
+        p = std::make_unique<ResourcePump>(
+            dir,
+            [this](uint16_t t, ByteSpan b) {
+                sent.push_back({t, Bytes(b.begin(), b.end())});
+                return true;
+            },
+            [](const std::string&) {});
     }
-    int count(uint16_t t) const { int n = 0; for (auto& s : sent) if (s.first == t) n++; return n; }
+    int count(uint16_t t) const {
+        int n = 0;
+        for (auto& s : sent)
+            if (s.first == t) n++;
+        return n;
+    }
     // answer the oldest declaration: offer + data for `file` named `name`
     void serve(const Bytes& file, const std::string& name) {
         uint32_t id = resId(file);
@@ -54,23 +94,29 @@ struct Rig {
         Bytes u;
         for (auto& [file, key] : recs) {
             Bytes enc = encodeResource(*file, key);
-            Bytes rr; rr.push_back(1); putLe32(rr, key ^ 0x5a5a5a5au);
+            Bytes rr;
+            rr.push_back(1);
+            putLe32(rr, key ^ 0x5a5a5a5au);
             while (rr.size() < 13) rr.push_back(0);
             putLe32(rr, uint32_t(enc.size()));
-            rr.push_back('f'); rr.push_back(0);
+            rr.push_back('f');
+            rr.push_back(0);
             rr.insert(rr.end(), enc.begin(), enc.end());
-            putLe32(u, uint32_t(rr.size())); u.push_back(0x83);
+            putLe32(u, uint32_t(rr.size()));
+            u.push_back(0x83);
             u.insert(u.end(), rr.begin(), rr.end());
         }
         Bytes gz = {0x1f, 0x8b, 8, 0, 0, 0, 0, 0, 0, 3};
         for (size_t off = 0; off < u.size() || off == 0; off += 65535) {
             size_t n = std::min<size_t>(65535, u.size() - off);
             gz.push_back(off + n >= u.size() ? 1 : 0);
-            putLe16(gz, uint16_t(n)); putLe16(gz, uint16_t(~n));
+            putLe16(gz, uint16_t(n));
+            putLe16(gz, uint16_t(~n));
             gz.insert(gz.end(), u.begin() + long(off), u.begin() + long(off + n));
             if (off + n >= u.size()) break;
         }
-        putLe32(gz, crc32Gzip(u)); putLe32(gz, uint32_t(u.size()));
+        putLe32(gz, crc32Gzip(u));
+        putLe32(gz, uint32_t(u.size()));
         return encodeResource(gz, rid);
     }
     void serveBundle(uint32_t rid, const std::vector<std::pair<const Bytes*, uint32_t>>& recs) {
@@ -79,7 +125,7 @@ struct Rig {
         p->onFrame(dataFrame(rid, 1, 2, 0, b));
     }
 };
-}
+}  // namespace
 
 class RscStoreTest : public QObject {
     Q_OBJECT
@@ -99,7 +145,7 @@ private slots:
         std::snprintf(want, sizeof want, "%s/%02x/%08x", d.c_str(), unsigned(id >> 24), unsigned(id));
         QCOMPARE(RscStore::pathFor(d, id), std::string(want));
         QCOMPARE(slurpS(want), std::string(f.begin(), f.end()));  // the file is the raw bytes and nothing else
-#ifndef _WIN32 // Cache files inherit the profile ACL on Windows; CRT mode bits are not Unix permissions.
+#ifndef _WIN32  // Cache files inherit the profile ACL on Windows; CRT mode bits are not Unix permissions.
         QCOMPARE(modeOf(want), 0600u);
         QCOMPARE(modeOf(std::string(want).substr(0, std::string(want).rfind('/'))), 0700u);
         QCOMPARE(modeOf(d + "/names"), 0600u);
@@ -107,7 +153,8 @@ private slots:
         char nl[256];
         std::snprintf(nl, sizeof nl, "%08x\ticons/a.dmi\n", unsigned(id));
         QCOMPARE(slurpS(d + "/names"), std::string(nl));
-        for (auto& e : fs::directory_iterator(fs::path(want).parent_path())) QVERIFY2(e.path().filename().string().rfind(".tmp-", 0) != 0, "temp file left behind");
+        for (auto& e : fs::directory_iterator(fs::path(want).parent_path()))
+            QVERIFY2(e.path().filename().string().rfind(".tmp-", 0) != 0, "temp file left behind");
         // fixed vector: pins the shard rule independent of the implementation (id 0xdeadbeef -> de/deadbeef)
         QCOMPARE(RscStore::pathFor("/x", 0xdeadbeefu), std::string("/x/de/deadbeef"));
         QCOMPARE(RscStore::pathFor("/x", 0x0000000au), std::string("/x/00/0000000a"));
@@ -160,17 +207,26 @@ private slots:
         std::string d = td.path().toStdString();
         Bytes f = bigFile(5);
         uint32_t id = resId(f);
-        { RscStore s(d); QVERIFY(s.put(id, "", f)); QVERIFY(!s.hasName(id)); QVERIFY(s.put(id, "late.png", f)); }
-        fs::create_directories(d + "/zz"); std::ofstream(d + "/zz/00000001") << "x";  // not a shard
-        fs::create_directories(d + "/ab"); std::ofstream(d + "/ab/notanid") << "x";  // not an id
+        {
+            RscStore s(d);
+            QVERIFY(s.put(id, "", f));
+            QVERIFY(!s.hasName(id));
+            QVERIFY(s.put(id, "late.png", f));
+        }
+        fs::create_directories(d + "/zz");
+        std::ofstream(d + "/zz/00000001") << "x";  // not a shard
+        fs::create_directories(d + "/ab");
+        std::ofstream(d + "/ab/notanid") << "x";  // not an id
         std::ofstream(d + "/notes.txt") << "mine";
         RscStore s(d);
         QVERIFY(s.hasName(id));
-        Bytes out; std::string nm;
+        Bytes out;
+        std::string nm;
         QVERIFY(s.get(id, out, &nm));
         QCOMPARE(nm, std::string("late.png"));
         QCOMPARE(s.stats().files, uint64_t(1));
-        QVERIFY(fs::exists(d + "/zz/00000001") && fs::exists(d + "/ab/notanid") && fs::exists(d + "/notes.txt"));  // never deleted
+        QVERIFY(fs::exists(d + "/zz/00000001") && fs::exists(d + "/ab/notanid") &&
+                fs::exists(d + "/notes.txt"));  // never deleted
         // sanitised name: a tab/newline in a server-controlled name cannot corrupt the log
         Bytes g = bigFile(6);
         QVERIFY(s.put(resId(g), "a\tb\nc", g));
@@ -201,7 +257,7 @@ private slots:
         {
             Rig cold(d);
             cold.p->onResList(listOf({resId(a), resId(b)}));
-            QCOMPARE(cold.count(0x003c), 1);  // one batch
+            QCOMPARE(cold.count(C2S::ResourceDeclare), 1);    // one batch
             QCOMPARE(cold.p->stats().declared, uint64_t(2));  // both ordinals
             cold.serve(a, "a.dmi");
             cold.serve(b, "b.ogg");
@@ -209,8 +265,9 @@ private slots:
         }
         Rig warm(d);
         warm.p->onResList(listOf({resId(a), resId(b), 0x12345678u}));
-        QCOMPARE(warm.count(0x003c), 1);  // only the id the cache lacks
-        QCOMPARE(warm.sent[0].second, (Bytes{2, 0, 0, 0}));  // ORDINAL stays the list index (the cache hits are 0 and 1)
+        QCOMPARE(warm.count(C2S::ResourceDeclare), 1);  // only the id the cache lacks
+        QCOMPARE(warm.sent[0].second,
+                 (Bytes{2, 0, 0, 0}));  // ORDINAL stays the list index (the cache hits are 0 and 1)
         QCOMPARE(warm.p->stats().cacheServed, uint64_t(2));
         QCOMPARE(warm.p->storedCount(), size_t(2));  // reported to the session as already held
         Bytes out;
@@ -226,27 +283,30 @@ private slots:
         QTemporaryDir td;
         Rig r(td.path().toStdString() + "/rsc");
         Bytes list;
-        for (int i = 0; i < 400; i++) { putLe32(list, 0x20000000u + uint32_t(i) * 7919u); list.push_back(3); }
+        for (int i = 0; i < 400; i++) {
+            putLe32(list, 0x20000000u + uint32_t(i) * 7919u);
+            list.push_back(3);
+        }
         r.p->onResList(list);
-        QCOMPARE(r.count(0x003c), 1);  // one batch at DD, nothing measured yet
+        QCOMPARE(r.count(C2S::ResourceDeclare), 1);        // one batch at DD, nothing measured yet
         QCOMPARE(r.sent[0].second.size(), size_t(8 * 4));  // kFirstBatch ordinals, 0..7
         QCOMPARE(le32(&r.sent[0].second[0]), 0u);
         QCOMPARE(r.p->inFlight(), size_t(8));
         // Its offer arrives: that batch is being answered, so the next one is declared to wait behind it, and no more.
         r.p->onFrame(offerFrame(0x51, 2, 8 * 2000, "resources", "##action=load_rsc"));
-        QCOMPARE(r.count(0x003c), 2);
+        QCOMPARE(r.count(C2S::ResourceDeclare), 2);
         QCOMPARE(r.p->inFlight(), size_t(8));
         r.p->tick();
-        QCOMPARE(r.count(0x003c), 2);
+        QCOMPARE(r.count(C2S::ResourceDeclare), 2);
         r.p->onFrame(dataFrame(0x51, 1, 2, 0, bigFile(1, 8 * 2000)));  // 2000 bytes per ordinal
-        QCOMPARE(r.p->nextBackgroundBatch(), size_t(32));  // 1 MiB / 2000 B -> capped at kBatch
-        r.serve(bigFile(2, 8 * 256 * 1024), "resources");  // the second batch: 256 KB per ordinal
-        QCOMPARE(r.p->nextBackgroundBatch(), size_t(7));  // EWMA ~129 KB/ordinal -> 1 MiB holds 7 more
-        QCOMPARE(r.count(0x003c), 3);
+        QCOMPARE(r.p->nextBackgroundBatch(), size_t(32));              // 1 MiB / 2000 B -> capped at kBatch
+        r.serve(bigFile(2, 8 * 256 * 1024), "resources");              // the second batch: 256 KB per ordinal
+        QCOMPARE(r.p->nextBackgroundBatch(), size_t(7));               // EWMA ~129 KB/ordinal -> 1 MiB holds 7 more
+        QCOMPARE(r.count(C2S::ResourceDeclare), 3);
         QCOMPARE(r.sent.back().second.size(), size_t(32 * 4));  // declared before that bundle landed, at 32
-        r.serve(bigFile(3, 4 << 20), "resources");  // that 32-batch carried 4 MiB
-        QCOMPARE(r.sent.back().second.size(), size_t(7 * 4));  // the batch declared behind it holds 7, not 32
-        QCOMPARE(r.p->inFlight(), size_t(7));  // still exactly one background batch at DD
+        r.serve(bigFile(3, 4 << 20), "resources");              // that 32-batch carried 4 MiB
+        QCOMPARE(r.sent.back().second.size(), size_t(7 * 4));   // the batch declared behind it holds 7, not 32
+        QCOMPARE(r.p->inFlight(), size_t(7));                   // still exactly one background batch at DD
     }
 
     // What the client needs now jumps the queue (ResourcePump::prioritize): a title-screen icon, a lobby song, a page's browse_rsc asset.
@@ -257,33 +317,38 @@ private slots:
         Rig r(td.path().toStdString() + "/rsc");
         std::vector<uint32_t> ids;
         Bytes list;
-        for (uint32_t i = 0; i < 9000; i++) { ids.push_back(0x10000000u + i * 7919u); putLe32(list, ids.back()); list.push_back(3); }
+        for (uint32_t i = 0; i < 9000; i++) {
+            ids.push_back(0x10000000u + i * 7919u);
+            putLe32(list, ids.back());
+            list.push_back(3);
+        }
         r.p->onResList(list);
         r.p->onFrame(offerFrame(0x61, 2, 1000, "resources", "##action=load_rsc"));  // batch 1 is being answered
-        QCOMPARE(r.count(0x003c), 2);  // batch 2 waits behind it
+        QCOMPARE(r.count(C2S::ResourceDeclare), 2);                                 // batch 2 waits behind it
         QCOMPARE(r.p->queued(), size_t(9000 - 16));
-        const int before = r.count(0x003c);
+        const int before = r.count(C2S::ResourceDeclare);
         r.p->prioritize({ids[8999], ids[5000], 0x99999999u});  // two queued entries, plus an id the list never offered
-        QCOMPARE(r.count(0x003c), before + 1);  // sent NOW: no transfer has completed
+        QCOMPARE(r.count(C2S::ResourceDeclare), before + 1);   // sent NOW: no transfer has completed
         Bytes want;
-        putLe32(want, 5000); putLe32(want, 8999);  // list order among the demanded
+        putLe32(want, 5000);
+        putLe32(want, 8999);  // list order among the demanded
         QCOMPARE(r.sent.back().second, want);
         QCOMPARE(r.p->queued(), size_t(9000 - 18));
         r.p->prioritize({ids[8999]});  // already declared: ignored, nothing re-sent
-        QCOMPARE(r.count(0x003c), before + 1);
+        QCOMPARE(r.count(C2S::ResourceDeclare), before + 1);
         // demands have their own window, so a burst still goes out in batches
         std::vector<uint32_t> burst(ids.begin() + 1000, ids.begin() + 1300);
         r.p->prioritize(burst);
-        QCOMPARE(r.count(0x003c), before + 1 + 3);  // 4 urgent frames open at most (one already)
-        QCOMPARE(le32(&r.sent.back().second[0]), 1064u);  // 1000..1031, 1032..1063, 1064..1095
+        QCOMPARE(r.count(C2S::ResourceDeclare), before + 1 + 3);  // 4 urgent frames open at most (one already)
+        QCOMPARE(le32(&r.sent.back().second[0]), 1064u);          // 1000..1031, 1032..1063, 1064..1095
         // While demands are queued the background fill waits behind them: the offer for the background frame DD holds sends nothing;
         // the offer for the first demanded frame sends the next demanded one.
-        const int afterBurst = r.count(0x003c);
+        const int afterBurst = r.count(C2S::ResourceDeclare);
         r.p->onFrame(dataFrame(0x61, 1, 2, 0, bigFile(9, 1000)));  // batch 1's bytes
-        r.serve(bigFile(10), "resources");  // batch 2
-        QCOMPARE(r.count(0x003c), afterBurst);
+        r.serve(bigFile(10), "resources");                         // batch 2
+        QCOMPARE(r.count(C2S::ResourceDeclare), afterBurst);
         r.serve(bigFile(20), "resources");  // the [5000, 8999] frame
-        QCOMPARE(r.count(0x003c), afterBurst + 1);
+        QCOMPARE(r.count(C2S::ResourceDeclare), afterBurst + 1);
         QCOMPARE(le32(&r.sent.back().second[0]), 1096u);
         QCOMPARE(r.p->queued(), size_t(9000 - 18 - 128));
     }
@@ -295,13 +360,20 @@ private slots:
         Rig r(td.path().toStdString() + "/rsc");
         std::vector<Bytes> files;
         std::vector<uint32_t> ids;
-        for (int i = 0; i < 8; i++) { files.push_back(bigFile(300 + i, 700 + size_t(i))); ids.push_back(resId(files.back())); }
+        for (int i = 0; i < 8; i++) {
+            files.push_back(bigFile(300 + i, 700 + size_t(i)));
+            ids.push_back(resId(files.back()));
+        }
         Bytes list;
-        for (uint32_t id : ids) { putLe32(list, id); list.push_back(3); }
+        for (uint32_t id : ids) {
+            putLe32(list, id);
+            list.push_back(3);
+        }
         r.p->onResList(list);
-        QCOMPARE(r.count(0x003c), 1);
+        QCOMPARE(r.count(C2S::ResourceDeclare), 1);
         std::vector<std::pair<const Bytes*, uint32_t>> recs;
-        for (int i : {3, 0, 7, 1, 6, 2, 5, 4}) recs.push_back({&files[size_t(i)], ids[size_t(i)]});  // NOT declaration order
+        for (int i : {3, 0, 7, 1, 6, 2, 5, 4})
+            recs.push_back({&files[size_t(i)], ids[size_t(i)]});  // NOT declaration order
         r.serveBundle(0x700, recs);
         QCOMPARE(r.p->stats().bundles, uint64_t(1));
         QCOMPARE(r.p->stats().verified, uint64_t(8));
@@ -322,9 +394,15 @@ private slots:
         r.p->setClockForTest([&now] { return now; });
         std::vector<Bytes> files;
         std::vector<uint32_t> ids;
-        for (int i = 0; i < 24; i++) { files.push_back(bigFile(500 + i, 600 + size_t(i))); ids.push_back(resId(files.back())); }
+        for (int i = 0; i < 24; i++) {
+            files.push_back(bigFile(500 + i, 600 + size_t(i)));
+            ids.push_back(resId(files.back()));
+        }
         Bytes list;
-        for (uint32_t id : ids) { putLe32(list, id); list.push_back(3); }
+        for (uint32_t id : ids) {
+            putLe32(list, id);
+            list.push_back(3);
+        }
         r.p->onResList(list);  // batch A = 0..7 declared
         auto recsOf = [&](int from) {
             std::vector<std::pair<const Bytes*, uint32_t>> v;
@@ -333,18 +411,18 @@ private slots:
         };
         // A's offer arrives and its (big) bundle starts streaming; B = 8..15 is declared behind it
         r.p->onFrame(offerFrame(0xA00, 2, 0, "resources", "##action=load_rsc"));
-        QCOMPARE(r.count(0x003c), 2);
+        QCOMPARE(r.count(C2S::ResourceDeclare), 2);
         now += 31000;  // A is still streaming: B passes the expiry
         r.p->tick();
         QCOMPARE(r.p->stats().declExpired, uint64_t(8));
-        QCOMPARE(r.count(0x003c), 3);  // its slot is free: C = 16..23 goes out
-        r.p->onFrame(dataFrame(0xA00, 1, 2, 0, r.bundleBytes(0xA00, recsOf(0))));   // A lands
+        QCOMPARE(r.count(C2S::ResourceDeclare), 3);  // its slot is free: C = 16..23 goes out
+        r.p->onFrame(dataFrame(0xA00, 1, 2, 0, r.bundleBytes(0xA00, recsOf(0))));  // A lands
         r.serveBundle(0xB00, recsOf(8));  // DD answers B after all - late, not never
         r.serveBundle(0xC00, recsOf(16));
         QCOMPARE(r.p->stats().verified, uint64_t(24));
         QCOMPARE(r.p->stats().unverified, uint64_t(0));
         QCOMPARE(r.p->stats().offerMismatch, uint64_t(0));  // no offer was guessed onto the wrong batch
-        QCOMPARE(r.p->stats().declExpired, uint64_t(0));  // answered: no longer counted as expired
+        QCOMPARE(r.p->stats().declExpired, uint64_t(0));    // answered: no longer counted as expired
         QCOMPARE(r.p->outstandingBatches(), size_t(0));
         QCOMPARE(r.p->pending(), size_t(0));
     }
@@ -355,12 +433,18 @@ private slots:
         Rig r(td.path().toStdString() + "/rsc");
         std::vector<Bytes> files;
         std::vector<uint32_t> ids;
-        for (int i = 0; i < 16; i++) { files.push_back(bigFile(700 + i, 500 + size_t(i))); ids.push_back(resId(files.back())); }
+        for (int i = 0; i < 16; i++) {
+            files.push_back(bigFile(700 + i, 500 + size_t(i)));
+            ids.push_back(resId(files.back()));
+        }
         Bytes list;
-        for (uint32_t id : ids) { putLe32(list, id); list.push_back(3); }
+        for (uint32_t id : ids) {
+            putLe32(list, id);
+            list.push_back(3);
+        }
         r.p->onResList(list);  // A = 0..7
         r.p->onFrame(offerFrame(0x1, 2, 0, "resources", "##action=load_rsc"));
-        QCOMPARE(r.count(0x003c), 2);  // B = 8..15
+        QCOMPARE(r.count(C2S::ResourceDeclare), 2);  // B = 8..15
         std::vector<std::pair<const Bytes*, uint32_t>> b;
         for (int i = 8; i < 16; i++) b.push_back({&files[size_t(i)], ids[size_t(i)]});
         r.p->onFrame(dataFrame(0x1, 1, 2, 0, r.bundleBytes(0x1, b)));  // the offer guessed A, but the bytes are B's
@@ -368,7 +452,7 @@ private slots:
         QCOMPARE(r.p->stats().unverified, uint64_t(0));
         QCOMPARE(r.p->stats().offerMismatch, uint64_t(1));
         QCOMPARE(r.p->stats().declSkipped, uint64_t(8));  // A will never be answered: declared again
-        QCOMPARE(r.count(0x003c), 3);
+        QCOMPARE(r.count(C2S::ResourceDeclare), 3);
         QCOMPARE(le32(&r.sent.back().second[0]), 0u);
         std::vector<std::pair<const Bytes*, uint32_t>> a;
         for (int i = 0; i < 8; i++) a.push_back({&files[size_t(i)], ids[size_t(i)]});
@@ -387,7 +471,8 @@ private slots:
         }
         Rig warm(d);
         warm.p->onResList(listOf({resId(a)}));
-        QCOMPARE(warm.count(0x003c), 1);  // bytes cached but nameless: the offer is the only source of the name
+        QCOMPARE(warm.count(C2S::ResourceDeclare),
+                 1);  // bytes cached but nameless: the offer is the only source of the name
         QCOMPARE(warm.p->stats().cacheNameless, uint64_t(1));
         QCOMPARE(warm.p->stats().cacheServed, uint64_t(0));
         warm.serve(a, "panel.css");
@@ -395,21 +480,25 @@ private slots:
         QCOMPARE(warm.p->storedThisRun().at(resId(a)), std::string("panel.css"));
         Rig warm2(d);  // the name is learned for the NEXT join
         warm2.p->onResList(listOf({resId(a)}));
-        QCOMPARE(warm2.count(0x003c), 0);
+        QCOMPARE(warm2.count(C2S::ResourceDeclare), 0);
     }
 
     void corrupted_cache_entry_falls_back_to_the_wire() {
         QTemporaryDir td;
         std::string d = td.path().toStdString() + "/rsc";
         Bytes a = bigFile(23);
-        { Rig cold(d); cold.p->onResList(listOf({resId(a)})); cold.serve(a, "a.dmi"); }
+        {
+            Rig cold(d);
+            cold.p->onResList(listOf({resId(a)}));
+            cold.serve(a, "a.dmi");
+        }
         fs::resize_file(RscStore::pathFor(d, resId(a)), 7);  // damage after the list skipped it
         Rig warm(d);
         warm.p->onResList(listOf({resId(a)}));
-        QCOMPARE(warm.count(0x003c), 0);  // optimistic Has: skipped
+        QCOMPARE(warm.count(C2S::ResourceDeclare), 0);  // optimistic Has: skipped
         Bytes out;
-        QVERIFY(!warm.p->readStored(resId(a), out));  // the verified read refuses and deletes it, and
-        QCOMPARE(warm.count(0x003c), 1);  // re-declares (re-resolve, never stuck)
+        QVERIFY(!warm.p->readStored(resId(a), out));    // the verified read refuses and deletes it, and
+        QCOMPARE(warm.count(C2S::ResourceDeclare), 1);  // re-declares (re-resolve, never stuck)
         QCOMPARE(warm.p->stats().cacheRedeclared, uint64_t(1));
         QVERIFY(!fs::exists(RscStore::pathFor(d, resId(a))));
         warm.serve(a, "a.dmi");

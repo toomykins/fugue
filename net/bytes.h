@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <optional>
 #include <span>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -41,14 +42,38 @@ inline std::optional<Bytes> hexDecode(std::string_view s) {
     return out;
 }
 
+// hexDecode that throws std::invalid_argument on bad input, for callers with no recovery.
+// Never dereference hexDecode()'s optional unchecked: that is undefined behaviour on nullopt.
+inline Bytes hexBytes(std::string_view s) {
+    auto b = hexDecode(s);
+    if (!b) throw std::invalid_argument("bad hex");
+    return std::move(*b);
+}
+
 // Wire scalars. Frame headers and the c2s seq are BIG-endian; payload scalars are LITTLE-endian.
 inline uint16_t be16(const uint8_t* p) { return uint16_t(p[0] << 8 | p[1]); }
-inline uint32_t be32(const uint8_t* p) { return uint32_t(p[0]) << 24 | uint32_t(p[1]) << 16 | uint32_t(p[2]) << 8 | p[3]; }
+inline uint32_t be32(const uint8_t* p) {
+    return uint32_t(p[0]) << 24 | uint32_t(p[1]) << 16 | uint32_t(p[2]) << 8 | p[3];
+}
 inline uint16_t le16(const uint8_t* p) { return uint16_t(p[0] | p[1] << 8); }
-inline uint32_t le32(const uint8_t* p) { return uint32_t(p[0]) | uint32_t(p[1]) << 8 | uint32_t(p[2]) << 16 | uint32_t(p[3]) << 24; }
-inline void putBe16(Bytes& o, uint16_t v) { o.push_back(uint8_t(v >> 8)); o.push_back(uint8_t(v)); }
-inline void putBe32(Bytes& o, uint32_t v) { putBe16(o, uint16_t(v >> 16)); putBe16(o, uint16_t(v)); }
-inline void putLe16(Bytes& o, uint16_t v) { o.push_back(uint8_t(v)); o.push_back(uint8_t(v >> 8)); }
-inline void putLe32(Bytes& o, uint32_t v) { putLe16(o, uint16_t(v)); putLe16(o, uint16_t(v >> 16)); }
+inline uint32_t le32(const uint8_t* p) {
+    return uint32_t(p[0]) | uint32_t(p[1]) << 8 | uint32_t(p[2]) << 16 | uint32_t(p[3]) << 24;
+}
+inline void putBe16(Bytes& o, uint16_t v) {
+    o.push_back(uint8_t(v >> 8));
+    o.push_back(uint8_t(v));
+}
+inline void putBe32(Bytes& o, uint32_t v) {
+    putBe16(o, uint16_t(v >> 16));
+    putBe16(o, uint16_t(v));
+}
+inline void putLe16(Bytes& o, uint16_t v) {
+    o.push_back(uint8_t(v));
+    o.push_back(uint8_t(v >> 8));
+}
+inline void putLe32(Bytes& o, uint32_t v) {
+    putLe16(o, uint16_t(v));
+    putLe16(o, uint16_t(v >> 16));
+}
 
 }  // namespace fugue

@@ -106,7 +106,8 @@ QMessageBox QPushButton:focus { border-color:#bcd4ff; }
 // parseTarget's sentences name protocol details; the add-server field says it plainly.
 QString plainTargetError(const std::string& err) {
     if (err.find("hub WORLD reference") != std::string::npos)
-        return "That needs a port number, like example.com:1234. (BYOND hub links like Name.World cannot be opened here yet.)";
+        return "That needs a port number, like example.com:1234. (BYOND hub links like Name.World cannot be opened "
+               "here yet.)";
     if (err.find("no server address") != std::string::npos) return "Type the server's address first.";
     return "That doesn't look like a server address. Type it like example.com:1234 or byond://example.com:1234.";
 }
@@ -132,7 +133,8 @@ QFrame* sep(QWidget* parent) {
     return f;
 }
 QString a(const QString& href, const QString& text) {
-    return QString("<a href=\"%1\" style=\"color:%2; text-decoration:none;\">%3</a>").arg(href.toHtmlEscaped(), kLink, text.toHtmlEscaped());
+    return QString("<a href=\"%1\" style=\"color:%2; text-decoration:none;\">%3</a>")
+        .arg(href.toHtmlEscaped(), kLink, text.toHtmlEscaped());
 }
 
 // List rows: data roles the delegate draws. Rows are PAINTED (no per-row widgets), like BYOND's list.
@@ -141,20 +143,25 @@ enum Role { kAddr = Qt::UserRole + 1, kPlayers, kBlocked, kPlaceholder };
 class GameRowDelegate : public QStyledItemDelegate {
 public:
     using QStyledItemDelegate::QStyledItemDelegate;
-    QSize sizeHint(const QStyleOptionViewItem& opt, const QModelIndex&) const override { return QSize(opt.rect.width(), 22); }
+    QSize sizeHint(const QStyleOptionViewItem& opt, const QModelIndex&) const override {
+        return QSize(opt.rect.width(), 22);
+    }
     void paint(QPainter* p, const QStyleOptionViewItem& opt, const QModelIndex& ix) const override {
         p->save();
         const QRect r = opt.rect;
         QColor bg = (ix.row() % 2) ? QColor("#1e1e1e") : QColor("#000000");
-        if (opt.state & QStyle::State_Selected) bg = QColor("#2d4f95");
-        else if (opt.state & QStyle::State_MouseOver) bg = QColor("#303030");
+        if (opt.state & QStyle::State_Selected)
+            bg = QColor("#2d4f95");
+        else if (opt.state & QStyle::State_MouseOver)
+            bg = QColor("#303030");
         p->fillRect(r, bg);
         QFont f = opt.font;
         if (ix.data(kPlaceholder).toBool()) {
             f.setItalic(true);
             p->setFont(f);
             p->setPen(QColor(kDim));
-            p->drawText(r.adjusted(8, 0, -8, 0), Qt::AlignVCenter | Qt::AlignLeft, opt.fontMetrics.elidedText(ix.data().toString(), Qt::ElideRight, r.width() - 16));
+            p->drawText(r.adjusted(8, 0, -8, 0), Qt::AlignVCenter | Qt::AlignLeft,
+                        opt.fontMetrics.elidedText(ix.data().toString(), Qt::ElideRight, r.width() - 16));
             p->restore();
             return;
         }
@@ -203,7 +210,7 @@ QListWidget* gameList(QWidget* parent, const char* name) {
     l->setMouseTracking(true);
     l->setUniformItemSizes(true);
     l->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    l->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);   // always show the scrollbar
+    l->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);  // always show the scrollbar
     return l;
 }
 }  // namespace
@@ -246,7 +253,7 @@ PagerWindow::PagerWindow(QWidget* parent) : QWidget(parent) {
     filter_->setClearButtonEnabled(true);
     openBtn_ = pill("Open...", bar, "open");
     openBtn_->setToolTip("Add a server by its address");
-    openBtn_->setMinimumWidth(openBtn_->sizeHint().width());   // never elide the pill
+    openBtn_->setMinimumWidth(openBtn_->sizeHint().width());  // never elide the pill
     r2->addWidget(fl);
     r2->addWidget(filter_, 1);
     r2->addWidget(openBtn_);
@@ -281,7 +288,11 @@ PagerWindow::PagerWindow(QWidget* parent) : QWidget(parent) {
     bl->addWidget(addRow_);
     gl->addWidget(bar);
     connect(openBtn_, &QPushButton::clicked, this, &PagerWindow::showAddServer);
-    connect(addCancel_, &QPushButton::clicked, this, [this] { addEdit_->clear(); addMsg_->hide(); addRow_->hide(); });
+    connect(addCancel_, &QPushButton::clicked, this, [this] {
+        addEdit_->clear();
+        addMsg_->hide();
+        addRow_->hide();
+    });
     connect(addOk_, &QPushButton::clicked, this, [this] { submitAddServer(addEdit_->text()); });
     connect(addEdit_, &QLineEdit::returnPressed, this, [this] { submitAddServer(addEdit_->text()); });
 
@@ -296,7 +307,10 @@ PagerWindow::PagerWindow(QWidget* parent) : QWidget(parent) {
     auto* acctLay = new QHBoxLayout(acctBar);
     acctLay->setContentsMargins(6, 4, 6, 4);
     gl->addWidget(acctBar);
-    connect(marks_, &QListWidget::currentRowChanged, this, [this] { updateJoin(); updateGameTab(); });
+    connect(marks_, &QListWidget::currentRowChanged, this, [this] {
+        updateJoin();
+        updateGameTab();
+    });
     connect(marks_, &QListWidget::itemClicked, this, [this] { openGameTab(); });
     connect(marks_, &QListWidget::itemDoubleClicked, this, [this](QListWidgetItem* it) { joinRow(marks_->row(it)); });
     connect(marks_, &QListWidget::customContextMenuRequested, this, [this](const QPoint& pos) {
@@ -309,9 +323,12 @@ PagerWindow::PagerWindow(QWidget* parent) : QWidget(parent) {
         wm->setEnabled(warming_ || jn->isEnabled());
         QAction* rm = m.addAction("Remove server");
         QAction* got = m.exec(marks_->viewport()->mapToGlobal(pos));
-        if (got == rm) emit serverRemoved(Q(sorted_[size_t(r)].addr));
-        else if (got == jn) joinRow(r);
-        else if (got == wm) warmRow(r);
+        if (got == rm)
+            emit serverRemoved(Q(sorted_[size_t(r)].addr));
+        else if (got == jn)
+            joinRow(r);
+        else if (got == wm)
+            warmRow(r);
     });
 
     // ================= RIGHT: Home | <game> | Details =================
@@ -415,17 +432,22 @@ PagerWindow::PagerWindow(QWidget* parent) : QWidget(parent) {
     mh->addStretch(1);
     pages_->addWidget(mp);
     connect(acctBtn_, &QPushButton::clicked, this, [this] {
-        if (cfg_.account.empty()) showSignIn();   // a guest stays a guest unless the Sign in window succeeds
-        else emit signOutRequested();
+        if (cfg_.account.empty())
+            showSignIn();  // a guest stays a guest unless the Sign in window succeeds
+        else
+            emit signOutRequested();
     });
     acctLay->addWidget(pages_);
 
     auto* findBody = new QLabel(home_);
     findBody->setTextFormat(Qt::RichText);
-    findBody->setText("Find games to play!<br>" + a("saved", "Saved servers") + " | " + a("open", "Open location\xe2\x80\xa6"));
+    findBody->setText("Find games to play!<br>" + a("saved", "Saved servers") + " | " +
+                      a("open", "Open location\xe2\x80\xa6"));
     connect(findBody, &QLabel::linkActivated, this, [this](const QString& href) {
-        if (href == "saved") marks_->setFocus();
-        else if (href == "open") showAddServer();
+        if (href == "saved")
+            marks_->setFocus();
+        else if (href == "open")
+            showAddServer();
     });
     hv->addWidget(row(icons::find(32), findBody));
     hv->addWidget(sep(home_));
@@ -438,8 +460,10 @@ PagerWindow::PagerWindow(QWidget* parent) : QWidget(parent) {
         for (int i = 0; i < int(sorted_.size()); i++) {
             if (Q(sorted_[size_t(i)].addr) != addr) continue;
             marks_->setCurrentRow(i);
-            if (replay) joinRow(i);
-            else openGameTab();
+            if (replay)
+                joinRow(i);
+            else
+                openGameTab();
             return;
         }
     });
@@ -455,7 +479,10 @@ PagerWindow::PagerWindow(QWidget* parent) : QWidget(parent) {
     hv->addStretch(1);
     right_->addTab(home_, icons::home(), "Home");
     for (auto side : {QTabBar::LeftSide, QTabBar::RightSide})
-        if (QWidget* b = right_->tabBar()->tabButton(0, side)) { b->hide(); right_->tabBar()->setTabButton(0, side, nullptr); }
+        if (QWidget* b = right_->tabBar()->tabButton(0, side)) {
+            b->hide();
+            right_->tabBar()->setTabButton(0, side, nullptr);
+        }
 
     // ---- the selected game's tab (opened by a click; closable) ----
     game_ = new QWidget(this);
@@ -500,7 +527,8 @@ PagerWindow::PagerWindow(QWidget* parent) : QWidget(parent) {
     // Download resources: fetch the whole resource list into the shared cache without joining (the client's --prefetch
     // pass, which never enters the world; see net/session.h holdEntry).
     gameWarm_ = pill("Download resources", game_, "warm");
-    gameWarm_->setToolTip("Download this game's files now, so the first join starts complete. You do not join the game.");
+    gameWarm_->setToolTip(
+        "Download this game's files now, so the first join starts complete. You do not join the game.");
     gameRemove_ = link("Remove server", game_, "remove");
     gb->addWidget(gameJoin_);
     gb->addSpacing(8);
@@ -519,8 +547,10 @@ PagerWindow::PagerWindow(QWidget* parent) : QWidget(parent) {
     });
     connect(right_, &QTabWidget::tabCloseRequested, this, [this](int i) {
         QWidget* w = right_->widget(i);
-        if (w == details_) setDetailsVisible(false);
-        else if (w == game_) closeTab(right_, game_, home_);
+        if (w == details_)
+            setDetailsVisible(false);
+        else if (w == game_)
+            closeTab(right_, game_, home_);
     });
 
     // ---- the gear menu: the BYOND items Fugue does ----
@@ -529,27 +559,36 @@ PagerWindow::PagerWindow(QWidget* parent) : QWidget(parent) {
     auto act = [this](const QString& text, const char* name, const QKeySequence& ks = {}, bool enabled = true) {
         QAction* x = gear_->addAction(text);
         x->setObjectName(name);
-        if (!ks.isEmpty()) { x->setShortcut(ks); x->setShortcutContext(Qt::WindowShortcut); }
+        if (!ks.isEmpty()) {
+            x->setShortcut(ks);
+            x->setShortcutContext(Qt::WindowShortcut);
+        }
         x->setEnabled(enabled);
-        addAction(x);   // shortcuts work with the menu closed
+        addAction(x);  // shortcuts work with the menu closed
         return x;
     };
     connect(act("About Fugue...", "about"), &QAction::triggered, this, [this] {
         QMessageBox::about(this, "About Fugue",
                            QString("Fugue %1 \xe2\x80\x94 a native client and pager for BYOND games.\n"
-                                   "Not made by or affiliated with BYOND.").arg(fugue::kVersion));
+                                   "Not made by or affiliated with BYOND.")
+                               .arg(fugue::kVersion));
     });
     gear_->addSeparator();
-    connect(act("Open Location...", "openloc", QKeySequence("Ctrl+O")), &QAction::triggered, this, &PagerWindow::showAddServer);
+    connect(act("Open Location...", "openloc", QKeySequence("Ctrl+O")), &QAction::triggered, this,
+            &PagerWindow::showAddServer);
     connect(act("Logout", "logout", QKeySequence("Ctrl+L")), &QAction::triggered, this, [this] {
         // A guest's item reads "Sign in...": it opens the Sign in window and changes nothing until that succeeds. Signed in, Logout
         // goes through the caller (it also forgets a remembered guest choice), which then shows the Sign in window.
-        if (cfg_.account.empty()) { showSignIn(); return; }
+        if (cfg_.account.empty()) {
+            showSignIn();
+            return;
+        }
         guest_ = false;
         emit signOutRequested();
     });
     gear_->addSeparator();
-    connect(act("Preferences...", "prefs", QKeySequence("Ctrl+P")), &QAction::triggered, this, &PagerWindow::showPreferences);
+    connect(act("Preferences...", "prefs", QKeySequence("Ctrl+P")), &QAction::triggered, this,
+            &PagerWindow::showPreferences);
     connect(act("Show Resources", "resources"), &QAction::triggered, this, [this] { showTab(SetupTab); });
     QAction* top = act("Stay on Top", "ontop");
     top->setCheckable(true);
@@ -613,7 +652,6 @@ PagerWindow::PagerWindow(QWidget* parent) : QWidget(parent) {
     tabs_->addTab(sw, "Setup");
     connect(apply_, &QPushButton::clicked, this, [this] { emit accountApplied(acctEdit_->text().trimmed()); });
 
-
     // ---- Log ----
     log_ = new QPlainTextEdit;
     log_->setObjectName("log");
@@ -646,15 +684,24 @@ void PagerWindow::setState(const account::Config& cfg, const Status& st) {
         l->setText(text);
         l->setStyleSheet(QString("color:%1; font-weight:600;").arg(color));
     };
-    if (st.keyTxtErr) chip(keyChip_, "key.txt: missing", kBad);
-    else if (cfg.account.empty()) chip(keyChip_, "key.txt: not needed", kDim);
-    else if (st.hasKey()) chip(keyChip_, "key.txt: ok", kOk);
-    else chip(keyChip_, "key.txt: no block", kBad);
-    if (cfg.account.empty()) chip(identChip_, "identity: not needed", kDim);
-    else if (st.hasIdentity) chip(identChip_, "identity: ok", kOk);
-    else chip(identChip_, "identity: none", kBad);
-    if (st.clientErr) chip(clientChip_, "client: missing", kBad);
-    else chip(clientChip_, "client: ok", kOk);
+    if (st.keyTxtErr)
+        chip(keyChip_, "key.txt: missing", kBad);
+    else if (cfg.account.empty())
+        chip(keyChip_, "key.txt: not needed", kDim);
+    else if (st.hasKey())
+        chip(keyChip_, "key.txt: ok", kOk);
+    else
+        chip(keyChip_, "key.txt: no block", kBad);
+    if (cfg.account.empty())
+        chip(identChip_, "identity: not needed", kDim);
+    else if (st.hasIdentity)
+        chip(identChip_, "identity: ok", kOk);
+    else
+        chip(identChip_, "identity: none", kBad);
+    if (st.clientErr)
+        chip(clientChip_, "client: missing", kBad);
+    else
+        chip(clientChip_, "client: ok", kOk);
     acctEdit_->setText(Q(cfg.account));
     std::string text;
     for (auto& l : windowChecklist(st)) text += l + "\n";
@@ -662,7 +709,8 @@ void PagerWindow::setState(const account::Config& cfg, const Status& st) {
     std::string e;
     cfgPathLabel_->setText(Q(account::configPath(&e)));
     CacheStats cs = scanRscCache(rscDir());
-    cacheLabel_->setText(QString("%1  (%2 files, %3 MiB)").arg(Q(rscDir())).arg(cs.files).arg(double(cs.bytes) / (1 << 20), 0, 'f', 1));
+    cacheLabel_->setText(
+        QString("%1  (%2 files, %3 MiB)").arg(Q(rscDir())).arg(cs.files).arg(double(cs.bytes) / (1 << 20), 0, 'f', 1));
     rebuildServers();
     rebuildRecent();
     choosePage();
@@ -675,7 +723,8 @@ void PagerWindow::choosePage() {
     const Page p = !busy_ && (signedIn || guest) ? ServersPage : SignInPage;
     // a QStackedWidget sizes to its LARGEST page: let only the shown one count, so the account row stays one line tall
     for (int i = 0; i < pages_->count(); i++)
-        pages_->widget(i)->setSizePolicy(QSizePolicy::Preferred, i == int(p) ? QSizePolicy::Preferred : QSizePolicy::Ignored);
+        pages_->widget(i)->setSizePolicy(QSizePolicy::Preferred,
+                                         i == int(p) ? QSizePolicy::Preferred : QSizePolicy::Ignored);
     pages_->setCurrentIndex(int(p));
     pages_->adjustSize();
     updateMenu();
@@ -701,8 +750,10 @@ void PagerWindow::buildSignInDialog() {
     mark->setPixmap(QApplication::windowIcon().pixmap(40, 40));
     mark->setFixedSize(40, 40);
     top->addWidget(mark, 0, Qt::AlignTop);
-    auto* intro = new QLabel("<b>Sign in with your BYOND account</b><br>"
-                             "<span style=\"color:#9a9a9a;\">You only sign in once on each computer.</span>", signIn_);
+    auto* intro = new QLabel(
+        "<b>Sign in with your BYOND account</b><br>"
+        "<span style=\"color:#9a9a9a;\">You only sign in once on each computer.</span>",
+        signIn_);
     top->addWidget(intro, 1, Qt::AlignVCenter);
     v->addLayout(top);
     auto* g = new QGridLayout;
@@ -731,7 +782,8 @@ void PagerWindow::buildSignInDialog() {
     g->addWidget(ext("getaccount", "https://secure.byond.com/Join", "Get an account"), 0, 2);
     g->addWidget(new QLabel("Password:", signIn_), 1, 0);
     g->addWidget(passEdit_, 1, 1);
-    g->addWidget(ext("forgotpassword", "https://www.byond.com/members/?command=forgot_password", "Forgot password?"), 1, 2);
+    g->addWidget(ext("forgotpassword", "https://www.byond.com/members/?command=forgot_password", "Forgot password?"), 1,
+                 2);
     g->setColumnStretch(1, 1);
     v->addLayout(g);
     signInNote_ = new QLabel(signIn_);
@@ -767,17 +819,19 @@ void PagerWindow::buildSignInDialog() {
     bh->addWidget(signInBtn_);
     bh->addWidget(cancelBtn_);
     v->addLayout(bh);
-    v->setSizeConstraint(QLayout::SetMinimumSize);   // a wrapped note must never be clipped
+    v->setSizeConstraint(QLayout::SetMinimumSize);  // a wrapped note must never be clipped
     signIn_->setMinimumWidth(440);
     connect(signInBtn_, &QPushButton::clicked, this, &PagerWindow::submitDialog);
     connect(passEdit_, &QLineEdit::returnPressed, this, &PagerWindow::submitDialog);
     connect(userEdit_->lineEdit(), &QLineEdit::returnPressed, this, [this] {
-        if (passEdit_->text().isEmpty() && !hasSavedSignIn(userEdit_->currentText().trimmed())) passEdit_->setFocus();
-        else submitDialog();
+        if (passEdit_->text().isEmpty() && !hasSavedSignIn(userEdit_->currentText().trimmed()))
+            passEdit_->setFocus();
+        else
+            submitDialog();
     });
     connect(userEdit_, &QComboBox::currentTextChanged, this, [this] { updateSignInNote(); });
     connect(cancelBtn_, &QPushButton::clicked, signIn_, &QDialog::reject);
-    connect(signIn_, &QDialog::rejected, this, [this] { passEdit_->clear(); });   // never kept past the window
+    connect(signIn_, &QDialog::rejected, this, [this] { passEdit_->clear(); });  // never kept past the window
     connect(guestBtn_, &QPushButton::clicked, this, [this] {
         if (busy_) return;
         passEdit_->clear();
@@ -805,16 +859,22 @@ bool PagerWindow::hasSavedSignIn(const QString& account) const {
 
 void PagerWindow::updateSignInNote() {
     const QString u = userEdit_->currentText().trimmed();
-    if (hasSavedSignIn(u)) signInNote_->setText("This computer already has a sign-in for " + u + ": no password needed. Type it only to sign in again.");
-    else signInNote_->setText("Your password goes to BYOND once, to fetch this computer's sign-in, and is never saved.");
+    if (hasSavedSignIn(u))
+        signInNote_->setText("This computer already has a sign-in for " + u +
+                             ": no password needed. Type it only to sign in again.");
+    else
+        signInNote_->setText("Your password goes to BYOND once, to fetch this computer's sign-in, and is never saved.");
 }
 
 void PagerWindow::submitDialog() {
     if (busy_) return;
     const QString u = userEdit_->currentText().trimmed(), p = passEdit_->text();
-    if (u.isEmpty()) { setSignInError("Enter your BYOND username and password."); return; }
+    if (u.isEmpty()) {
+        setSignInError("Enter your BYOND username and password.");
+        return;
+    }
     if (p.isEmpty()) {
-        if (hasSavedSignIn(u)) {   // sign in once: this computer's identity for u is the sign-in
+        if (hasSavedSignIn(u)) {  // sign in once: this computer's identity for u is the sign-in
             held_ = false;
             guest_ = false;
             signInMsg_->hide();
@@ -847,16 +907,21 @@ void PagerWindow::showSignIn(const QString& message) {
         userEdit_->setEditText(!keep.isEmpty() ? keep : names.isEmpty() ? QString() : names.first());
     }
     updateSignInNote();
-    if (!message.isEmpty()) setSignInError(message);
-    else if (!cfg_.account.empty() && haveState_ && !st_.hasIdentity && userEdit_->currentText().trimmed() == Q(cfg_.account)) {
+    if (!message.isEmpty())
+        setSignInError(message);
+    else if (!cfg_.account.empty() && haveState_ && !st_.hasIdentity &&
+             userEdit_->currentText().trimmed() == Q(cfg_.account)) {
         // An account is saved but this box has no identity for it (e.g. a fresh machine, or after Clear cache): its password.
         signInMsg_->setText("Sign in again to play as " + Q(cfg_.account) + ".");
         signInMsg_->setStyleSheet(QString("color:%1;").arg(kDim));
         signInMsg_->show();
-    } else signInMsg_->hide();
+    } else
+        signInMsg_->hide();
     signIn_->show();
     signIn_->raise();
-    (userEdit_->currentText().isEmpty() || hasSavedSignIn(userEdit_->currentText()) ? static_cast<QWidget*>(userEdit_) : passEdit_)->setFocus();
+    (userEdit_->currentText().isEmpty() || hasSavedSignIn(userEdit_->currentText()) ? static_cast<QWidget*>(userEdit_)
+                                                                                    : passEdit_)
+        ->setFocus();
 }
 QDialog* PagerWindow::signInDialog() const { return signIn_; }
 bool PagerWindow::signInVisible() const { return signIn_ && signIn_->isVisible(); }
@@ -884,10 +949,14 @@ void PagerWindow::holdSignIn() {
 
 void PagerWindow::setSigningIn(bool busy) {
     busy_ = busy;
-    for (QWidget* w : std::initializer_list<QWidget*>{userEdit_, passEdit_, signInBtn_, guestBtn_, cancelBtn_, rowGuest_, rowSignIn_}) w->setEnabled(!busy);
+    for (QWidget* w : std::initializer_list<QWidget*>{userEdit_, passEdit_, signInBtn_, guestBtn_, cancelBtn_,
+                                                      rowGuest_, rowSignIn_})
+        w->setEnabled(!busy);
     signInBtn_->setText(busy ? "Signing in\xe2\x80\xa6" : "Sign in");
-    if (busy) signInMsg_->hide();
-    else passEdit_->clear();   // the password is never kept past one attempt
+    if (busy)
+        signInMsg_->hide();
+    else
+        passEdit_->clear();  // the password is never kept past one attempt
     choosePage();
 }
 
@@ -903,7 +972,10 @@ void PagerWindow::setSignInError(const QString& plain) {
     signInMsg_->setStyleSheet(QString("color:%1;").arg(kBad));
     signInMsg_->setVisible(!plain.isEmpty());
     // The window was closed (Esc / the title bar) while the attempt ran: bring it back so the error is seen.
-    if (!plain.isEmpty() && !signInVisible()) { signIn_->show(); signIn_->raise(); }
+    if (!plain.isEmpty() && !signInVisible()) {
+        signIn_->show();
+        signIn_->raise();
+    }
 }
 
 void PagerWindow::submitSignIn(const QString& user, const QString& password) {
@@ -921,7 +993,8 @@ void PagerWindow::rebuildServers() {
     marks_->clear();
     for (int i = 0; i < int(sorted_.size()); i++) {
         const auto& s = sorted_[size_t(i)];
-        auto* it = new QListWidgetItem(Q(s.name), marks_);   // ONE label per row: the name (an added server's name is its address)
+        auto* it = new QListWidgetItem(Q(s.name),
+                                       marks_);  // ONE label per row: the name (an added server's name is its address)
         it->setData(kAddr, Q(s.addr));
         it->setData(Qt::DecorationRole, icons::gameIcon(Q(s.name), 16));
         auto b = plainBlocker(st_, s);
@@ -936,8 +1009,10 @@ void PagerWindow::rebuildServers() {
 
 void PagerWindow::rebuildRecent() {
     std::vector<const account::Server*> played;
-    for (auto& s : sorted_) if (!s.lastPlayed.isZero()) played.push_back(&s);
-    std::stable_sort(played.begin(), played.end(), [](auto* x, auto* y) { return x->lastPlayed.sec > y->lastPlayed.sec; });
+    for (auto& s : sorted_)
+        if (!s.lastPlayed.isZero()) played.push_back(&s);
+    std::stable_sort(played.begin(), played.end(),
+                     [](auto* x, auto* y) { return x->lastPlayed.sec > y->lastPlayed.sec; });
     if (played.size() > 3) played.resize(3);
     QString t;
     for (auto* s : played) {
@@ -948,7 +1023,6 @@ void PagerWindow::rebuildRecent() {
     recent_->setText(t);
 }
 
-
 void PagerWindow::setFilter(const QString& text) {
     filter_->setText(text);
     applyFilter();
@@ -957,7 +1031,8 @@ void PagerWindow::applyFilter() {
     const QString f = filter_->text().trimmed();
     for (int i = 0; i < marks_->count(); i++) {
         QListWidgetItem* it = marks_->item(i);
-        const bool match = f.isEmpty() || it->text().contains(f, Qt::CaseInsensitive) || it->data(kAddr).toString().contains(f, Qt::CaseInsensitive);
+        const bool match = f.isEmpty() || it->text().contains(f, Qt::CaseInsensitive) ||
+                           it->data(kAddr).toString().contains(f, Qt::CaseInsensitive);
         it->setHidden(!match);
     }
 }
@@ -968,7 +1043,10 @@ int PagerWindow::visibleGameCount() const {
 }
 
 void PagerWindow::warmRow(int r) {
-    if (warming_) { emit warmCancelRequested(); return; }   // the button reads "Cancel download" while one runs
+    if (warming_) {
+        emit warmCancelRequested();
+        return;
+    }  // the button reads "Cancel download" while one runs
     if (r < 0 || r >= int(sorted_.size()) || running_ || blocker(st_, sorted_[size_t(r)])) return;
     if (page() != ServersPage) {
         setStatus("Sign in, or choose Play as guest, to download a game's resources.", true);
@@ -993,7 +1071,7 @@ void PagerWindow::setWarming(bool on, const QString& progress, bool error) {
 // fetches the rest, what it draws first.
 void PagerWindow::joinRow(int r) {
     if (r < 0 || r >= int(sorted_.size()) || running_ || blocker(st_, sorted_[size_t(r)])) return;
-    if (page() != ServersPage) {   // the account row is still asking: sign in, or say "guest", first
+    if (page() != ServersPage) {  // the account row is still asking: sign in, or say "guest", first
         setStatus("Sign in, or choose Play as guest, to join a game.", true);
         return;
     }
@@ -1020,7 +1098,8 @@ QString PagerWindow::submitAddServer(const QString& text) {
     addRow_->hide();
     emit serverAdded(Q(*ad));
     for (int i = 0; i < int(sorted_.size()); i++)
-        if (QString::fromStdString(sorted_[size_t(i)].addr).compare(Q(*ad), Qt::CaseInsensitive) == 0) marks_->setCurrentRow(i);
+        if (QString::fromStdString(sorted_[size_t(i)].addr).compare(Q(*ad), Qt::CaseInsensitive) == 0)
+            marks_->setCurrentRow(i);
     return {};
 }
 
@@ -1029,8 +1108,9 @@ void PagerWindow::updateJoin() {
     const bool valid = r >= 0 && r < int(sorted_.size());
     gameJoin_->setEnabled(valid && !running_ && !blocker(st_, sorted_[size_t(r)]) && page() == ServersPage);
     gameWarm_->setText(warming_ ? "Cancel download" : "Download resources");
-    gameWarm_->setToolTip(warming_ ? "Stop the download. What arrived is kept, and Join still works."
-                                   : "Download this game's files now, so the first join starts complete. You do not join the game.");
+    gameWarm_->setToolTip(
+        warming_ ? "Stop the download. What arrived is kept, and Join still works."
+                 : "Download this game's files now, so the first join starts complete. You do not join the game.");
     gameWarm_->setEnabled(warming_ || gameJoin_->isEnabled());
     if (!valid) {
         joinNote_->setText(sorted_.empty() ? "No saved servers." : "Select a server.");
@@ -1042,7 +1122,8 @@ void PagerWindow::updateJoin() {
         joinNote_->setText("\xe2\x9a\xa0 " + Q(windowWording(*b)));
         joinNote_->setStyleSheet(QString("color:%1;").arg(kBad));
     } else {
-        joinNote_->setText("Ready to join " + Q(sorted_[size_t(r)].addr) + (cfg_.account.empty() ? " as a guest." : " as " + Q(cfg_.account) + "."));
+        joinNote_->setText("Ready to join " + Q(sorted_[size_t(r)].addr) +
+                           (cfg_.account.empty() ? " as a guest." : " as " + Q(cfg_.account) + "."));
         joinNote_->setStyleSheet(QString("color:%1;").arg(kOk));
     }
     if (status_->text().startsWith("Add a server to play")) setStatus({});
@@ -1050,7 +1131,10 @@ void PagerWindow::updateJoin() {
 
 void PagerWindow::updateGameTab() {
     const int r = marks_->currentRow();
-    if (r < 0 || r >= int(sorted_.size())) { closeTab(right_, game_, home_); return; }
+    if (r < 0 || r >= int(sorted_.size())) {
+        closeTab(right_, game_, home_);
+        return;
+    }
     const auto& s = sorted_[size_t(r)];
     const QString title = Q(s.name);
     gameIcon_->setPixmap(icons::gameIcon(title, 48));
@@ -1060,10 +1144,14 @@ void PagerWindow::updateGameTab() {
     gameWhy_->setText(b ? Q(*b) : QString());
     gameWhy_->setVisible(bool(b));
     QString note;
-    if (running_) note = runNote_.isEmpty() ? QString("The game is running.") : runNote_;
-    else if (warming_) note = warmNote_;
-    else if (!b && page() != ServersPage) note = "Sign in, or choose Play as guest, to join.";
-    else if (!b) note = Q(plainWarmState(s));
+    if (running_)
+        note = runNote_.isEmpty() ? QString("The game is running.") : runNote_;
+    else if (warming_)
+        note = warmNote_;
+    else if (!b && page() != ServersPage)
+        note = "Sign in, or choose Play as guest, to join.";
+    else if (!b)
+        note = Q(plainWarmState(s));
     gameNote_->setText(note);
     gameNote_->setVisible(!note.isEmpty());
     const int ix = right_->indexOf(game_);
@@ -1090,11 +1178,13 @@ void PagerWindow::setStatus(const QString& plain, bool error) {
     status_->setVisible(!plain.isEmpty());
 }
 
-
 void PagerWindow::reload(const CheckOptions& opt) {
     std::string e;
     auto cfg = account::loadConfig(&e);
-    if (!cfg) { cfg = account::Config{}; cfg->servers = account::defaultServers(); }
+    if (!cfg) {
+        cfg = account::Config{};
+        cfg->servers = account::defaultServers();
+    }
     setState(*cfg, check(*cfg, opt));
 }
 
@@ -1107,7 +1197,8 @@ void PagerWindow::updateMenu() {
 }
 QMenu* PagerWindow::gearMenu() const { return gear_; }
 QAction* PagerWindow::menuAction(const QString& name) const {
-    for (QAction* x : gear_->actions()) if (x->objectName() == name) return x;
+    for (QAction* x : gear_->actions())
+        if (x->objectName() == name) return x;
     return nullptr;
 }
 
@@ -1145,8 +1236,9 @@ void PagerWindow::showPreferences() {
         connect(prefsDetails_, &QCheckBox::toggled, this, [this](bool on) { setDetailsVisible(on); });
         prefsGpu_ = new QCheckBox("Use GPU rendering (experimental)", prefs_);
         prefsGpu_->setObjectName("prefsgpu");
-        prefsGpu_->setToolTip("The same setting as the game's Client > Renderer menu. It applies from the next join; "
-                              "a running game keeps its renderer unless you switch it there.");
+        prefsGpu_->setToolTip(
+            "The same setting as the game's Client > Renderer menu. It applies from the next join; "
+            "a running game keeps its renderer unless you switch it there.");
         v->addWidget(prefsGpu_);
         connect(prefsGpu_, &QCheckBox::toggled, this, [this](bool on) {
             std::string e;
@@ -1195,7 +1287,7 @@ void PagerWindow::updatePrefs() {
         prefsDetails_->setChecked(detailsVisible());
     }
     prefsGpu_->setVisible(!displayIni_.isEmpty());
-    if (!displayIni_.isEmpty()) {   // re-read: the game's own menu may have changed it
+    if (!displayIni_.isEmpty()) {  // re-read: the game's own menu may have changed it
         const QSignalBlocker hold(prefsGpu_);
         prefsGpu_->setChecked(savedRendererGpu(displayIni_.toStdString()));
     }
@@ -1203,11 +1295,15 @@ void PagerWindow::updatePrefs() {
     QString acct;
     if (!cfg_.account.empty() && st_.hasIdentity)
         acct = "Signed in as " + Q(cfg_.account) + ". This computer keeps a sign-in for " + Q(cfg_.account) +
-               ", so you sign in only once here. Fugue never saves your password. Logout keeps the sign-in; Clear cache removes it.";
+               ", so you sign in only once here. Fugue never saves your password. Logout keeps the sign-in; Clear "
+               "cache removes it.";
     else if (!cfg_.account.empty())
-        acct = "Not signed in on this computer as " + Q(cfg_.account) + ". Sign in once and Fugue keeps a sign-in for this computer; it never saves your password.";
+        acct = "Not signed in on this computer as " + Q(cfg_.account) +
+               ". Sign in once and Fugue keeps a sign-in for this computer; it never saves your password.";
     else if (guest_)
-        acct = "Playing as a guest. Sign in once and Fugue keeps a sign-in for this computer; it never saves your password.";
+        acct =
+            "Playing as a guest. Sign in once and Fugue keeps a sign-in for this computer; it never saves your "
+            "password.";
     else
         acct = "Not signed in. Sign in once and Fugue keeps a sign-in for this computer; it never saves your password.";
     prefsAccount_->setText(acct);
@@ -1215,29 +1311,51 @@ void PagerWindow::updatePrefs() {
     int signIns = 0;
     uint64_t rsc = 0, rscFiles = 0;
     for (auto& i : p.items) {
-        if (i.path == rscDir()) { rsc = i.bytes; rscFiles = i.files; }
-        else if (i.what.rfind("Saved sign-in", 0) == 0) signIns++;
+        if (i.path == rscDir()) {
+            rsc = i.bytes;
+            rscFiles = i.files;
+        } else if (i.what.rfind("Saved sign-in", 0) == 0)
+            signIns++;
     }
-    QString t = p.empty() ? QString("Nothing is cached.")
-                          : QString("Cached: %1 saved sign-in%2, %3 of game resources (%4 file%5). Your servers and settings are kept.")
-                                .arg(signIns).arg(signIns == 1 ? "" : "s").arg(Q(humanBytes(rsc))).arg(rscFiles).arg(rscFiles == 1 ? "" : "s");
+    QString t =
+        p.empty()
+            ? QString("Nothing is cached.")
+            : QString(
+                  "Cached: %1 saved sign-in%2, %3 of game resources (%4 file%5). Your servers and settings are kept.")
+                  .arg(signIns)
+                  .arg(signIns == 1 ? "" : "s")
+                  .arg(Q(humanBytes(rsc)))
+                  .arg(rscFiles)
+                  .arg(rscFiles == 1 ? "" : "s");
     prefsCache_->setText(t);
     prefsClear_->setEnabled(!running_ && !warming_ && !p.empty());
-    prefsClear_->setToolTip(running_ ? "Close the game first." : warming_ ? "Wait for the download to finish." : QString());
+    prefsClear_->setToolTip(running_   ? "Close the game first."
+                            : warming_ ? "Wait for the download to finish."
+                                       : QString());
 }
 
-void PagerWindow::setConfirmHook(std::function<bool(const QString&, const QString&)> hook) { confirm_ = std::move(hook); }
+void PagerWindow::setConfirmHook(std::function<bool(const QString&, const QString&)> hook) {
+    confirm_ = std::move(hook);
+}
 
 void PagerWindow::requestClearCache() {
-    if (running_) { setStatus("Close the game before clearing the cache.", true); return; }
-    if (warming_) { setStatus("Wait for the resource download to finish before clearing the cache.", true); return; }
+    if (running_) {
+        setStatus("Close the game before clearing the cache.", true);
+        return;
+    }
+    if (warming_) {
+        setStatus("Wait for the resource download to finish before clearing the cache.", true);
+        return;
+    }
     CachePlan p = planClearCache();
     const QString title = "Clear cache";
     const QString text = "This removes:\n\n" + Q(describeClearCache(p));
     bool yes;
-    if (confirm_) yes = confirm_(title, text);
+    if (confirm_)
+        yes = confirm_(title, text);
     else {
-        QMessageBox box(QMessageBox::Warning, title, p.empty() ? "There is nothing cached to remove." : "Remove these cached files?",
+        QMessageBox box(QMessageBox::Warning, title,
+                        p.empty() ? "There is nothing cached to remove." : "Remove these cached files?",
                         p.empty() ? QMessageBox::Ok : (QMessageBox::Yes | QMessageBox::No), this);
         box.setInformativeText(text);
         if (!p.empty()) box.setDefaultButton(QMessageBox::No);
@@ -1295,7 +1413,8 @@ void PagerWindow::updateTray() {
         trayWatch_ = new QTimer(this);
         trayWatch_->setInterval(2000);
         connect(trayWatch_, &QTimer::timeout, this, [this] {
-            if (hiddenToTray() && !trayAvailable()) showPager();   // the panel went away: nothing would bring the window back
+            if (hiddenToTray() && !trayAvailable())
+                showPager();  // the panel went away: nothing would bring the window back
         });
     }
     tray_->setToolTip("Fugue: a game is running");
@@ -1307,8 +1426,10 @@ void PagerWindow::showPager() {
     if (parked_ && QGuiApplication::platformName().startsWith("wayland")) hide();
     parked_ = false;
     if (trayWatch_) trayWatch_->stop();
-    if (isMinimized()) showNormal();
-    else show();
+    if (isMinimized())
+        showNormal();
+    else
+        show();
     raise();
     activateWindow();
 }
@@ -1319,29 +1440,31 @@ void PagerWindow::closeEvent(QCloseEvent* e) {
         return;
     }
     switch (closeAction(running_, trayAvailable())) {
-    case CloseAction::Quit:
-        e->accept();
-        requestQuit();
-        return;
-    case CloseAction::HideToTray:
-        e->ignore();
-        parked_ = true;
-        updateTray();
-        hide();
-        trayWatch_->start();
-        if (!trayNoticed_) {
-            trayNoticed_ = true;
-            const QString title = "Fugue is still running";
-            const QString text = "The game keeps running. Click the Fugue icon to open the pager again.";
-            if (notice_) notice_(title, text);
-            else tray_->showMessage(title, text);
-        }
-        return;
-    case CloseAction::Minimize:
-        e->ignore();
-        parked_ = true;
-        showMinimized();
-        return;
+        case CloseAction::Quit:
+            e->accept();
+            requestQuit();
+            return;
+        case CloseAction::HideToTray:
+            e->ignore();
+            parked_ = true;
+            updateTray();
+            hide();
+            trayWatch_->start();
+            if (!trayNoticed_) {
+                trayNoticed_ = true;
+                const QString title = "Fugue is still running";
+                const QString text = "The game keeps running. Click the Fugue icon to open the pager again.";
+                if (notice_)
+                    notice_(title, text);
+                else
+                    tray_->showMessage(title, text);
+            }
+            return;
+        case CloseAction::Minimize:
+            e->ignore();
+            parked_ = true;
+            showMinimized();
+            return;
     }
 }
 
@@ -1373,7 +1496,7 @@ bool PagerWindow::eventFilter(QObject* o, QEvent* e) {
     }
 #endif
     quitting_ = true;
-    QTimer::singleShot(0, this, [this] { quitting_ = false; });   // still running: another window refused the quit
+    QTimer::singleShot(0, this, [this] { quitting_ = false; });  // still running: another window refused the quit
     return false;
 }
 

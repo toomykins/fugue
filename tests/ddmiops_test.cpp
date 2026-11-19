@@ -33,7 +33,10 @@ std::string slurp(const std::string& p) {
     return std::string((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
 }
 // cases.tsv: name, resource id, and the turf (x, y) its object stands on, in the order world.dm builds them.
-struct Case { std::string name, res; int x = 0, y = 0; };
+struct Case {
+    std::string name, res;
+    int x = 0, y = 0;
+};
 std::vector<Case> cases(const std::string& p) {
     std::vector<Case> out;
     std::ifstream f(p);
@@ -59,7 +62,8 @@ private slots:
         while (std::getline(f, line)) {
             if (line.rfind("0x", 0) != 0) continue;
             size_t sp = line.find(' ', line.find("len="));
-            sess_.ingest(uint16_t(std::stoul(line.substr(2, 4), nullptr, 16)), sp == std::string::npos ? Bytes{} : unhex(line.substr(sp + 1)));
+            sess_.ingest(uint16_t(std::stoul(line.substr(2, 4), nullptr, 16)),
+                         sp == std::string::npos ? Bytes{} : unhex(line.substr(sp + 1)));
         }
         QDir rd(QString::fromStdString(dir_ + "/res"));
         for (const QString& n : rd.entryList(QDir::Files)) {
@@ -99,8 +103,12 @@ private slots:
             QCOMPARE(g.movement, w.movement);
             if (w.frames > 1)
                 for (int64_t f = 0; f < w.frames; f++)
-                    QVERIFY2(std::fabs((f < int64_t(g.delays.size()) ? g.delays[size_t(f)] : 1.0) - w.delays[size_t(f)]) < 1e-5,
-                             qPrintable(QString("frame %1 delay: DD %2 ours %3").arg(f).arg(w.delays[size_t(f)]).arg(f < int64_t(g.delays.size()) ? g.delays[size_t(f)] : 1.0)));
+                    QVERIFY2(std::fabs((f < int64_t(g.delays.size()) ? g.delays[size_t(f)] : 1.0) -
+                                       w.delays[size_t(f)]) < 1e-5,
+                             qPrintable(QString("frame %1 delay: DD %2 ours %3")
+                                            .arg(f)
+                                            .arg(w.delays[size_t(f)])
+                                            .arg(f < int64_t(g.delays.size()) ? g.delays[size_t(f)] : 1.0)));
             for (int64_t d = 0; d < w.dirs; d++)
                 for (int64_t f = 0; f < w.frames; f++) {
                     std::vector<uint8_t> gc, wc;
@@ -111,9 +119,20 @@ private slots:
                         bool same = wc[i + 3] == 0 ? gc[i + 3] == 0 : std::memcmp(&wc[i], &gc[i], 4) == 0;
                         if (!same && bad++ == 0) {
                             size_t px = i / 4;
-                            first = QString("state %1 dir %2 frame %3 (%4,%5): DD %6,%7,%8,%9 ours %10,%11,%12,%13").arg(si).arg(d).arg(f)
-                                        .arg(px % size_t(want.width)).arg(px / size_t(want.width)).arg(wc[i]).arg(wc[i + 1]).arg(wc[i + 2]).arg(wc[i + 3])
-                                        .arg(gc[i]).arg(gc[i + 1]).arg(gc[i + 2]).arg(gc[i + 3]);
+                            first = QString("state %1 dir %2 frame %3 (%4,%5): DD %6,%7,%8,%9 ours %10,%11,%12,%13")
+                                        .arg(si)
+                                        .arg(d)
+                                        .arg(f)
+                                        .arg(px % size_t(want.width))
+                                        .arg(px / size_t(want.width))
+                                        .arg(wc[i])
+                                        .arg(wc[i + 1])
+                                        .arg(wc[i + 2])
+                                        .arg(wc[i + 3])
+                                        .arg(gc[i])
+                                        .arg(gc[i + 1])
+                                        .arg(gc[i + 2])
+                                        .arg(gc[i + 3]);
                         }
                     }
                 }
@@ -128,13 +147,18 @@ private slots:
     // the first operand instead proves each refusal is observable.
     void unsupportedRecipesAreRefused_data() {
         QTest::addColumn<QByteArray>("body");
-        QTest::addColumn<bool>("op");   // refused at an op (the mutation applies), not while extracting an operand
-        const QByteArray grad = QByteArray::fromHex("010100000008056772616400");   // ref 1 (src.dmi), state "grad"
+        QTest::addColumn<bool>("op");  // refused at an op (the mutation applies), not while extracting an operand
+        const QByteArray grad = QByteArray::fromHex("010100000008056772616400");  // ref 1 (src.dmi), state "grad"
         QTest::newRow("op 0x06") << grad + QByteArray::fromHex("40ffffff06") << true;
         QTest::newRow("a value left on the stack") << grad + QByteArray::fromHex("40ffffff03ff0000ff") << true;
-        QTest::newRow("MapColors with 16 coefficients") << grad + QByteArray::fromHex("40ffffff4a10") + QByteArray(64, '\0') << true;
+        QTest::newRow("MapColors with 16 coefficients")
+            << grad + QByteArray::fromHex("40ffffff4a10") + QByteArray(64, '\0') << true;
         QTest::newRow("Blend with a number") << grad + QByteArray::fromHex("40ffffff04000000004200") << true;
-        QTest::newRow("Insert of another size") << grad + QByteArray::fromHex("40ffffff010200000008056669") + QByteArray::fromHex("6c6c0040ffffff057800" "41ffff0000000000") << true;
+        QTest::newRow("Insert of another size") << grad + QByteArray::fromHex("40ffffff010200000008056669") +
+                                                       QByteArray::fromHex(
+                                                           "6c6c0040ffffff057800"
+                                                           "41ffff0000000000")
+                                                << true;
     }
     void unsupportedRecipesAreRefused() {
         QFETCH(QByteArray, body);
@@ -144,9 +168,11 @@ private slots:
         for (int k = 0; k < 4; k++) raw[4 + k] = char((n >> (8 * k)) & 0xff);
         render::DdmiRecipe rec;
         std::string err;
-        QVERIFY2(render::parseDdmi(reinterpret_cast<const uint8_t*>(raw.constData()), size_t(raw.size()), rec, &err), err.c_str());
+        QVERIFY2(render::parseDdmi(reinterpret_cast<const uint8_t*>(raw.constData()), size_t(raw.size()), rec, &err),
+                 err.c_str());
         std::vector<const render::Icon*> ops;
-        for (const render::DdmiRef& r : rec.refs) ops.push_back(res_.iconResolved(sess_.world().resources[r.ordinal].first, sess_.world().resources));
+        for (const render::DdmiRef& r : rec.refs)
+            ops.push_back(res_.iconResolved(sess_.world().resources[r.ordinal].first, sess_.world().resources));
         for (const render::Icon* o : ops) QVERIFY(o);
         render::DdmiResult r = render::evalDdmi(rec, ops);
         QVERIFY(!r.icon());
@@ -171,7 +197,7 @@ private slots:
         QVERIFY2(render::assembleMapControl(sess_, res_, 0, dl, stats, &err, false), err.c_str());
         dl.groundBlack = false;
         render::RgbaImage g = render::execute(dl);
-        for (size_t k = 0; k < g.px.size(); k += 4) {   // over the map's background
+        for (size_t k = 0; k < g.px.size(); k += 4) {  // over the map's background
             const int a = g.px[k + 3];
             const uint8_t bg[3] = {255, 0, 255};
             for (int c = 0; c < 3; c++) g.px[k + c] = uint8_t((g.px[k + c] * a + bg[c] * (255 - a) + 127) / 255);
@@ -179,7 +205,8 @@ private slots:
         }
         QCOMPARE(g.w, d.w);
         QCOMPARE(g.h, d.h);
-        const std::set<std::string> animated{"d_insanim", "e_insdelay", "e_insframe3", "f_walkboth", "f_walkmv", "f_walkstill", "f_wholemov"};
+        const std::set<std::string> animated{"d_insanim", "e_insdelay",  "e_insframe3", "f_walkboth",
+                                             "f_walkmv",  "f_walkstill", "f_wholemov"};
         int compared = 0;
         QStringList bad;
         for (const Case& c : cases(dir_ + "/cases.tsv")) {

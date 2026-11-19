@@ -45,3 +45,4 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/tests/paste_scan_test.cpp)
   target_compile_definitions(paste_scan_test PRIVATE FUGUE_SOURCE_ROOT="${PROJECT_SOURCE_DIR}")
   add_test(NAME shell_paste_scan COMMAND paste_scan_test -o -,txt)
 endif()
+fugue_shell_test(shell_chaticons chaticons_test)  # \icon[x] in chat: the IMG tag becomes the state cell inline

@@ -36,12 +36,19 @@ Bytes unhex(const std::string& h) {
 std::string hex(const Bytes& b) {
     static const char* d = "0123456789abcdef";
     std::string o;
-    for (uint8_t c : b) { o += d[c >> 4]; o += d[c & 15]; }
+    for (uint8_t c : b) {
+        o += d[c >> 4];
+        o += d[c & 15];
+    }
     return o;
 }
 std::vector<std::string> split(const std::string& s, char sep) {
     std::vector<std::string> o;
-    for (size_t p = 0, q; p <= s.size(); p = q + 1) { q = s.find(sep, p); if (q == std::string::npos) q = s.size(); o.push_back(s.substr(p, q - p)); }
+    for (size_t p = 0, q; p <= s.size(); p = q + 1) {
+        q = s.find(sep, p);
+        if (q == std::string::npos) q = s.size();
+        o.push_back(s.substr(p, q - p));
+    }
     return o;
 }
 
@@ -68,8 +75,10 @@ struct Recorded {
             std::vector<net::SrcCandidate> out;
             const model::World& w = sess.world();
             for (const model::VerbSrcCandidate& c : model::verbSrcCandidates(w, id, true)) {
-                bool own = c.src.kind == proto::enc::kVerbSrcClient || (c.src.kind == proto::enc::kVerbSrcMob && c.src.ref == w.selfRef);
-                out.push_back({{c.src.kind, c.src.ref}, c.name, !own, std::nullopt, c.rank.dist, c.rank.cell, c.rank.carried});
+                bool own = c.src.kind == proto::enc::kVerbSrcClient ||
+                           (c.src.kind == proto::enc::kVerbSrcMob && c.src.ref == w.selfRef);
+                out.push_back(
+                    {{c.src.kind, c.src.ref}, c.name, !own, std::nullopt, c.rank.dist, c.rank.cell, c.rank.carried});
             }
             return out;
         };
@@ -83,7 +92,8 @@ struct Recorded {
             const model::World& w = sess.world();
             for (const model::VerbSrcCandidate& c : model::verbArgCandidates(w, ma)) {
                 bool own = c.src.kind == proto::enc::kVerbSrcMob && c.src.ref == w.selfRef;
-                out.push_back({{c.src.kind, c.src.ref}, c.name, !own, std::nullopt, c.rank.dist, c.rank.cell, c.rank.carried});
+                out.push_back(
+                    {{c.src.kind, c.src.ref}, c.name, !own, std::nullopt, c.rank.dist, c.rank.cell, c.rank.carried});
             }
             return out;
         };
@@ -98,13 +108,13 @@ struct Recorded {
 
 // One line of dreamseeker-verbs.txt.
 struct Ds {
-    std::string line, pick, what;   // what: send / listbox / dialog / completes / refuses
+    std::string line, pick, what;  // what: send / listbox / dialog / completes / refuses
     uint16_t verb = 0;
     uint8_t kind = 0;
-    std::string ref;                // self / client / a number
+    std::string ref;  // self / client / a number
     std::vector<VerbArg> args;
-    std::string title;              // listbox / dialog title, completion text
-    std::vector<std::string> names; // listbox entries; the printed lines
+    std::string title;               // listbox / dialog title, completion text
+    std::vector<std::string> names;  // listbox entries; the printed lines
 };
 
 std::vector<Ds> loadDs(const std::string& world = "verbrank-world") {
@@ -130,10 +140,21 @@ std::vector<Ds> loadDs(const std::string& world = "verbrank-world") {
             if (m[4].matched) {
                 std::string a = m[4];
                 VerbArg v;
-                if (a == "null") { v.tag = 0; v.kind = 0; v.ref = 0xffff; }
-                else if (a.rfind("num:", 0) == 0) { v.tag = 1; v.num = std::stof(a.substr(4)); }
-                else if (a.rfind("obj:", 0) == 0) { v.tag = 0; v.kind = 1; v.ref = uint32_t(std::stoul(a.substr(4))); }
-                else { v.tag = 2; v.str = a.substr(5); }
+                if (a == "null") {
+                    v.tag = 0;
+                    v.kind = 0;
+                    v.ref = 0xffff;
+                } else if (a.rfind("num:", 0) == 0) {
+                    v.tag = 1;
+                    v.num = std::stof(a.substr(4));
+                } else if (a.rfind("obj:", 0) == 0) {
+                    v.tag = 0;
+                    v.kind = 1;
+                    v.ref = uint32_t(std::stoul(a.substr(4)));
+                } else {
+                    v.tag = 2;
+                    v.str = a.substr(5);
+                }
                 d.args.push_back(v);
             }
         } else if (body.rfind("refuses ", 0) == 0) {
@@ -147,7 +168,8 @@ std::vector<Ds> loadDs(const std::string& world = "verbrank-world") {
             d.what = m[1];
             d.title = std::regex_replace(std::string(m[2]), std::regex(R"(\\(.))"), "$1");
             if (m[3].matched) d.names = split(m[3], '|');
-        } else continue;
+        } else
+            continue;
         out.push_back(d);
     }
     return out;
@@ -165,11 +187,12 @@ private slots:
     }
 
     // Every send, listbox and refusal of one world's dreamseeker-verbs.txt, against fugue-qt on the recorded scene.
-    static void sameAsDreamSeeker(const std::string& world, const std::vector<Ds>& ds, int wantSends, int wantBoxes, int wantRefusals = 0) {
+    static void sameAsDreamSeeker(const std::string& world, const std::vector<Ds>& ds, int wantSends, int wantBoxes,
+                                  int wantRefusals = 0) {
         Recorded r;
         QVERIFY(r.load(world));
         const model::World& w = r.sess.world();
-        std::string self = r.selfName();   // empty in a world with no verb on the own mob
+        std::string self = r.selfName();  // empty in a world with no verb on the own mob
         int sends = 0, boxes = 0, refusals = 0;
         for (const Ds& d : ds) {
             if (d.what == "listbox") {
@@ -178,14 +201,19 @@ private slots:
                 QCOMPARE(QString::fromStdString(res.srcChoice->title), QString::fromStdString(d.title));
                 std::vector<std::string> names, want = d.names;
                 for (const net::SrcCandidate& c : res.srcChoice->candidates) names.push_back(c.name);
-                for (std::string& n : want) if (n == "self") { QVERIFY(!self.empty()); n = self; }
+                for (std::string& n : want)
+                    if (n == "self") {
+                        QVERIFY(!self.empty());
+                        n = self;
+                    }
                 QVERIFY2(names == want, qPrintable(QString::fromStdString(d.line)));
                 boxes++;
                 continue;
             }
             if (d.what == "refuses") {
                 net::CommandResult res = r.im.verbCommand(d.line, true, r.srcFor(), r.argFor());
-                QVERIFY2(res.frames.empty() && !res.missing && !res.srcChoice, qPrintable(QString::fromStdString(d.line)));
+                QVERIFY2(res.frames.empty() && !res.missing && !res.srcChoice,
+                         qPrintable(QString::fromStdString(d.line)));
                 std::string want;
                 for (const std::string& l : d.names) want += (want.empty() ? "" : "\n") + l;
                 QCOMPARE(QString::fromStdString(res.error), QString::fromStdString(want));
@@ -197,7 +225,8 @@ private slots:
             if (!d.pick.empty()) {
                 QVERIFY2(res.srcChoice, qPrintable(QString::fromStdString(d.line + ": no listbox, " + res.error)));
                 std::vector<net::SrcCandidate> picked;
-                for (const net::SrcCandidate& c : res.srcChoice->candidates) if (c.name == d.pick) picked.push_back(c);
+                for (const net::SrcCandidate& c : res.srcChoice->candidates)
+                    if (c.name == d.pick) picked.push_back(c);
                 QCOMPARE(int(picked.size()), 1);
                 res = r.im.verbCommand(res.srcChoice->line, true, [&](uint16_t) { return picked; }, r.argFor());
             }
@@ -206,7 +235,8 @@ private slots:
             uint32_t ref = d.ref == "self" ? w.selfRef : d.ref == "client" ? 0 : uint32_t(std::stoul(d.ref));
             Bytes want = proto::enc::encodeVerb(d.verb, d.kind, ref, d.args);
             QVERIFY2(hex(res.frames[0].body) == hex(want),
-                     qPrintable(QString::fromStdString(d.line + " " + d.pick + ": got " + hex(res.frames[0].body) + ", DreamSeeker " + hex(want))));
+                     qPrintable(QString::fromStdString(d.line + " " + d.pick + ": got " + hex(res.frames[0].body) +
+                                                       ", DreamSeeker " + hex(want))));
             sends++;
         }
         QCOMPARE(sends, wantSends);

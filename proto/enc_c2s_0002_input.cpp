@@ -16,27 +16,35 @@ AtomRef turfRef(int wx, int wy) {
 Bytes encodeAtomRef(const AtomRef& a) {
     Bytes b;
     b.push_back(a.kind);
-    if (a.kind == RefTurf) { putLe16(b, a.x); putLe16(b, a.y); }
-    else putLe32(b, a.ref);
+    if (a.kind == RefTurf) {
+        putLe16(b, a.x);
+        putLe16(b, a.y);
+    } else
+        putLe32(b, a.ref);
     return b;
 }
 
 static int clampPx(int v) { return v < 1 ? 1 : (v > 32 ? 32 : v); }
 
-// Order: icon-x, icon-y, vis-x, vis-y, the button (none for a hover), the modifiers, screen-loc.
+// Order: icon-x, icon-y, vis-x, vis-y, the button (a hover has only "right=1", and only while the right button is held),
+// the modifiers, screen-loc.
 static std::string mouseParams(const ClickCmd& c, bool withButton) {
     std::string btn = c.button.empty() ? "left" : c.button;
     // icon-x/icon-y are not clamped: they are in the named atom's icon frame, whatever the cursor's distance from it
     // (stock MouseParams::ParamString prints %hd). Over an overlay at -8,-8 the pair can be negative.
     std::string s = "icon-x=" + std::to_string(c.iconX) + ";icon-y=" + std::to_string(c.iconY) + ";";
     if (c.hasVis) s += "vis-x=" + std::to_string(c.visX) + ";vis-y=" + std::to_string(c.visY) + ";";
-    if (withButton) s += btn + "=1;button=" + btn + ";";
+    if (withButton)
+        s += btn + "=1;button=" + btn + ";";
+    else if (c.button == "right")
+        s += "right=1;";
     if (c.mods.ctrl) s += "ctrl=1;";
     if (c.mods.shift) s += "shift=1;";
     if (c.mods.alt) s += "alt=1;";
     int spx = c.screenPX ? c.screenPX : c.iconX, spy = c.screenPY ? c.screenPY : c.iconY;
-    s += "screen-loc=" + (c.screenLocMap.empty() ? std::string() : mapIdParam(c.screenLocMap) + ":") + std::to_string(c.screenX) + ":" + std::to_string(clampPx(spx)) + "," +
-         std::to_string(c.screenY) + ":" + std::to_string(clampPx(spy));
+    s += "screen-loc=" + (c.screenLocMap.empty() ? std::string() : mapIdParam(c.screenLocMap) + ":") +
+         std::to_string(c.screenX) + ":" + std::to_string(clampPx(spx)) + "," + std::to_string(c.screenY) + ":" +
+         std::to_string(clampPx(spy));
     return s;
 }
 
@@ -44,8 +52,13 @@ std::string mapIdParam(const std::string& id) {
     static const char* hexd = "0123456789abcdef";
     std::string o;
     for (unsigned char ch : id) {
-        if (std::isalnum(ch) || ch == '_' || ch == '.' || ch == '-') o += char(ch);
-        else { o += '%'; o += hexd[ch >> 4]; o += hexd[ch & 15]; }
+        if (std::isalnum(ch) || ch == '_' || ch == '.' || ch == '-')
+            o += char(ch);
+        else {
+            o += '%';
+            o += hexd[ch >> 4];
+            o += hexd[ch & 15];
+        }
     }
     return o;
 }
@@ -53,16 +66,21 @@ std::string mapIdParam(const std::string& id) {
 std::string clickParams(const ClickCmd& c) { return mouseParams(c, true); }
 std::string hoverParams(const ClickCmd& c) { return mouseParams(c, false); }
 
-static void putStr(Bytes& b, const std::string& s) { b.insert(b.end(), s.begin(), s.end()); b.push_back(0); }
+static void putStr(Bytes& b, const std::string& s) {
+    b.insert(b.end(), s.begin(), s.end());
+    b.push_back(0);
+}
 
-static Bytes mouseBody(uint8_t sub, const AtomRef& over, const AtomRef& loc, const std::string& locStr, const std::string& control,
-                       const std::string& params) {
+static Bytes mouseBody(uint8_t sub, const AtomRef& over, const AtomRef& loc, const std::string& locStr,
+                       const std::string& control, const std::string& params) {
     Bytes b{sub, 0x00, 0xff, 0xff};
     auto o = encodeAtomRef(over);
     b.insert(b.end(), o.begin(), o.end());
-    b.push_back(0x03);   // three values follow; loc is tag 0, an atom, or tag 2, a string (cf. encodeInfoClick)
-    if (!locStr.empty()) { b.push_back(0x02); putStr(b, locStr); }
-    else {
+    b.push_back(0x03);  // three values follow; loc is tag 0, an atom, or tag 2, a string (cf. encodeInfoClick)
+    if (!locStr.empty()) {
+        b.push_back(0x02);
+        putStr(b, locStr);
+    } else {
         b.push_back(0x00);
         auto l = encodeAtomRef(loc);
         b.insert(b.end(), l.begin(), l.end());
@@ -82,15 +100,21 @@ Bytes encodeMouseNone(uint8_t sub, const std::string& locStr, const std::string&
     b.insert(b.end(), n.begin(), n.end());
     b.push_back(0x03);
     for (const std::string* v : {&locStr, &control}) {
-        if (v->empty()) { b.push_back(0x00); b.insert(b.end(), n.begin(), n.end()); }
-        else { b.push_back(0x02); putStr(b, *v); }
+        if (v->empty()) {
+            b.push_back(0x00);
+            b.insert(b.end(), n.begin(), n.end());
+        } else {
+            b.push_back(0x02);
+            putStr(b, *v);
+        }
     }
     b.push_back(0x02);
     putStr(b, params);
     return b;
 }
 
-Bytes encodeHover(const AtomRef& over, const AtomRef& loc, const std::string& control, const std::string& params, const std::string& locStr) {
+Bytes encodeHover(const AtomRef& over, const AtomRef& loc, const std::string& control, const std::string& params,
+                  const std::string& locStr) {
     return mouseBody(kMouseHover, over, loc, locStr, control, params);
 }
 
@@ -99,8 +123,12 @@ Bytes encodeHoverLeave() {
     auto n = encodeAtomRef(nullRef());
     b.insert(b.end(), n.begin(), n.end());
     b.push_back(0x03);
-    for (int i = 0; i < 2; i++) { b.push_back(0x00); b.insert(b.end(), n.begin(), n.end()); }   // loc and control: null atoms
-    b.push_back(0x02); b.push_back(0x00);                                                      // params ""
+    for (int i = 0; i < 2; i++) {
+        b.push_back(0x00);
+        b.insert(b.end(), n.begin(), n.end());
+    }  // loc and control: null atoms
+    b.push_back(0x02);
+    b.push_back(0x00);  // params ""
     return b;
 }
 
@@ -108,16 +136,26 @@ ClickCmd turfClick(int wx, int wy, int sc, int sr, int ix, int iy, Mods m) {
     ClickCmd c;
     c.sub = kMouseClick;
     c.over = c.loc = turfRef(wx, wy);
-    c.iconX = ix; c.iconY = iy; c.screenX = sc; c.screenY = sr; c.screenPX = ix; c.screenPY = iy; c.mods = m;
+    c.iconX = ix;
+    c.iconY = iy;
+    c.screenX = sc;
+    c.screenY = sr;
+    c.screenPX = ix;
+    c.screenPY = iy;
+    c.mods = m;
     return c;
 }
 
-Bytes encodeInfoClick(uint8_t sub, const AtomRef& over, const std::string& panel, const std::string& control, const std::string& params) {
+Bytes encodeInfoClick(uint8_t sub, const AtomRef& over, const std::string& panel, const std::string& control,
+                      const std::string& params) {
     Bytes b{sub, 0x00, 0xff, 0xff};
     auto o = encodeAtomRef(over);
     b.insert(b.end(), o.begin(), o.end());
     b.push_back(0x03);
-    for (const std::string* s : {&panel, &control, &params}) { b.push_back(0x02); putStr(b, *s); }
+    for (const std::string* s : {&panel, &control, &params}) {
+        b.push_back(0x02);
+        putStr(b, *s);
+    }
     return b;
 }
 
@@ -135,13 +173,22 @@ MouseHooks allMouseHooks() { return MouseHooks{true, true, true, true, true, tru
 
 std::vector<Bytes> pressFrames(ClickCmd c, const MouseHooks& h) {
     std::vector<Bytes> out;
-    if (h.down) { c.sub = kMouseDown; out.push_back(encodeMouseCmd(c)); }
+    if (h.down) {
+        c.sub = kMouseDown;
+        out.push_back(encodeMouseCmd(c));
+    }
     return out;
 }
 std::vector<Bytes> releaseFrames(ClickCmd c, const MouseHooks& h) {
     std::vector<Bytes> out;
-    if (h.up) { c.sub = kMouseUp; out.push_back(encodeMouseCmd(c)); }
-    if (h.click) { c.sub = kMouseClick; out.push_back(encodeMouseCmd(c)); }
+    if (h.up) {
+        c.sub = kMouseUp;
+        out.push_back(encodeMouseCmd(c));
+    }
+    if (h.click) {
+        c.sub = kMouseClick;
+        out.push_back(encodeMouseCmd(c));
+    }
     return out;
 }
 std::vector<Bytes> clickSequence(ClickCmd c, const MouseHooks& h) {
@@ -154,10 +201,15 @@ Bytes encodeDragCmd(const DragCmd& d) {
     Bytes b{kMouseExt, 0x00};
     putLe16(b, d.drop ? kMouseEventDrop : kMouseEventDrag);
     for (uint8_t x : {0x00, 0xff, 0xff, 0x00, 0x00}) b.push_back(x);
-    b.push_back(7);   // value count
+    b.push_back(7);  // value count
     const std::string none;
-    for (auto [r, str] : {std::pair{&d.src, &none}, {&d.over, &none}, {&d.srcLoc, &d.srcLocStr}, {&d.overLoc, &d.overLocStr}}) {
-        if (!str->empty() || (r == &d.overLoc && d.overLocBlank)) { b.push_back(0x02); putStr(b, *str); continue; }
+    for (auto [r, str] :
+         {std::pair{&d.src, &none}, {&d.over, &none}, {&d.srcLoc, &d.srcLocStr}, {&d.overLoc, &d.overLocStr}}) {
+        if (!str->empty() || (r == &d.overLoc && d.overLocBlank)) {
+            b.push_back(0x02);
+            putStr(b, *str);
+            continue;
+        }
         AtomRef a = *r;
         if (a.kind == RefNull && a.ref == 0) a.ref = 0x0000ffff;
         b.push_back(0x00);
@@ -171,7 +223,8 @@ Bytes encodeDragCmd(const DragCmd& d) {
             b.insert(b.end(), n.begin(), n.end());
             continue;
         }
-        b.push_back(0x02); putStr(b, *s);
+        b.push_back(0x02);
+        putStr(b, *s);
     }
     return b;
 }
@@ -180,14 +233,22 @@ Bytes encodeWheelCmd(const WheelCmd& w) {
     Bytes b{kMouseExt, 0x00};
     putLe16(b, kMouseEventWheel);
     for (uint8_t x : {0x00, 0xff, 0xff, 0x00, 0x00}) b.push_back(x);
-    b.push_back(6);   // value count
+    b.push_back(6);  // value count
     AtomRef o = w.over;
     if (o.kind == RefNull && o.ref == 0) o.ref = 0x0000ffff;
     b.push_back(0x00);
     auto e = encodeAtomRef(o);
     b.insert(b.end(), e.begin(), e.end());
-    for (float f : {w.dx, w.dy}) { uint32_t u; std::memcpy(&u, &f, 4); b.push_back(0x01); putLe32(b, u); }
-    for (const std::string* s : {&w.location, &w.control, &w.params}) { b.push_back(0x02); putStr(b, *s); }
+    for (float f : {w.dx, w.dy}) {
+        uint32_t u;
+        std::memcpy(&u, &f, 4);
+        b.push_back(0x01);
+        putLe32(b, u);
+    }
+    for (const std::string* s : {&w.location, &w.control, &w.params}) {
+        b.push_back(0x02);
+        putStr(b, *s);
+    }
     return b;
 }
 
@@ -201,17 +262,32 @@ Bytes encodeVerb(uint16_t id, uint8_t srcKind, uint32_t srcRef, const std::vecto
     b.push_back(uint8_t(args.size()));
     for (auto& a : args) {
         b.push_back(a.tag);
-        if (a.tag == 0x02) putStr(b, a.str);
-        else if (a.tag == 0x01) { uint32_t u; std::memcpy(&u, &a.num, 4); putLe32(b, u); }
-        else { b.push_back(a.kind); putLe32(b, a.ref); }
+        if (a.tag == 0x02)
+            putStr(b, a.str);
+        else if (a.tag == 0x01) {
+            uint32_t u;
+            std::memcpy(&u, &a.num, 4);
+            putLe32(b, u);
+        } else {
+            b.push_back(a.kind);
+            putLe32(b, a.ref);
+        }
     }
     return b;
 }
 
 Bytes encodeMoveVerb(uint16_t id, uint32_t srcRef, int dir, bool down, bool twoArgs) {
     std::vector<VerbArg> a;
-    VerbArg d; d.tag = 0x01; d.num = float(dir); a.push_back(d);
-    if (twoArgs) { VerbArg s; s.tag = 0x01; s.num = down ? 1.f : 0.f; a.push_back(s); }
+    VerbArg d;
+    d.tag = 0x01;
+    d.num = float(dir);
+    a.push_back(d);
+    if (twoArgs) {
+        VerbArg s;
+        s.tag = 0x01;
+        s.num = down ? 1.f : 0.f;
+        a.push_back(s);
+    }
     // A /client/verb carries src-ref 0; `srcRef` is unused.
     (void)srcRef;
     return encodeVerb(id, kVerbSrcClient, 0, a);

@@ -13,12 +13,14 @@ using namespace fugue::skin;
 
 namespace {
 // Stock DreamSeeker's output after F6 -> hello then F1 -> zap user: "macro " entries with CRLF, newest first.
-const char* kDsGlobal = "macro \r\n\telem \r\n\t\tname = \"F1\"\r\n\t\tcommand = \"zap user\"\r\n\telem \r\n\t\tname = \"F6\"\r\n"
-                        "\t\tcommand = \"hello\"\r\n\r\n";
+const char* kDsGlobal =
+    "macro \r\n\telem \r\n\t\tname = \"F1\"\r\n\t\tcommand = \"zap user\"\r\n\telem \r\n\t\tname = \"F6\"\r\n"
+    "\t\tcommand = \"hello\"\r\n\r\n";
 
 // Stock DreamSeeker's per-game file after F6 -> Rest then R -> zap userR: newest entry first, so the file is not sorted by key.
-const char* kDsGame = "macro \r\n\telem \r\n\t\tname = \"R\"\r\n\t\tcommand = \"zap userR\"\r\n\telem \r\n\t\tname = \"F6\"\r\n"
-                      "\t\tcommand = \"Rest\"\r\n\r\n";
+const char* kDsGame =
+    "macro \r\n\telem \r\n\t\tname = \"R\"\r\n\t\tcommand = \"zap userR\"\r\n\telem \r\n\t\tname = \"F6\"\r\n"
+    "\t\tcommand = \"Rest\"\r\n\r\n";
 
 MacroKey key(const char* spec, bool* rep = nullptr) {
     MacroKey k;
@@ -66,8 +68,10 @@ private slots:
         std::string out = formatUserMacros(s);
         std::string ds = kDsGlobal;
         std::string lf;
-        for (char c : ds) if (c != '\r') lf.push_back(c);
-        QCOMPARE(QString::fromStdString(out), QString::fromStdString(lf));  // unnamed datum, same rows; ours is sorted by key, LF endings
+        for (char c : ds)
+            if (c != '\r') lf.push_back(c);
+        QCOMPARE(QString::fromStdString(out),
+                 QString::fromStdString(lf));  // unnamed datum, same rows; ours is sorted by key, LF endings
     }
     void roundTripsEscapesIdsAndFlags() {
         MacroSet s;
@@ -105,8 +109,9 @@ private slots:
     }
     void precedenceIsSkinThenGameThenGlobal() {
         // Layers: skin F1 -> hello; global F1 -> zap user, F6 -> hello; this game F6 -> zap game, F7 -> hello.
-        MacroSet skin = skinSet("macro \"macro\"\n\telem\n\t\tname = \"F1\"\n\t\tcommand = \"hello\"\n"
-                                "\telem\n\t\tname = \"F2\"\n\t\tcommand = \"x\"\n\t\tis-disabled = true\n");
+        MacroSet skin = skinSet(
+            "macro \"macro\"\n\telem\n\t\tname = \"F1\"\n\t\tcommand = \"hello\"\n"
+            "\telem\n\t\tname = \"F2\"\n\t\tcommand = \"x\"\n\t\tis-disabled = true\n");
         MacroSet global, game;
         editUserMacro(global, "", "F1", "zap user");
         editUserMacro(global, "", "F6", "hello");
@@ -117,14 +122,16 @@ private slots:
             const MacroEntry* e = lookupLayered(&skin, game, global, key(k), false);
             return e ? QString::fromStdString(e->command) : QString("<none>");
         };
-        QCOMPARE(fire("F1"), QString("hello"));  // the skin's: the key is in use
+        QCOMPARE(fire("F1"), QString("hello"));     // the skin's: the key is in use
         QCOMPARE(fire("F6"), QString("zap game"));  // this game's beats global
-        QCOMPARE(fire("F7"), QString("hello"));  // this game's alone
-        QCOMPARE(fire("F2"), QString("<none>"));  // a disabled skin binding still claims its key
+        QCOMPARE(fire("F7"), QString("hello"));     // this game's alone
+        QCOMPARE(fire("F2"), QString("<none>"));    // a disabled skin binding still claims its key
         QCOMPARE(fire("F3"), QString("<none>"));
         MacroSet noGame;
-        QCOMPARE(QString::fromStdString(lookupLayered(&skin, noGame, global, key("F6"), false)->command), QString("hello"));
-        QCOMPARE(QString::fromStdString(lookupLayered(nullptr, noGame, global, key("F1"), false)->command), QString("zap user"));
+        QCOMPARE(QString::fromStdString(lookupLayered(&skin, noGame, global, key("F6"), false)->command),
+                 QString("hello"));
+        QCOMPARE(QString::fromStdString(lookupLayered(nullptr, noGame, global, key("F1"), false)->command),
+                 QString("zap user"));
     }
     void anyAnswersEveryKeyWithTheBestFittingModifiers() {
         auto set = [](std::initializer_list<const char*> specs) {
@@ -162,9 +169,16 @@ private slots:
         MacroSet f = set({"Any", "Z"});
         QVERIFY(f.lookup(key("Z"), false));
         QVERIFY(!f.lookup(key("Q"), false));
-        QCOMPARE(QString::fromStdString(lookupLayeredAny(&f, MacroSet{}, MacroSet{}, key("Q"), false)->spec), QString("Any"));
-        for (auto [canon, name] : {std::pair{"NORTH", "North"}, {"SHIFT", "Shift"}, {"CTRL", "Ctrl"}, {"NORTHWEST", "Northwest"},
-                                   {"BACK", "Back"}, {"F11", "F11"}, {"A", "A"}, {"[", "["}})
+        QCOMPARE(QString::fromStdString(lookupLayeredAny(&f, MacroSet{}, MacroSet{}, key("Q"), false)->spec),
+                 QString("Any"));
+        for (auto [canon, name] : {std::pair{"NORTH", "North"},
+                                   {"SHIFT", "Shift"},
+                                   {"CTRL", "Ctrl"},
+                                   {"NORTHWEST", "Northwest"},
+                                   {"BACK", "Back"},
+                                   {"F11", "F11"},
+                                   {"A", "A"},
+                                   {"[", "["}})
             QCOMPARE(QString::fromStdString(anyKeyName(canon)), QString(name));
     }
     void ownBindingFallsBackToFewerModifiers() {
@@ -182,7 +196,8 @@ private slots:
             return e ? QString::fromStdString(e->spec) : QString("<none>");
         };
         MacroSet z = set({"Z"});
-        for (const char* k : {"Z", "CTRL+Z", "SHIFT+Z", "ALT+Z", "CTRL+SHIFT+ALT+Z"}) QCOMPARE(fire(z, k), QString("Z"));
+        for (const char* k : {"Z", "CTRL+Z", "SHIFT+Z", "ALT+Z", "CTRL+SHIFT+ALT+Z"})
+            QCOMPARE(fire(z, k), QString("Z"));
         QCOMPARE(fire(z, "Q"), QString("<none>"));
         MacroSet a = set({"SHIFT+Z", "CTRL+Z", "ALT+Z"});
         QCOMPARE(fire(a, "Z"), QString("<none>"));
@@ -234,7 +249,8 @@ private slots:
         MacroSet global = set({"CTRL+Z", "Q"});
         auto layered = [&](const MacroSet& s, const char* k) {
             const MacroEntry* e = lookupLayered(&s, none, global, key(k), false);
-            return e ? QString::fromStdString(e->command) + (&s.entries.front() <= e && e <= &s.entries.back() ? "" : " (list)")
+            return e ? QString::fromStdString(e->command) +
+                           (&s.entries.front() <= e && e <= &s.entries.back() ? "" : " (list)")
                      : QString("<none>");
         };
         QCOMPARE(layered(skinZ, "CTRL+Z"), QString("CTRL+Z (list)"));
@@ -248,7 +264,8 @@ private slots:
     void storage() {
         QCOMPARE(QString::fromStdString(userMacrosPath("/s", "")), QString("/s/macros.dmf"));
         QCOMPARE(QString::fromStdString(worldKeyFor("127.0.0.1", 45000)), QString("127.0.0.1_45000"));
-        QCOMPARE(QString::fromStdString(worldKeyFor("a/../b:c", 1)), QString("a_.._b_c_1"));  // no path separators survive
+        QCOMPARE(QString::fromStdString(worldKeyFor("a/../b:c", 1)),
+                 QString("a_.._b_c_1"));  // no path separators survive
         QCOMPARE(QString::fromStdString(userMacrosPath("/s", "h_1")), QString("/s/macros/h_1/macros.dmf"));
         QTemporaryDir d;
         QVERIFY(d.isValid());

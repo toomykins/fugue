@@ -22,7 +22,7 @@ void onError(j_common_ptr c) {
     (*c->err->format_message)(c, e->msg);
     std::longjmp(e->jump, 1);
 }
-void onMessage(j_common_ptr) {}   // warnings (e.g. a corrupt but recoverable stream) are not printed
+void onMessage(j_common_ptr) {}  // warnings (e.g. a corrupt but recoverable stream) are not printed
 
 // The setjmp frames below hold no object with a destructor: a longjmp across C++ unwind state is not portable.
 struct Jpeg {
@@ -36,8 +36,10 @@ const char* readHeader(Jpeg& j, const uint8_t* d, size_t n, uint64_t maxPixels) 
     jpeg_mem_src(&j.c, const_cast<unsigned char*>(d), static_cast<unsigned long>(n));
     if (jpeg_read_header(&j.c, TRUE) != JPEG_HEADER_OK) return "no image";
     if (j.c.jpeg_color_space == JCS_CMYK || j.c.jpeg_color_space == JCS_YCCK) return "CMYK is not supported";
-    if (j.c.image_width == 0 || j.c.image_height == 0 || uint64_t(j.c.image_width) * j.c.image_height > maxPixels) return "image size";
-    j.c.out_color_space = JCS_RGB;  // grayscale expands; otherwise libjpeg's defaults (JDCT_ISLOW, as stock DreamDaemon uses)
+    if (j.c.image_width == 0 || j.c.image_height == 0 || uint64_t(j.c.image_width) * j.c.image_height > maxPixels)
+        return "image size";
+    j.c.out_color_space =
+        JCS_RGB;  // grayscale expands; otherwise libjpeg's defaults (JDCT_ISLOW, as stock DreamDaemon uses)
     jpeg_calc_output_dimensions(&j.c);
     return nullptr;
 }

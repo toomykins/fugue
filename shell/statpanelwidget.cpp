@@ -10,7 +10,7 @@
 namespace fugue::shell {
 
 namespace {
-constexpr int kIconTextGap = 3;   // gap between the icon cell and the text
+constexpr int kIconTextGap = 3;  // gap between the icon cell and the text
 constexpr int kIconRole = Qt::UserRole + 1;
 // The Stat() value column is [icon cell][gap][text], top-aligned, as stock DreamSeeker lays out an atom row. It is
 // painted here rather than through Qt's DecorationRole, so the click can be counted in the cell exactly (iconAt).
@@ -19,14 +19,18 @@ public:
     using QStyledItemDelegate::QStyledItemDelegate;
     void paint(QPainter* p, const QStyleOptionViewItem& opt, const QModelIndex& ix) const override {
         QImage icon = ix.data(kIconRole).value<QImage>();
-        if (icon.isNull()) { QStyledItemDelegate::paint(p, opt, ix); return; }
+        if (icon.isNull()) {
+            QStyledItemDelegate::paint(p, opt, ix);
+            return;
+        }
         p->save();
         p->drawImage(opt.rect.topLeft(), icon);
         QStyleOptionViewItem o(opt);
         initStyleOption(&o, ix);
         o.rect.setLeft(opt.rect.left() + icon.width() + kIconTextGap);
         o.displayAlignment = Qt::AlignLeft | Qt::AlignTop;
-        o.widget ? o.widget->style()->drawControl(QStyle::CE_ItemViewItem, &o, p, o.widget) : QStyledItemDelegate::paint(p, o, ix);
+        o.widget ? o.widget->style()->drawControl(QStyle::CE_ItemViewItem, &o, p, o.widget)
+                 : QStyledItemDelegate::paint(p, o, ix);
         p->restore();
     }
     QSize sizeHint(const QStyleOptionViewItem& opt, const QModelIndex& ix) const override {
@@ -40,7 +44,7 @@ public:
 }  // namespace
 
 StatPanelWidget::StatPanelWidget(QWidget* parent) : QWidget(parent) {
-    setProperty("fugueZone", "info");   // shell/focusfilter.h: keys over the stat panel go to macro routing
+    setProperty("fugueZone", "info");  // shell/focusfilter.h: keys over the stat panel go to macro routing
     auto* l = new QVBoxLayout(this);
     l->setContentsMargins(0, 0, 0, 0);
     l->setSpacing(0);
@@ -84,27 +88,35 @@ StatPanelWidget::StatPanelWidget(QWidget* parent) : QWidget(parent) {
 
 void StatPanelWidget::changeEvent(QEvent* e) {
     QWidget::changeEvent(e);
-    if (e->type() == QEvent::FontChange && table_) rebuildRows();   // clickable rows carry their own copy of the font
+    if (e->type() == QEvent::FontChange && table_) rebuildRows();  // clickable rows carry their own copy of the font
 }
 
 bool StatPanelWidget::eventFilter(QObject* o, QEvent* e) {
     if (o != table_->viewport() || view_.verbTab) return QWidget::eventFilter(o, e);
     auto t = e->type();
-    if (t != QEvent::MouseButtonPress && t != QEvent::MouseButtonDblClick && t != QEvent::MouseButtonRelease) return QWidget::eventFilter(o, e);
+    if (t != QEvent::MouseButtonPress && t != QEvent::MouseButtonDblClick && t != QEvent::MouseButtonRelease)
+        return QWidget::eventFilter(o, e);
     auto* me = static_cast<QMouseEvent*>(e);
     QModelIndex ix = table_->indexAt(me->position().toPoint());
-    int row = (ix.isValid() && ix.column() == 1 && ix.row() < view_.rows.size() && view_.rows[ix.row()].clickable) ? ix.row() : -1;
+    int row = (ix.isValid() && ix.column() == 1 && ix.row() < view_.rows.size() && view_.rows[ix.row()].clickable)
+                  ? ix.row()
+                  : -1;
     QString button = me->button() == Qt::LeftButton ? "left" : me->button() == Qt::MiddleButton ? "middle" : QString();
-    if (t == QEvent::MouseButtonPress) { pressRow_ = row; return QWidget::eventFilter(o, e); }
+    if (t == QEvent::MouseButtonPress) {
+        pressRow_ = row;
+        return QWidget::eventFilter(o, e);
+    }
     Qt::KeyboardModifiers km = me->modifiers();
-    int mods = (km & Qt::ControlModifier ? ModCtrl : 0) | (km & Qt::ShiftModifier ? ModShift : 0) | (km & Qt::AltModifier ? ModAlt : 0);
+    int mods = (km & Qt::ControlModifier ? ModCtrl : 0) | (km & Qt::ShiftModifier ? ModShift : 0) |
+               (km & Qt::AltModifier ? ModAlt : 0);
     int iconX = 0, iconY = 0;
     bool icon = row >= 0 && iconAt(row, me->position().toPoint(), iconX, iconY);
     if (t == QEvent::MouseButtonDblClick) {
         pressRow_ = row;
         if (row >= 0 && !button.isEmpty()) emit rowClicked(row, controlId_, button, mods, true, icon, iconX, iconY);
     } else {
-        if (row >= 0 && row == pressRow_ && !button.isEmpty()) emit rowClicked(row, controlId_, button, mods, false, icon, iconX, iconY);
+        if (row >= 0 && row == pressRow_ && !button.isEmpty())
+            emit rowClicked(row, controlId_, button, mods, false, icon, iconX, iconY);
         pressRow_ = -1;
     }
     return QWidget::eventFilter(o, e);
@@ -152,7 +164,7 @@ void StatPanelWidget::setView(const StatView& v) {
 void StatPanelWidget::rebuildRows() {
     table_->clearContents();
     if (view_.verbTab) {
-        const int cols = 4;   // verbs flow row-major across a uniform four-column grid, as in stock
+        const int cols = 4;  // verbs flow row-major across a uniform four-column grid, as in stock
         table_->setColumnCount(cols);
         table_->setRowCount((view_.rows.size() + cols - 1) / cols);
         for (int i = 0; i < view_.rows.size(); i++) {
@@ -168,13 +180,14 @@ void StatPanelWidget::rebuildRows() {
             auto* a = new QTableWidgetItem(view_.rows[i].name);
             auto* b = new QTableWidgetItem(view_.rows[i].text);
             Qt::ItemFlags f = Qt::ItemIsEnabled;
-            a->setFlags(f); b->setFlags(f);
-            a->setTextAlignment(Qt::AlignLeft | Qt::AlignTop);   // stock: a label sits at the top of an icon row
+            a->setFlags(f);
+            b->setFlags(f);
+            a->setTextAlignment(Qt::AlignLeft | Qt::AlignTop);  // stock: a label sits at the top of an icon row
             if (prefix_.isValid()) a->setForeground(prefix_);
             if (suffix_.isValid()) b->setForeground(suffix_);
             if (!view_.rows[i].icon.isNull()) b->setData(kIconRole, view_.rows[i].icon);
             if (view_.rows[i].clickable) {
-                QFont ft = table_->font();   // the INFO control's font (an item's own font() is the application's)
+                QFont ft = table_->font();  // the INFO control's font (an item's own font() is the application's)
                 ft.setUnderline(true);
                 b->setFont(ft);
                 b->setToolTip("Click to click this atom");

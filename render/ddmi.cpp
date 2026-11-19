@@ -15,13 +15,16 @@ int g_ddmiMut = 0;
 
 constexpr uint8_t kOpIconRef = 0x01, kOpColor = 0x03, kOpNumber = 0x04, kOpState = 0x05, kOpDup = 0x06, kOpNop = 0x3f,
                   kOpDir = 0x40, kOpInsert = 0x41, kOpBlend = 0x42, kOpIntensity = 0x43, kOpFlip = 0x44, kOpTurn = 0x45,
-                  kOpTurnF = 0x46, kOpShift = 0x47, kOpSwap = 0x48, kOpDrawBox = 0x49, kOpMapColors = 0x4a, kOpScale = 0x4b,
-                  kOpCrop = 0x4c, kOpBlendAt = 0x4d, kOpInsertF = 0x4e;
+                  kOpTurnF = 0x46, kOpShift = 0x47, kOpSwap = 0x48, kOpDrawBox = 0x49, kOpMapColors = 0x4a,
+                  kOpScale = 0x4b, kOpCrop = 0x4c, kOpBlendAt = 0x4d, kOpInsertF = 0x4e;
 
 bool payloadLen(uint8_t tag, const uint8_t* d, size_t n, size_t i, size_t& out, std::string* err) {
     size_t avail = n - (i + 1);
     auto fixed = [&](size_t w) {
-        if (avail < w) { if (err) *err = "DDMI op wants more bytes than remain"; return false; }
+        if (avail < w) {
+            if (err) *err = "DDMI op wants more bytes than remain";
+            return false;
+        }
         out = w;
         return true;
     };
@@ -29,30 +32,43 @@ bool payloadLen(uint8_t tag, const uint8_t* d, size_t n, size_t i, size_t& out, 
         case kOpIconRef: return fixed(5);
         case kOpState: {
             const uint8_t* nul = static_cast<const uint8_t*>(std::memchr(d + i + 1, 0, avail));
-            if (!nul) { if (err) *err = "DDMI state name unterminated"; return false; }
+            if (!nul) {
+                if (err) *err = "DDMI state name unterminated";
+                return false;
+            }
             out = size_t(nul - (d + i + 1)) + 1;
             return true;
         }
         case kOpDir: return fixed(3);
-        case kOpDup: case kOpNop: return fixed(0);
+        case kOpDup:
+        case kOpNop: return fixed(0);
         case kOpColor: return fixed(4);
         case kOpNumber: return fixed(4);
-        case kOpInsert: case kOpInsertF: return fixed(7);
+        case kOpInsert:
+        case kOpInsertF: return fixed(7);
         case kOpBlend: return fixed(1);
         case kOpIntensity: return fixed(12);
         case kOpFlip: return fixed(1);
-        case kOpTurn: case kOpTurnF: return fixed(4);
+        case kOpTurn:
+        case kOpTurnF: return fixed(4);
         case kOpShift: return fixed(4);
         case kOpSwap: return fixed(1);
         case kOpDrawBox: return fixed(8);
         case kOpMapColors:
-            if (avail < 1) { if (err) *err = "DDMI MapColors op has no count byte"; return false; }
+            if (avail < 1) {
+                if (err) *err = "DDMI MapColors op has no count byte";
+                return false;
+            }
             return fixed(1 + 4 * std::min<size_t>(d[i + 1], 20));
         case kOpScale: return fixed(4);
         case kOpCrop: return fixed(8);
         case kOpBlendAt: return fixed(5);
         default:
-            if (err) { char t[8]; std::snprintf(t, sizeof t, "0x%02x", tag); *err = std::string("DDMI unrecognised op tag ") + t; }
+            if (err) {
+                char t[8];
+                std::snprintf(t, sizeof t, "0x%02x", tag);
+                *err = std::string("DDMI unrecognised op tag ") + t;
+            }
             return false;
     }
 }
@@ -63,20 +79,33 @@ Rgba8 overComposite(Rgba8 bottom, Rgba8 top) {
     double sa = double(top.a) / 255;
     double da = double(bottom.a) / 255;
     double oa = sa + da * (1 - sa);
-    auto round8 = [](double v) -> uint8_t { if (v <= 0) return 0; if (v >= 255) return 255; return uint8_t(std::round(v)); };
+    auto round8 = [](double v) -> uint8_t {
+        if (v <= 0) return 0;
+        if (v >= 255) return 255;
+        return uint8_t(std::round(v));
+    };
     auto ch = [&](uint8_t topC, uint8_t bottomC) {
         uint8_t premul = round8(double(topC) * sa);
         return clamp8(double(premul) + double(bottomC) * (1 - sa));
     };
     return Rgba8{ch(top.r, bottom.r), ch(top.g, bottom.g), ch(top.b, bottom.b), clamp8(oa * 255)};
 }
-enum { kIconAdd = 0, kIconSubtract = 1, kIconMultiply = 2, kIconOverlay = 3, kIconAnd = 4, kIconOr = 5, kIconUnderlay = 6 };
+enum {
+    kIconAdd = 0,
+    kIconSubtract = 1,
+    kIconMultiply = 2,
+    kIconOverlay = 3,
+    kIconAnd = 4,
+    kIconOr = 5,
+    kIconUnderlay = 6
+};
 // R/G/B independently clamped, alpha the PRODUCT 255*sa*da
 template <class Op>
 Rgba8 channelBlend(Rgba8 self, Rgba8 other, Op op) {
     double sa = double(self.a) / 255;
     double da = double(other.a) / 255;
-    return Rgba8{clamp8(op(self.r, other.r)), clamp8(op(self.g, other.g)), clamp8(op(self.b, other.b)), clamp8(255 * sa * da)};
+    return Rgba8{clamp8(op(self.r, other.r)), clamp8(op(self.g, other.g)), clamp8(op(self.b, other.b)),
+                 clamp8(255 * sa * da)};
 }
 // The clamped colour add with the UNION alpha
 Rgba8 orBlend(Rgba8 self, Rgba8 other) {
@@ -95,10 +124,12 @@ Rgba8 blendPixelIcon(int mode, Rgba8 self, Rgba8 other) {
         case kIconUnderlay: return overComposite(other, self);
         case kIconOr: return orBlend(self, other);
         case kIconAdd:
-        case kIconAnd:   // DD's ICON_AND is byte-for-byte ICON_ADD
+        case kIconAnd:  // DD's ICON_AND is byte-for-byte ICON_ADD
             return channelBlend(self, other, [](uint8_t a, uint8_t b) { return double(a) + double(b); });
-        case kIconSubtract: return channelBlend(self, other, [](uint8_t a, uint8_t b) { return double(a) - double(b); });
-        case kIconMultiply: return channelBlend(self, other, [](uint8_t a, uint8_t b) { return double(a) * double(b) / 255; });
+        case kIconSubtract:
+            return channelBlend(self, other, [](uint8_t a, uint8_t b) { return double(a) - double(b); });
+        case kIconMultiply:
+            return channelBlend(self, other, [](uint8_t a, uint8_t b) { return double(a) * double(b) / 255; });
         default: return self;
     }
 }
@@ -106,7 +137,10 @@ Rgba8 blendPixelIcon(int mode, Rgba8 self, Rgba8 other) {
 // The wire blend byte DD 516 writes -> the DM IconBlendMode it means (mapped, never cast):
 // ADD 0, SUBTRACT 1, OR 2, AND 3, MULTIPLY 4, OVERLAY 7, UNDERLAY 8.
 bool wireBlend(uint8_t b, int& mode) {
-    if (g_ddmiMut == 17) { mode = int(b); return true; }
+    if (g_ddmiMut == 17) {
+        mode = int(b);
+        return true;
+    }
     switch (b) {
         case 0: mode = kIconAdd; return true;
         case 1: mode = kIconSubtract; return true;
@@ -125,7 +159,10 @@ Rgba8 pixelAt(const RgbaImage& im, int x, int y) {
 }
 void setPixel(RgbaImage& im, int x, int y, Rgba8 c) {
     uint8_t* p = &im.px[(size_t(y) * size_t(im.w) + size_t(x)) * 4];
-    p[0] = c.r; p[1] = c.g; p[2] = c.b; p[3] = c.a;
+    p[0] = c.r;
+    p[1] = c.g;
+    p[2] = c.b;
+    p[3] = c.a;
 }
 bool cellRect(const Icon& ic, int64_t cell, int& x0, int& y0) {
     x0 = int((cell % ic.sheetCols) * ic.width);
@@ -137,7 +174,8 @@ bool cellRect(const Icon& ic, int64_t cell, int& x0, int& y0) {
 std::unique_ptr<Icon> blendedColor(const Icon& ic, int mode, Rgba8 col) {
     auto o = std::make_unique<Icon>(ic);
     for (int y = 0; y < o->sheet.h; y++)
-        for (int x = 0; x < o->sheet.w; x++) setPixel(o->sheet, x, y, blendPixelIcon(mode, pixelAt(ic.sheet, x, y), col));
+        for (int x = 0; x < o->sheet.w; x++)
+            setPixel(o->sheet, x, y, blendPixelIcon(mode, pixelAt(ic.sheet, x, y), col));
     return o;
 }
 
@@ -165,7 +203,8 @@ struct Cells {
 
 Cells explode(const Icon& ic) {
     Cells out;
-    out.w = ic.width; out.h = ic.height;
+    out.w = ic.width;
+    out.h = ic.height;
     for (const IconState& st : ic.states) {
         StateCells sc;
         sc.meta = st;
@@ -188,11 +227,13 @@ Cells explode(const Icon& ic) {
 std::unique_ptr<Icon> implode(const Cells& c, const std::string& version) {
     auto o = std::make_unique<Icon>();
     o->version = version;
-    o->width = c.w; o->height = c.h;
+    o->width = c.w;
+    o->height = c.h;
     size_t total = 0;
     for (const StateCells& s : c.states) total += s.cells.size();
     o->sheetCols = int(std::max<size_t>(total, 1));
-    o->sheet.w = o->sheetCols * c.w; o->sheet.h = c.h;
+    o->sheet.w = o->sheetCols * c.w;
+    o->sheet.h = c.h;
     o->sheet.px.assign(size_t(o->sheet.w) * size_t(o->sheet.h) * 4, 0);
     int64_t next = 0;
     for (const StateCells& s : c.states) {
@@ -221,7 +262,9 @@ std::unique_ptr<Icon> extractIcon(const Icon& ic, const std::string* state, int 
     std::vector<StateCells> kept;
     for (const StateCells& s : c.states) {
         if (moving >= 0 && s.meta.movement != (moving != 0)) continue;
-        if (state && (s.meta.name != *state || std::any_of(kept.begin(), kept.end(), [&](const StateCells& k) { return k.meta.movement == s.meta.movement; })))
+        if (state && (s.meta.name != *state || std::any_of(kept.begin(), kept.end(), [&](const StateCells& k) {
+                          return k.meta.movement == s.meta.movement;
+                      })))
             continue;
         if (s.meta.dirs <= dir || s.meta.frames <= frame) continue;
         StateCells n;
@@ -252,7 +295,8 @@ std::unique_ptr<Icon> mapCells(const Icon& ic, int nw, int nh, Fn fn) {
             fn(static_cast<const Cell&>(cell), d);
             cell = std::move(d);
         }
-    c.w = nw; c.h = nh;
+    c.w = nw;
+    c.h = nh;
     return implode(c, ic.version);
 }
 
@@ -281,7 +325,8 @@ std::unique_ptr<Icon> blendIcons(const Icon& ic, int mode, const Icon& other, in
         if (dirs != s.meta.dirs || frames != s.meta.frames) {
             StateCells g;
             g.meta = s.meta;
-            g.meta.dirs = dirs; g.meta.frames = frames;
+            g.meta.dirs = dirs;
+            g.meta.frames = frames;
             for (int64_t f = 0; f < frames; f++)
                 for (int64_t d = 0; d < dirs; d++) {
                     int64_t sf = f % s.meta.frames, sd = d < s.meta.dirs ? d : 0;
@@ -306,23 +351,37 @@ std::unique_ptr<Icon> blendIcons(const Icon& ic, int mode, const Icon& other, in
 }
 
 // DM's /icon.Insert(ins, state, dir, frame, moving, delay) for icons of one tile. dirIdx/frame < 0 mean "not given".
-bool insertIcon(const Icon& ic, const Icon& ins, const std::string* state, int dirIdx, int frame, bool moving, double delay,
-                std::unique_ptr<Icon>& out, std::string& err) {
-    if (ins.states.empty()) { out = std::make_unique<Icon>(ic); return true; }
+bool insertIcon(const Icon& ic, const Icon& ins, const std::string* state, int dirIdx, int frame, bool moving,
+                double delay, std::unique_ptr<Icon>& out, std::string& err) {
+    if (ins.states.empty()) {
+        out = std::make_unique<Icon>(ic);
+        return true;
+    }
     Cells c = explode(ic);
     const Cells ic2 = explode(ins);
-    if (c.states.empty()) { c.w = ic2.w; c.h = ic2.h; }
-    else if (c.w != ic2.w || c.h != ic2.h) { err = "unsupported DDMI recipe shape: Insert of an icon of another size"; return false; }
+    if (c.states.empty()) {
+        c.w = ic2.w;
+        c.h = ic2.h;
+    } else if (c.w != ic2.w || c.h != ic2.h) {
+        err = "unsupported DDMI recipe shape: Insert of an icon of another size";
+        return false;
+    }
     const std::string name = state ? *state : std::string();
     const StateCells& src = ic2.states[0];
     auto pow2Dirs = [](int d) { return d == 0 ? 1 : d <= 3 ? 4 : 8; };
     auto applyDelaySign = [](IconState& m, double& dl) {
-        if (dl < 0) { dl = -dl; m.rewind = true; }
-        else if (dl > 0) m.rewind = false;
+        if (dl < 0) {
+            dl = -dl;
+            m.rewind = true;
+        } else if (dl > 0)
+            m.rewind = false;
     };
     StateCells* t = nullptr;
     for (StateCells& s : c.states)
-        if (s.meta.name == name && s.meta.movement == moving) { t = &s; break; }
+        if (s.meta.name == name && s.meta.movement == moving) {
+            t = &s;
+            break;
+        }
     if (!t) {
         if (dirIdx < 0 && frame < 0) {
             StateCells n = src;
@@ -330,7 +389,8 @@ bool insertIcon(const Icon& ic, const Icon& ins, const std::string* state, int d
             applyDelaySign(n.meta, dl);
             n.meta.movement = moving;
             n.meta.name = name;
-            if (dl != 0) for (double& v : n.delay) v = dl;
+            if (dl != 0)
+                for (double& v : n.delay) v = dl;
             c.states.push_back(std::move(n));
             out = implode(c, ic.version.empty() ? ins.version : ic.version);
             return true;
@@ -350,17 +410,25 @@ bool insertIcon(const Icon& ic, const Icon& ins, const std::string* state, int d
     double dl = delay;
     if (dl == 0 && frame >= 0) {
         int64_t fr = t->meta.frames;
-        if (frame > 0) dl = t->delay[size_t((std::min<int64_t>(frame, fr) - 1) * t->meta.dirs)];
-        else dl = frame + 1 < fr ? t->delay[size_t((frame + 1) * t->meta.dirs)] : 1.0;
+        if (frame > 0)
+            dl = t->delay[size_t((std::min<int64_t>(frame, fr) - 1) * t->meta.dirs)];
+        else
+            dl = frame + 1 < fr ? t->delay[size_t((frame + 1) * t->meta.dirs)] : 1.0;
     }
     applyDelaySign(t->meta, dl);
-    if (frame >= t->meta.frames + 16) { err = "unsupported DDMI recipe shape: Insert frame far past the state's end"; return false; }
-    int64_t dirs = dirIdx < 0 ? std::max(t->meta.dirs, src.meta.dirs) : (t->meta.dirs <= dirIdx ? pow2Dirs(dirIdx) : t->meta.dirs);
-    int64_t frames = frame < 0 ? std::max(t->meta.frames, src.meta.frames) : std::max<int64_t>(t->meta.frames, frame + 1);
+    if (frame >= t->meta.frames + 16) {
+        err = "unsupported DDMI recipe shape: Insert frame far past the state's end";
+        return false;
+    }
+    int64_t dirs =
+        dirIdx < 0 ? std::max(t->meta.dirs, src.meta.dirs) : (t->meta.dirs <= dirIdx ? pow2Dirs(dirIdx) : t->meta.dirs);
+    int64_t frames =
+        frame < 0 ? std::max(t->meta.frames, src.meta.frames) : std::max<int64_t>(t->meta.frames, frame + 1);
     if (dirs > t->meta.dirs || frames > t->meta.frames) {
         StateCells g;
         g.meta = t->meta;
-        g.meta.dirs = dirs; g.meta.frames = frames;
+        g.meta.dirs = dirs;
+        g.meta.frames = frames;
         for (int64_t f = 0; f < frames; f++)
             for (int64_t d = 0; d < dirs; d++) {
                 bool had = d < t->meta.dirs && f < t->meta.frames;
@@ -390,13 +458,20 @@ bool insertIcon(const Icon& ic, const Icon& ins, const std::string* state, int d
                 for (int64_t d = 0; d < sdirs; d++) put(d, f, d, f);
         }
     } else if (dirIdx < 0) {
-        if (sdirs == 1) for (int64_t d = 0; d < t->meta.dirs; d++) put(d, frame, 0, 0);
-        else for (int64_t d = 0; d < sdirs; d++) put(d, frame, d, 0);
+        if (sdirs == 1)
+            for (int64_t d = 0; d < t->meta.dirs; d++) put(d, frame, 0, 0);
+        else
+            for (int64_t d = 0; d < sdirs; d++) put(d, frame, d, 0);
     } else {
         const int64_t sd = dirIdx < sdirs ? dirIdx : 0;
-        if (frame >= 0) put(dirIdx, frame, sd, frame < sframes ? frame : 0);
-        else if (t->meta.frames == 1 && sframes == 1) put(dirIdx, 0, sd, 0);
-        else { err = "unsupported DDMI recipe shape: Insert into one dir of an animated state"; return false; }
+        if (frame >= 0)
+            put(dirIdx, frame, sd, frame < sframes ? frame : 0);
+        else if (t->meta.frames == 1 && sframes == 1)
+            put(dirIdx, 0, sd, 0);
+        else {
+            err = "unsupported DDMI recipe shape: Insert into one dir of an animated state";
+            return false;
+        }
     }
     out = implode(c, ic.version.empty() ? ins.version : ic.version);
     return true;
@@ -409,12 +484,18 @@ void turnCell(const Cell& s, Cell& d, float deg) {
     int k = int(deg);
     if (float(k) == deg && k % 90 == 0) {
         k %= 360;
-        if (k == 0) { d.px = s.px; return; }
+        if (k == 0) {
+            d.px = s.px;
+            return;
+        }
         for (int y = 0; y < h; y++)
             for (int x = 0; x < w; x++) {
-                if (k == 90 || k == -270) d.at(h - 1 - y, x) = s.at(x, y);
-                else if (k == -90 || k == 270) d.at(y, w - 1 - x) = s.at(x, y);
-                else d.at(w - 1 - x, h - 1 - y) = s.at(x, y);
+                if (k == 90 || k == -270)
+                    d.at(h - 1 - y, x) = s.at(x, y);
+                else if (k == -90 || k == 270)
+                    d.at(y, w - 1 - x) = s.at(x, y);
+                else
+                    d.at(w - 1 - x, h - 1 - y) = s.at(x, y);
             }
         return;
     }
@@ -438,7 +519,10 @@ void turnCell(const Cell& s, Cell& d, float deg) {
                     const int tx = xs[i], ty = ys[j];
                     if (tx < 0 || tx >= w || ty < 0 || ty >= h) continue;
                     float& bw = best[size_t(ty) * size_t(w) + size_t(tx)];
-                    if (bw <= wgt) { bw = wgt; d.at(tx, ty) = s.at(x, y); }
+                    if (bw <= wgt) {
+                        bw = wgt;
+                        d.at(tx, ty) = s.at(x, y);
+                    }
                 }
             }
         }
@@ -449,7 +533,14 @@ void turnCell(const Cell& s, Cell& d, float deg) {
 // least common multiple. Transparent pixels add no colour; alpha averages over the whole area. Integer arithmetic.
 void scaleCell(const Cell& s, Cell& d) {
     const int sw = s.w, sh = s.h, dw = d.w, dh = d.h;
-    auto gcd = [](int a, int b) { while (b) { int t = a % b; a = b; b = t; } return a; };
+    auto gcd = [](int a, int b) {
+        while (b) {
+            int t = a % b;
+            a = b;
+            b = t;
+        }
+        return a;
+    };
     const int64_t lx = int64_t(dw / gcd(sw, dw)) * sw, ly = int64_t(dh / gcd(sh, dh)) * sh;
     const int64_t kx = lx / sw, ky = ly / sh, px = lx / dw, py = ly / dh;
     int dy = 0;
@@ -462,17 +553,27 @@ void scaleCell(const Cell& s, Cell& d) {
             int64_t row = y0 / ky;
             for (int64_t yy = row * ky; yy < y1; row++) {
                 int64_t hh = ky;
-                if (yy < y0) { hh = ky - y0 + yy; yy = y0; }
+                if (yy < y0) {
+                    hh = ky - y0 + yy;
+                    yy = y0;
+                }
                 if (ky + yy > y1) hh = y1 - yy;
                 int64_t col = x0 / kx;
                 for (int64_t xx = col * kx; xx < x1; col++) {
                     int64_t ww = kx;
-                    if (xx < x0) { ww = kx - x0 + xx; xx = x0; }
+                    if (xx < x0) {
+                        ww = kx - x0 + xx;
+                        xx = x0;
+                    }
                     if (kx + xx > x1) ww = x1 - xx;
                     const Rgba8 p = s.at(int(col), int(row));
                     if (p.a != 0) {
                         const int64_t wgt = hh * ww;
-                        ws += wgt; r += p.r * wgt; g += p.g * wgt; b += p.b * wgt; a += p.a * wgt;
+                        ws += wgt;
+                        r += p.r * wgt;
+                        g += p.g * wgt;
+                        b += p.b * wgt;
+                        a += p.a * wgt;
                     }
                     xx += ww;
                 }
@@ -508,8 +609,10 @@ void mapColorsCell(const std::vector<float>& c, Cell& cell) {
         float r = float(p.r) / 255, g = float(p.g) / 255, b = float(p.b) / 255, a = float(p.a) / 255;
         auto out = [&](int i) {
             float v = r * c[size_t(i)] + g * c[size_t(stride + i)] + b * c[size_t(2 * stride + i)];
-            if (full) v += a * c[size_t(12 + i)] + c[size_t(16 + i)];
-            else v += c[size_t(9 + i)];
+            if (full)
+                v += a * c[size_t(12 + i)] + c[size_t(16 + i)];
+            else
+                v += c[size_t(9 + i)];
             return ch(v);
         };
         p = Rgba8{out(0), out(1), out(2), full ? out(3) : p.a};
@@ -522,6 +625,8 @@ struct Slot {
     Kind kind = Kind::Icon;
     const Icon* icon = nullptr;
     std::unique_ptr<Icon> owned;
+    // owned is a DrawBox result: implode()'s layout, one row of cells, so a further DrawBox can paint it in place.
+    bool boxed = false;
     Rgba8 col{0, 0, 0, 0};
     std::string str;
 };
@@ -531,9 +636,15 @@ struct Slot {
 bool isDdmi(const uint8_t* d, size_t n) { return n >= 8 && std::memcmp(d, "DDMI", 4) == 0; }
 
 bool parseDdmi(const uint8_t* d, size_t n, DdmiRecipe& rec, std::string* err) {
-    if (!isDdmi(d, n)) { if (err) *err = "not a DDMI recipe (bad magic)"; return false; }
+    if (!isDdmi(d, n)) {
+        if (err) *err = "not a DDMI recipe (bad magic)";
+        return false;
+    }
     uint32_t bodyLen = uint32_t(d[4]) | uint32_t(d[5]) << 8 | uint32_t(d[6]) << 16 | uint32_t(d[7]) << 24;
-    if (uint64_t(8) + uint64_t(bodyLen) != uint64_t(n)) { if (err) *err = "DDMI declared body length does not match the payload size"; return false; }
+    if (uint64_t(8) + uint64_t(bodyLen) != uint64_t(n)) {
+        if (err) *err = "DDMI declared body length does not match the payload size";
+        return false;
+    }
     size_t i = 8;
     // A tag 0 ends the program.
     while (i < n && d[i] != 0) {
@@ -547,7 +658,8 @@ bool parseDdmi(const uint8_t* d, size_t n, DdmiRecipe& rec, std::string* err) {
         const uint8_t prevTag = rec.ops.empty() ? 0 : rec.ops.back().tag;
         if (tag == kOpIconRef) {
             DdmiRef r;
-            r.ordinal = uint32_t(payload[0]) | uint32_t(payload[1]) << 8 | uint32_t(payload[2]) << 16 | uint32_t(payload[3]) << 24;
+            r.ordinal = uint32_t(payload[0]) | uint32_t(payload[1]) << 8 | uint32_t(payload[2]) << 16 |
+                        uint32_t(payload[3]) << 24;
             r.kind = payload[4];
             op.ref = int(rec.refs.size());
             rec.refs.push_back(std::move(r));
@@ -571,13 +683,16 @@ bool ddmiRefIsEmptyIcon(const DdmiRef& r) { return r.ordinal == 0xffff && r.kind
 
 DdmiResult evalDdmi(const DdmiRecipe& rec, const std::vector<const Icon*>& ops) {
     DdmiResult res;
-    auto refuse = [&](const std::string& why) { res.err = why; return std::move(res); };
+    auto refuse = [&](const std::string& why) {
+        res.err = why;
+        return std::move(res);
+    };
     if (ops.size() != rec.refs.size()) return refuse("EvalDDMI got the wrong number of operands");
     std::vector<std::unique_ptr<Icon>> ownedSubs(rec.refs.size());
     std::vector<const Icon*> subs(rec.refs.size(), nullptr);
     for (size_t i = 0; i < rec.refs.size(); i++) {
         const DdmiRef& ref = rec.refs[i];
-        if (ddmiRefIsEmptyIcon(ref)) {   // new /icon: no states yet
+        if (ddmiRefIsEmptyIcon(ref)) {  // new /icon: no states yet
             ownedSubs[i] = std::make_unique<Icon>();
             subs[i] = ownedSubs[i].get();
             continue;
@@ -588,35 +703,72 @@ DdmiResult evalDdmi(const DdmiRecipe& rec, const std::vector<const Icon*>& ops) 
     // test-only hook: draw the first operand for a refused recipe instead of nothing
     auto refuseShape = [&](const std::string& why) {
         if (g_ddmiMut == 18 && !subs.empty() && subs[0]) {
-            if (ownedSubs[0]) res.owned = std::move(ownedSubs[0]); else res.alias = subs[0];
+            if (ownedSubs[0])
+                res.owned = std::move(ownedSubs[0]);
+            else
+                res.alias = subs[0];
             return std::move(res);
         }
         return refuse(why);
     };
-    auto opName = [](const DdmiOp& op) { char t[8]; std::snprintf(t, sizeof t, "0x%02x", op.tag); return std::string(t); };
+    auto opName = [](const DdmiOp& op) {
+        char t[8];
+        std::snprintf(t, sizeof t, "0x%02x", op.tag);
+        return std::string(t);
+    };
 
     std::vector<Slot> st;
-    auto put = [&](Slot& s, std::unique_ptr<Icon> ic) { s.owned = std::move(ic); s.icon = s.owned.get(); };
+    auto put = [&](Slot& s, std::unique_ptr<Icon> ic) {
+        s.owned = std::move(ic);
+        s.icon = s.owned.get();
+        s.boxed = false;
+    };
     for (const DdmiOp& op : rec.ops) {
         const std::vector<uint8_t>& p = op.payload;
         if (op.tag == kOpNop) continue;
         Slot push;
         switch (op.tag) {
-            case kOpIconRef: push.kind = Kind::Icon; push.icon = subs[size_t(op.ref)]; st.push_back(std::move(push)); continue;
-            case kOpColor: push.kind = Kind::Color; push.col = Rgba8{p[0], p[1], p[2], p[3]}; st.push_back(std::move(push)); continue;
-            case kOpNumber: push.kind = Kind::Number; st.push_back(std::move(push)); continue;
-            case kOpState: push.kind = Kind::String; push.str.assign(reinterpret_cast<const char*>(p.data()), p.size() - 1); st.push_back(std::move(push)); continue;
+            case kOpIconRef:
+                push.kind = Kind::Icon;
+                push.icon = subs[size_t(op.ref)];
+                st.push_back(std::move(push));
+                continue;
+            case kOpColor:
+                push.kind = Kind::Color;
+                push.col = Rgba8{p[0], p[1], p[2], p[3]};
+                st.push_back(std::move(push));
+                continue;
+            case kOpNumber:
+                push.kind = Kind::Number;
+                st.push_back(std::move(push));
+                continue;
+            case kOpState:
+                push.kind = Kind::String;
+                push.str.assign(reinterpret_cast<const char*>(p.data()), p.size() - 1);
+                st.push_back(std::move(push));
+                continue;
             default: break;
         }
         // An op pops its arguments; the icon below them is the one it changes.
-        const int pops = op.tag == kOpBlend || op.tag == kOpBlendAt || op.tag == kOpDrawBox || (op.tag == kOpDir && st.size() > 1) ? 1
-                         : op.tag == kOpSwap || op.tag == kOpInsert || op.tag == kOpInsertF ? 2 : 0;
-        if (int(st.size()) < pops + 1) return refuseShape("unsupported DDMI recipe shape: op " + opName(op) + " without its operands");
+        const int pops =
+            op.tag == kOpBlend || op.tag == kOpBlendAt || op.tag == kOpDrawBox || (op.tag == kOpDir && st.size() > 1)
+                ? 1
+            : op.tag == kOpSwap || op.tag == kOpInsert || op.tag == kOpInsertF ? 2
+                                                                               : 0;
+        if (int(st.size()) < pops + 1)
+            return refuseShape("unsupported DDMI recipe shape: op " + opName(op) + " without its operands");
         Slot a, b;
-        if (pops == 2) { b = std::move(st.back()); st.pop_back(); }
-        if (pops >= 1) { a = std::move(st.back()); st.pop_back(); }
+        if (pops == 2) {
+            b = std::move(st.back());
+            st.pop_back();
+        }
+        if (pops >= 1) {
+            a = std::move(st.back());
+            st.pop_back();
+        }
         Slot* t = &st.back();
-        if (t->kind != Kind::Icon) return refuseShape("unsupported DDMI recipe shape: op " + opName(op) + " on a non-icon");
+        if (t->kind != Kind::Icon)
+            return refuseShape("unsupported DDMI recipe shape: op " + opName(op) + " on a non-icon");
         const Icon& ic = *t->icon;
         int mode = 0;
         switch (op.tag) {
@@ -640,7 +792,8 @@ DdmiResult evalDdmi(const DdmiRecipe& rec, const std::vector<const Icon*>& ops) 
                 break;
             }
             case kOpDrawBox: {
-                if (a.kind != Kind::Color) return refuseShape("unsupported DDMI recipe shape: DrawBox without a colour");
+                if (a.kind != Kind::Color)
+                    return refuseShape("unsupported DDMI recipe shape: DrawBox without a colour");
                 // The colour replaces the pixel, alpha included. Corners are inclusive, y counts up from the bottom row,
                 // reversed corners are normalised and out-of-range ones clipped.
                 int x1 = i16At(p, 0), y1 = i16At(p, 2), x2 = i16At(p, 4), y2 = i16At(p, 6);
@@ -648,15 +801,29 @@ DdmiResult evalDdmi(const DdmiRecipe& rec, const std::vector<const Icon*>& ops) 
                 int ly = std::max(std::min(y1, y2), 1), hy = std::min(std::max(y1, y2), ic.height);
                 const Rgba8 c = a.col;
                 const int h = ic.height;
+                // A world that draws a picture a box at a time (vg's holomaps: ~25k boxes on a 480x480 icon) would pay a
+                // whole-icon copy per box. Once an icon is a DrawBox result it is painted in place: every cell takes the
+                // same box, so the cost is the box's area.
+                if (t->boxed && t->owned) {
+                    Icon& o = *t->owned;
+                    size_t cells = 0;
+                    for (const IconState& is : o.states) cells += size_t(is.frames * is.dirs);
+                    for (size_t k = 0; k < cells; k++)
+                        for (int y = ly; y <= hy; y++)
+                            for (int x = lx; x <= hx; x++) setPixel(o.sheet, int(k) * o.width + x - 1, h - y, c);
+                    break;
+                }
                 put(*t, mapCells(ic, ic.width, ic.height, [&](const Cell& s, Cell& d) {
                     d.px = s.px;
                     for (int y = ly; y <= hy; y++)
                         for (int x = lx; x <= hx; x++) d.at(x - 1, h - y) = c;
                 }));
+                t->boxed = true;
                 break;
             }
             case kOpSwap: {
-                if (a.kind != Kind::Color || b.kind != Kind::Color) return refuseShape("unsupported DDMI recipe shape: SwapColor without two colours");
+                if (a.kind != Kind::Color || b.kind != Kind::Color)
+                    return refuseShape("unsupported DDMI recipe shape: SwapColor without two colours");
                 // An old colour with alpha (or null) matches exactly; one without matches any visible pixel of its rgb
                 // and keeps that pixel's alpha.
                 const Rgba8 from = a.col, to = b.col;
@@ -665,7 +832,8 @@ DdmiResult evalDdmi(const DdmiRecipe& rec, const std::vector<const Icon*>& ops) 
                     d.px = s.px;
                     for (Rgba8& px : d.px) {
                         if (exact) {
-                            if (px.a != from.a || (from.a != 0 && (px.r != from.r || px.g != from.g || px.b != from.b))) continue;
+                            if (px.a != from.a || (from.a != 0 && (px.r != from.r || px.g != from.g || px.b != from.b)))
+                                continue;
                             px = to;
                         } else {
                             if (px.a == 0 || px.r != from.r || px.g != from.g || px.b != from.b) continue;
@@ -677,14 +845,17 @@ DdmiResult evalDdmi(const DdmiRecipe& rec, const std::vector<const Icon*>& ops) 
             }
             case kOpInsert:
             case kOpInsertF: {
-                if (b.kind != Kind::Icon && b.kind != Kind::String && b.kind != Kind::Number) return refuseShape("unsupported DDMI recipe shape: Insert state");
+                if (b.kind != Kind::Icon && b.kind != Kind::String && b.kind != Kind::Number)
+                    return refuseShape("unsupported DDMI recipe shape: Insert state");
                 if (a.kind != Kind::Icon) return refuseShape("unsupported DDMI recipe shape: Insert of a non-icon");
                 const int dirIdx = int(int8_t(p[0])), frame = int(int8_t(p[1]));
                 const double delay = op.tag == kOpInsert ? double(float(i32At(p, 3))) : double(f32At(p, 3));
-                if (dirIdx > 7) return refuseShape("unsupported DDMI recipe shape: Insert dir index " + std::to_string(dirIdx));
+                if (dirIdx > 7)
+                    return refuseShape("unsupported DDMI recipe shape: Insert dir index " + std::to_string(dirIdx));
                 std::unique_ptr<Icon> o;
                 std::string e;
-                if (!insertIcon(ic, *a.icon, b.kind == Kind::String ? &b.str : nullptr, dirIdx, frame, int8_t(p[2]) > 0, delay, o, e))
+                if (!insertIcon(ic, *a.icon, b.kind == Kind::String ? &b.str : nullptr, dirIdx, frame, int8_t(p[2]) > 0,
+                                delay, o, e))
                     return refuseShape(e);
                 put(*t, std::move(o));
                 break;
@@ -692,8 +863,13 @@ DdmiResult evalDdmi(const DdmiRecipe& rec, const std::vector<const Icon*>& ops) 
             case kOpMapColors: {
                 std::vector<float> c(std::min<size_t>(p[0], 20));
                 for (size_t k = 0; k < c.size(); k++) c[k] = f32At(p, 1 + 4 * k);
-                if (c.size() != 12 && c.size() != 20) return refuseShape("unsupported DDMI recipe shape: MapColors with " + std::to_string(c.size()) + " coefficients");
-                put(*t, mapCells(ic, ic.width, ic.height, [&](const Cell& s, Cell& d) { d.px = s.px; mapColorsCell(c, d); }));
+                if (c.size() != 12 && c.size() != 20)
+                    return refuseShape("unsupported DDMI recipe shape: MapColors with " + std::to_string(c.size()) +
+                                       " coefficients");
+                put(*t, mapCells(ic, ic.width, ic.height, [&](const Cell& s, Cell& d) {
+                    d.px = s.px;
+                    mapColorsCell(c, d);
+                }));
                 break;
             }
             case kOpIntensity: {
@@ -702,7 +878,8 @@ DdmiResult evalDdmi(const DdmiRecipe& rec, const std::vector<const Icon*>& ops) 
                 if (b2 < 0) b2 = r;
                 put(*t, mapCells(ic, ic.width, ic.height, [&](const Cell& s, Cell& d) {
                     d.px = s.px;
-                    for (Rgba8& px : d.px) px = Rgba8{clamp8(double(px.r) * r), clamp8(double(px.g) * g), clamp8(double(px.b) * b2), px.a};
+                    for (Rgba8& px : d.px)
+                        px = Rgba8{clamp8(double(px.r) * r), clamp8(double(px.g) * g), clamp8(double(px.b) * b2), px.a};
                 }));
                 break;
             }
@@ -713,10 +890,14 @@ DdmiResult evalDdmi(const DdmiRecipe& rec, const std::vector<const Icon*>& ops) 
                 put(*t, mapCells(ic, ic.width, ic.height, [&](const Cell& s, Cell& d) {
                     for (int y = 0; y < s.h; y++)
                         for (int x = 0; x < s.w; x++) {
-                            if (k <= 1) d.at(x, y) = s.at(x, s.h - 1 - y);
-                            else if (k <= 3) d.at(x, y) = s.at(s.w - 1 - x, y);
-                            else if (k == 4 || k == 7) d.at(x, y) = s.at(s.w - 1 - y, s.h - 1 - x);
-                            else d.at(x, y) = s.at(y, x);
+                            if (k <= 1)
+                                d.at(x, y) = s.at(x, s.h - 1 - y);
+                            else if (k <= 3)
+                                d.at(x, y) = s.at(s.w - 1 - x, y);
+                            else if (k == 4 || k == 7)
+                                d.at(x, y) = s.at(s.w - 1 - y, s.h - 1 - x);
+                            else
+                                d.at(x, y) = s.at(y, x);
                         }
                 }));
                 break;
@@ -730,7 +911,8 @@ DdmiResult evalDdmi(const DdmiRecipe& rec, const std::vector<const Icon*>& ops) 
                 break;
             }
             case kOpShift: {
-                static const int kDx[8] = {0, 0, 1, -1, 1, -1, 1, -1}, kDy[8] = {1, -1, 0, 0, 1, 1, -1, -1};   // top-down rows
+                static const int kDx[8] = {0, 0, 1, -1, 1, -1, 1, -1},
+                                 kDy[8] = {1, -1, 0, 0, 1, 1, -1, -1};  // top-down rows
                 if (p[0] > 7) break;
                 const int off = i16At(p, 1);
                 const int dx = kDx[p[0]] * off, dy = kDy[p[0]] * off;
@@ -739,8 +921,11 @@ DdmiResult evalDdmi(const DdmiRecipe& rec, const std::vector<const Icon*>& ops) 
                     for (int y = 0; y < s.h; y++)
                         for (int x = 0; x < s.w; x++) {
                             int nx = x + dx, ny = y + dy;
-                            if (wrap) { nx = ((nx % s.w) + s.w) % s.w; ny = ((ny % s.h) + s.h) % s.h; }
-                            else if (nx < 0 || ny < 0 || nx >= s.w || ny >= s.h) continue;
+                            if (wrap) {
+                                nx = ((nx % s.w) + s.w) % s.w;
+                                ny = ((ny % s.h) + s.h) % s.h;
+                            } else if (nx < 0 || ny < 0 || nx >= s.w || ny >= s.h)
+                                continue;
                             d.at(nx, ny) = s.at(x, y);
                         }
                 }));
@@ -749,7 +934,9 @@ DdmiResult evalDdmi(const DdmiRecipe& rec, const std::vector<const Icon*>& ops) 
             case kOpScale: {
                 const int nw = i16At(p, 0), nh = i16At(p, 2);
                 if (nw == ic.width && nh == ic.height) break;
-                if (nw <= 0 || nh <= 0) return refuseShape("unsupported DDMI recipe shape: Scale to " + std::to_string(nw) + "x" + std::to_string(nh));
+                if (nw <= 0 || nh <= 0)
+                    return refuseShape("unsupported DDMI recipe shape: Scale to " + std::to_string(nw) + "x" +
+                                       std::to_string(nh));
                 put(*t, mapCells(ic, nw, nh, [&](const Cell& s, Cell& d) { scaleCell(s, d); }));
                 break;
             }
@@ -767,17 +954,21 @@ DdmiResult evalDdmi(const DdmiRecipe& rec, const std::vector<const Icon*>& ops) 
                 }));
                 break;
             }
-            default:
-                return refuseShape("unsupported DDMI op " + opName(op));
+            default: return refuseShape("unsupported DDMI op " + opName(op));
         }
     }
     // The icon drawn is the bottom of the stack: the first reference, with every op applied.
-    if (st.size() != 1 || st[0].kind != Kind::Icon) return refuseShape("unsupported DDMI recipe shape: the program does not end with one icon on the stack");
-    if (st[0].owned) res.owned = std::move(st[0].owned);
+    if (st.size() != 1 || st[0].kind != Kind::Icon)
+        return refuseShape("unsupported DDMI recipe shape: the program does not end with one icon on the stack");
+    if (st[0].owned)
+        res.owned = std::move(st[0].owned);
     else {
         size_t k = 0;
         while (k < subs.size() && subs[k] != st[0].icon) k++;
-        if (k < subs.size() && ownedSubs[k]) res.owned = std::move(ownedSubs[k]); else res.alias = st[0].icon;
+        if (k < subs.size() && ownedSubs[k])
+            res.owned = std::move(ownedSubs[k]);
+        else
+            res.alias = st[0].icon;
     }
     return res;
 }

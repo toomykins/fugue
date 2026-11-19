@@ -21,10 +21,10 @@
 namespace fugue::pager {
 
 struct AccountRequest {
-    bool accountGiven = false;   // --account was on the command line (even as "")
-    std::string account;         // its value (the last one given)
-    bool playerLaunch = false;   // rule 2 applies; false (the default) = rule 3, a guest without --account
-    std::string why;             // a log line: what made it a player launch, or what did not
+    bool accountGiven = false;  // --account was on the command line (even as "")
+    std::string account;        // its value (the last one given)
+    bool playerLaunch = false;  // rule 2 applies; false (the default) = rule 3, a guest without --account
+    std::string why;            // a log line: what made it a player launch, or what did not
 };
 
 // The client's own --option names. asDreamSeeker: unknown --words are dropped, as DreamSeeker drops them (pager/dsargv.h).
@@ -38,10 +38,10 @@ AccountRequest accountRequestFor(bool asDreamSeeker, const DsArgv& ds, const Fug
 struct AccountDecision {
     enum Kind { Guest, Account, Fail };
     Kind kind = Guest;
-    std::string account;                        // Account / Fail: the key tried
-    bool fromPager = false;                     // the key came from pager.json (rule 2), not argv
-    std::optional<account::AccountLogin> login; // Account: the minted 0x1a record (a bearer token: never log it)
-    std::string reason;                         // a log line: why a guest, or why the run fails. Never a secret
+    std::string account;                         // Account / Fail: the key tried
+    bool fromPager = false;                      // the key came from pager.json (rule 2), not argv
+    std::optional<account::AccountLogin> login;  // Account: the minted 0x1a record (a bearer token: never log it)
+    std::string reason;                          // a log line: why a guest, or why the run fails. Never a secret
 };
 
 // mint: identity -> 0x1a record. Default: account::mintLocalAccountLogin with an empty password (the client never reads one).

@@ -1,15 +1,15 @@
 // Wire framing.
 //   s2c: [type u16 BE][len u16 BE][body]   (no seq prefix)
 //   c2s: [seq u16 BE][type u16 BE][len u16 BE][body]
-//   extended escape (either direction, bodies > 0xFFFF): [00a0][0006][realType u16 BE][realLen u32 BE][body]
+//   extended escape (either direction, bodies > 0xFFFF): [Extended][0006][realType u16 BE][realLen u32 BE][body]
 #pragma once
 #include <optional>
 #include <string>
 #include "net/bytes.h"
+#include "proto/msg.h"
 
 namespace fugue::net {
 
-constexpr uint16_t kExtType = 0x00a0;
 constexpr uint32_t kMaxShortPayload = 0xFFFF;
 constexpr uint32_t kMaxExtPayload = 0xFFFFFF;
 
@@ -43,6 +43,7 @@ public:
     ParseStatus next(Frame& out);
     size_t buffered() const { return buf_.size() - pos_; }
     const std::string& error() const { return err_; }
+
 private:
     Bytes buf_;
     size_t pos_ = 0;

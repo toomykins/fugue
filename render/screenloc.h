@@ -8,8 +8,8 @@
 namespace fugue::render {
 
 struct ParsedScreenLoc {
-    std::string mapCtrl;          // "name:" prefix, "" = the default map
-    int x = 0, y = 0;             // bottom-left of the object, viewport px, +y UP
+    std::string mapCtrl;  // "name:" prefix, "" = the default map
+    int x = 0, y = 0;     // bottom-left of the object, viewport px, +y UP
     int spanCols = 1, spanRows = 1;
 };
 

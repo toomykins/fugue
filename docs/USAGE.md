@@ -88,8 +88,9 @@ A command-line flag, where one exists, wins.
 | `FUGUE_AUDIO` | audio sink; same as `--audio` |
 | `FUGUE_GPU_BACKEND` | GPU builds only: renderer backend, `d3d11`, `metal` or `opengl` (default: the platform's) |
 | `FUGUE_GPU_SOFTWARE` | GPU builds only: `1` prefers a software GPU adapter (D3D11 WARP) |
-| `FUGUE_SCENE_PROFILE` | `1`: log the main map's scene-assembly time and appearance-cache hits once a second |
+| `FUGUE_SCENE_PROFILE` | `1`: log the main map's scene-assembly time and appearance-cache hits once a second, and RSS plus the model's table sizes (`[counters]`) |
 | `FUGUE_SCENE_TRACE` | path: a CSV row per map per assembly (time, cache hits, parses, cache size) |
+| `FUGUE_APPEARANCE_GC` | `0`: keep every appearance the server ever sent (default: erase the unreferenced ones and ask for them back with c2s 0x000c, as stock does; `model/appgc.h`) |
 | `FUGUE_IDENTITY` | path of the identity file to log in with |
 | `FUGUE_PAGER_CONFIG` | path of `pager.json` |
 | `FUGUE_BYOND_SID` | path of the `byond-sid` file |

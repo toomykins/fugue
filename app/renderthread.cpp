@@ -8,7 +8,7 @@ std::string mapKey(std::string id) {
     for (char& c : id) c = char(std::tolower(static_cast<unsigned char>(c)));
     return id;
 }
-}
+}  // namespace
 
 void RenderThread::setUseGpu(bool enabled) {
     {
@@ -40,7 +40,8 @@ RenderThread::DirectFrames RenderThread::takeDirectFrames() {
 void RenderThread::reportSubmission(const std::string& id, double cpuMs, double lastGpuMs, const std::string& backend,
                                     const fugue::app::RenderPhases& phases) {
     if (id.empty()) executed_++;
-    if (gpuExecuted_++ == 0) std::fprintf(stderr, "[render] first direct GPU frame submitted (no per-frame readback)\n");
+    if (gpuExecuted_++ == 0)
+        std::fprintf(stderr, "[render] first direct GPU frame submitted (no per-frame readback)\n");
     std::lock_guard<std::mutex> g(metricsMu_);
     (id.empty() ? metrics_.mainFrames : metrics_.auxFrames)++;
     metrics_.gpuFrames++;
@@ -50,7 +51,8 @@ void RenderThread::reportSubmission(const std::string& id, double cpuMs, double 
     metrics_.backend = backend;
     metrics_.fallbackReason.clear();
     auto& map = mapHistory_[mapKey(id)];
-    ++map.frames; ++map.gpuFrames;
+    ++map.frames;
+    ++map.gpuFrames;
     map.lastGpu = true;
     map.lastGpuMs = lastGpuMs;
     map.backend = backend;
@@ -126,7 +128,10 @@ void RenderThread::removeAux(const std::string& id) {
 }
 
 void RenderThread::requestStop() {
-    { std::lock_guard<std::mutex> g(mu_); stop_ = true; }
+    {
+        std::lock_guard<std::mutex> g(mu_);
+        stop_ = true;
+    }
     cv_.notify_all();
 }
 
@@ -154,10 +159,13 @@ void RenderThread::run() {
             metrics_.backend.clear();
             metrics_.fallbackReason = reason;
             auto& map = mapHistory_[id];
-            ++map.frames; ++map.cpuFrames;
+            ++map.frames;
+            ++map.cpuFrames;
             if (useGpu) ++map.fallbacks;
-            map.lastGpu = false; map.lastGpuMs = -1;
-            map.backend.clear(); map.fallbackReason = std::move(reason);
+            map.lastGpu = false;
+            map.lastGpuMs = -1;
+            map.backend.clear();
+            map.fallbackReason = std::move(reason);
             map.cpuRender.add(ms);
         }
         return image;
@@ -180,16 +188,24 @@ void RenderThread::run() {
         bool haveMain = false, force = false;
         {
             std::unique_lock<std::mutex> g(mu_);
-            cv_.wait(g, [&] { return stop_ || rendererDirty_ || slot_ || !auxSlots_.empty() || !fallbacks_.empty() || !auxForget_.empty() || !auxRemove_.empty(); });
+            cv_.wait(g, [&] {
+                return stop_ || rendererDirty_ || slot_ || !auxSlots_.empty() || !fallbacks_.empty() ||
+                       !auxForget_.empty() || !auxRemove_.empty();
+            });
             if (stop_) break;
             force = rendererDirty_;
             rendererDirty_ = false;
             useGpu = useGpu_;
-            if (slot_) { dl = std::move(*slot_); slot_.reset(); haveMain = true; }
+            if (slot_) {
+                dl = std::move(*slot_);
+                slot_.reset();
+                haveMain = true;
+            }
             aux.swap(auxSlots_);
             // Rebuilds invalidate unchanged skips, not the lists needed for idle renderer switching.
             for (const std::string& id : auxRemove_) {
-                auxLast_.erase(id); invalidAux.erase(id);
+                auxLast_.erase(id);
+                invalidAux.erase(id);
                 std::lock_guard<std::mutex> metricsLock(metricsMu_);
                 mapHistory_.erase(id);
             }
@@ -198,8 +214,13 @@ void RenderThread::run() {
             auxForget_.clear();
             fallbacks.swap(fallbacks_);
             if (force) {
-                if (!haveMain && last_) { dl = *last_; dl.hit = lastHit_.lock(); haveMain = true; }
-                for (const auto& [id, cached] : auxLast_) if (!aux.count(id)) aux.emplace(id, *cached);
+                if (!haveMain && last_) {
+                    dl = *last_;
+                    dl.hit = lastHit_.lock();
+                    haveMain = true;
+                }
+                for (const auto& [id, cached] : auxLast_)
+                    if (!aux.count(id)) aux.emplace(id, *cached);
             }
         }
         bool direct = false;
@@ -207,21 +228,27 @@ void RenderThread::run() {
         direct = useGpu;
         if (force) std::fprintf(stderr, "[render] requested renderer: %s\n", useGpu ? "GPU" : "CPU");
 #endif
-        if (direct) for (auto& [id, fallback] : fallbacks) {
-            auto image = execute(*fallback.list, id, fallback.reason);
-            if (id.empty()) executed_++;
-            if (image.w <= 0 || image.h <= 0) continue;
-            QImage q(image.px.data(), image.w, image.h, image.w * 4, QImage::Format_RGBX8888);
-            emit fallbackFrame(QString::fromStdString(id), fallback.list, q.copy());
-        }
+        if (direct)
+            for (auto& [id, fallback] : fallbacks) {
+                auto image = execute(*fallback.list, id, fallback.reason);
+                if (id.empty()) executed_++;
+                if (image.w <= 0 || image.h <= 0) continue;
+                QImage q(image.px.data(), image.w, image.h, image.w * 4, QImage::Format_RGBX8888);
+                emit fallbackFrame(QString::fromStdString(id), fallback.list, q.copy());
+            }
         for (auto& [id, al] : aux) {
             auto hit = al.hit;
             auto last = auxLast_.find(id);
             const bool invalid = invalidAux.erase(id) != 0;
             if (!force && !invalid && last != auxLast_.end() && fugue::render::sameDrawList(al, *last->second)) {
-                { std::lock_guard<std::mutex> g(metricsMu_); ++mapHistory_[id].unchanged; }
-                if (direct) publish(id, last->second, std::move(hit));   // the picture stands; the hit scene may not
-                else if (hit) emit auxSceneOnly(QString::fromStdString(id), std::move(hit));
+                {
+                    std::lock_guard<std::mutex> g(metricsMu_);
+                    ++mapHistory_[id].unchanged;
+                }
+                if (direct)
+                    publish(id, last->second, std::move(hit));  // the picture stands; the hit scene may not
+                else if (hit)
+                    emit auxSceneOnly(QString::fromStdString(id), std::move(hit));
                 continue;
             }
             auto list = std::make_shared<const fugue::render::DrawList>(std::move(al));
@@ -244,8 +271,14 @@ void RenderThread::run() {
         const bool unchanged = !force && last_ && fugue::render::sameDrawList(dl, *last_);
         if (unchanged) {
             unchanged_++;
-            { std::lock_guard<std::mutex> g(metricsMu_); ++mapHistory_[""].unchanged; }
-            if (!direct) { emit sceneOnly(std::move(hit)); continue; }
+            {
+                std::lock_guard<std::mutex> g(metricsMu_);
+                ++mapHistory_[""].unchanged;
+            }
+            if (!direct) {
+                emit sceneOnly(std::move(hit));
+                continue;
+            }
         }
         if (direct) {
             if (!unchanged || !lastDirectList) {
@@ -259,7 +292,7 @@ void RenderThread::run() {
         auto img = execute(dl, {});
         executed_++;
         last_ = std::move(dl);
-        last_->hit.reset();   // only the pixels are compared; do not keep an old hit scene alive
+        last_->hit.reset();  // only the pixels are compared; do not keep an old hit scene alive
         if (img.w <= 0 || img.h <= 0) continue;
         // The map is opaque after the black-ground flatten (alpha == 255 everywhere), so RGBX8888 is safe.
         // copy() detaches from the vector's storage before it dies.

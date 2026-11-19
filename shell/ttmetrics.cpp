@@ -40,16 +40,21 @@ bool vdmx(const QByteArray& t, int ppem, int& yMax, int& yMin) {
     int ratios = 6, offsets = ratios + 4 * numRatios;
     if (t.size() < offsets + 2 * numRatios) return false;
     for (int r = 0; r < numRatios; r++) {
-        int x = uint8_t(t[ratios + 4 * r + 1]), y0 = uint8_t(t[ratios + 4 * r + 2]), y1 = uint8_t(t[ratios + 4 * r + 3]);
+        int x = uint8_t(t[ratios + 4 * r + 1]), y0 = uint8_t(t[ratios + 4 * r + 2]),
+            y1 = uint8_t(t[ratios + 4 * r + 3]);
         bool any = x == 0 && y0 == 0 && y1 == 0;
-        if (!any && !(y0 <= x && x <= y1)) continue;   // a 1:1 device ratio lies in [yStart/x, yEnd/x]
+        if (!any && !(y0 <= x && x <= y1)) continue;  // a 1:1 device ratio lies in [yStart/x, yEnd/x]
         int g = be16(t, offsets + 2 * r);
         if (t.size() < g + 4) return false;
         int recs = be16(t, g);
         for (int i = 0; i < recs; i++) {
             int e = g + 4 + 6 * i;
             if (t.size() < e + 6) return false;
-            if (be16(t, e) == ppem) { yMax = int16_t(be16(t, e + 2)); yMin = int16_t(be16(t, e + 4)); return true; }
+            if (be16(t, e) == ppem) {
+                yMax = int16_t(be16(t, e + 2));
+                yMin = int16_t(be16(t, e + 4));
+                return true;
+            }
         }
         return false;
     }
@@ -58,7 +63,8 @@ bool vdmx(const QByteArray& t, int ppem, int& yMax, int& yMin) {
 
 bool sameFamily(const QString& want, const QString& got) {
     if (want.compare(got, Qt::CaseInsensitive) == 0) return true;
-    static const char* twins[][2] = {{"arial", "liberation sans"}, {"times new roman", "liberation serif"}, {"courier new", "liberation mono"}};
+    static const char* twins[][2] = {
+        {"arial", "liberation sans"}, {"times new roman", "liberation serif"}, {"courier new", "liberation mono"}};
     for (const auto& t : twins)
         if (want.compare(t[0], Qt::CaseInsensitive) == 0 && got.compare(t[1], Qt::CaseInsensitive) == 0) return true;
     return false;
@@ -76,9 +82,10 @@ std::vector<std::string> bitmapFontDirs() {
                           "/opt/wine-staging/share/wine/fonts", "/opt/wine-devel/share/wine/fonts"})
         d.push_back(p);
 #ifdef __APPLE__
-    for (const char* p : {"/opt/homebrew/share/wine/fonts", "/Applications/Wine Stable.app/Contents/Resources/wine/share/wine/fonts",
-                          "/Applications/Wine Staging.app/Contents/Resources/wine/share/wine/fonts",
-                          "/Applications/Wine Devel.app/Contents/Resources/wine/share/wine/fonts"})
+    for (const char* p :
+         {"/opt/homebrew/share/wine/fonts", "/Applications/Wine Stable.app/Contents/Resources/wine/share/wine/fonts",
+          "/Applications/Wine Staging.app/Contents/Resources/wine/share/wine/fonts",
+          "/Applications/Wine Devel.app/Contents/Resources/wine/share/wine/fonts"})
         d.push_back(p);
     if (!home.empty()) d.push_back(home + "/Library/Fonts");
     d.push_back("/Library/Fonts");
@@ -107,7 +114,8 @@ std::vector<render::FonStrike> loadBitmapFace(const std::string& file) {
 }  // namespace
 
 void installTrueTypeMetrics() {
-    render::setTrueTypeResolver([](const std::string& family, int em, bool bold, bool italic, render::TrueTypeFace& out) {
+    render::setTrueTypeResolver([](const std::string& family, int em, bool bold, bool italic,
+                                   render::TrueTypeFace& out) {
         QString want = QString::fromStdString(family);
         QFont f(want);
         f.setPixelSize(em);
@@ -115,7 +123,7 @@ void installTrueTypeMetrics() {
         f.setItalic(italic);
         f.setHintingPreference(QFont::PreferFullHinting);
         f.setStyleStrategy(QFont::NoFontMerging);
-        f.setKerning(false);   // GDI sums the advances without kerning
+        f.setKerning(false);  // GDI sums the advances without kerning
         if (!sameFamily(want, QFontInfo(f).family())) return false;
         QFontMetrics m(f);
         int yMax = 0, yMin = 0;
@@ -135,7 +143,8 @@ void installTrueTypeMetrics() {
 void installMaptextGlyphs() {
     auto files = std::make_shared<std::map<std::string, std::vector<render::FonStrike>>>();
     for (const auto& [family, file] : {std::pair<std::string, std::string>{"small fonts", "smalle.fon"},
-                                       {"ms sans serif", "sserife.fon"}, {"courier", "coure.fon"}})
+                                       {"ms sans serif", "sserife.fon"},
+                                       {"courier", "coure.fon"}})
         if (auto s = loadBitmapFace(file); !s.empty()) (*files)[family] = std::move(s);
     render::setGlyphRasterizer([files](const render::DsFace& face, char32_t cp, render::GlyphMask& out) {
         if (face.bitmap) {

@@ -43,12 +43,14 @@ public:
     using QWebEnginePage::QWebEnginePage;
     void setOrigin(LocalOrigin* o) { origin_ = o; }
 signals:
-    void byondLink(const QUrl& url);          // a byond:// navigation was intercepted
-    void topicQuery(const QString& href);     // an origin-page navigation with a query: "?..." Topic
-    void documentChanging();                  // a navigation to one of our documents was accepted: the old READY is void
+    void byondLink(const QUrl& url);       // a byond:// navigation was intercepted
+    void topicQuery(const QString& href);  // an origin-page navigation with a query: "?..." Topic
+    void documentChanging();               // a navigation to one of our documents was accepted: the old READY is void
 protected:
     bool acceptNavigationRequest(const QUrl& url, NavigationType type, bool isMainFrame) override;
-    void javaScriptConsoleMessage(JavaScriptConsoleMessageLevel, const QString& msg, int line, const QString& src) override;
+    void javaScriptConsoleMessage(JavaScriptConsoleMessageLevel, const QString& msg, int line,
+                                  const QString& src) override;
+
 private:
     LocalOrigin* origin_ = nullptr;
 };
@@ -64,30 +66,32 @@ public:
     // Wire this pane to a LocalOrigin: its bridge id and the injected cef_to_byond / hubStorage / READY script.
     void attachOrigin(LocalOrigin* o, int paneId);
     int paneId() const { return paneId_; }
-    void openFile(const QString& file);            // load origin->urlFor(file); READY is cleared
+    void openFile(const QString& file);  // load origin->urlFor(file); READY is cleared
     // Call window.fn(args...) in the page (JSON-quoted string arguments); queued until READY.
     void callPage(const QString& fn, const QStringList& args);
     void evalWhenReady(const QString& js);
     void markReady();
     bool ready() const { return ready_; }
     int callsRun() const { return callsRun_; }
-    QString name;                                   // the browse window / control name this pane shows
+    QString name;  // the browse window / control name this pane shows
 
     // Ctrl+F (see the file comment). findAllowed unset means the key always belongs to the page.
     std::function<bool()> findAllowed;
-    void openFind();                                // show the bar, focus and select its text
-    void closeFind();                               // hide it, clear the highlight, give the page its focus back
+    void openFind();   // show the bar, focus and select its text
+    void closeFind();  // hide it, clear the highlight, give the page its focus back
     void findNext(bool backward);
     bool findOpen() const;
     QLineEdit* findField() const { return findEdit_; }
-    QString findStatus() const;                     // "2/5", "No results", or "" (nothing searched)
+    QString findStatus() const;  // "2/5", "No results", or "" (nothing searched)
 
 signals:
     void byondLink(const QUrl& url);
     void topicQuery(const QString& href);
     void becameReady();
+
 protected:
     void resizeEvent(QResizeEvent* e) override;
+
 private:
     void flush();
     void ensureFindBar();

@@ -14,7 +14,7 @@
 #include <memory>
 #include <string>
 #include "render/hittest.h"
-#include "shell/mapwidget.h"   // declares the HitPtr metatype the frame signal needs
+#include "shell/mapwidget.h"  // declares the HitPtr metatype the frame signal needs
 #include "render/ir.h"
 #include "app/rendermetrics.h"
 
@@ -29,18 +29,21 @@ public:
     void setUseGpu(bool enabled);
     struct Metrics {
         uint64_t mainFrames = 0, auxFrames = 0, gpuFrames = 0, cpuFrames = 0, fallbacks = 0;
-        uint64_t dropped = 0, unchanged = 0; // main-map mailbox / unchanged-list skips
-        double lastRenderMs = 0; // last execution, or CPU submission time when lastAsync; not end-to-end latency
+        uint64_t dropped = 0, unchanged = 0;  // main-map mailbox / unchanged-list skips
+        double lastRenderMs = 0;  // last execution, or CPU submission time when lastAsync; not end-to-end latency
         bool lastGpu = false, lastAsync = false;
-        double lastGpuMs = -1; // last available GPU timestamp, not necessarily the submitted frame
+        double lastGpuMs = -1;  // last available GPU timestamp, not necessarily the submitted frame
         std::string backend, fallbackReason;
-        std::map<std::string, fugue::app::MapMetrics> maps; // empty key = main, all others independent auxiliary maps
+        std::map<std::string, fugue::app::MapMetrics> maps;  // empty key = main, all others independent auxiliary maps
     };
     Metrics metrics() const;
     // Empty id denotes the main map; auxiliary ids are case-normalized control names.
-    struct DirectFrame { GpuDrawList list; fugue::shell::HitPtr hit; };
+    struct DirectFrame {
+        GpuDrawList list;
+        fugue::shell::HitPtr hit;
+    };
     using DirectFrames = std::map<std::string, DirectFrame>;
-    DirectFrames takeDirectFrames(); // GUI drains all viewports with one queued wake-up
+    DirectFrames takeDirectFrames();  // GUI drains all viewports with one queued wake-up
     void reportSubmission(const std::string& id, double cpuMs, double lastGpuMs, const std::string& backend,
                           const fugue::app::RenderPhases& phases = {});
     void submitFallback(const std::string& id, GpuDrawList list, std::string reason);
@@ -52,13 +55,13 @@ public:
     // A widget for that map was (re)built with no picture yet: the next list for `id` is executed even when it equals the
     // last one, so the new widget gets a frame. Any thread.
     void forgetAux(const std::string& id);
-    void removeAux(const std::string& id); // release cached/pending work for an unmounted control
+    void removeAux(const std::string& id);  // release cached/pending work for an unmounted control
     void requestStop();
     uint64_t executed() const { return executed_; }
     uint64_t dropped() const { return dropped_; }
-    uint64_t gpuExecuted() const { return gpuExecuted_; }   // main + auxiliary frames
-    uint64_t cpuFallbacks() const { return cpuFallbacks_; } // GPU requested, but this frame used CPU
-    uint64_t unchanged() const { return unchanged_; }   // lists identical to the last executed one (not re-executed)
+    uint64_t gpuExecuted() const { return gpuExecuted_; }    // main + auxiliary frames
+    uint64_t cpuFallbacks() const { return cpuFallbacks_; }  // GPU requested, but this frame used CPU
+    uint64_t unchanged() const { return unchanged_; }  // lists identical to the last executed one (not re-executed)
 signals:
     // Emitted from this thread; GUI receivers get it queued. `hit` is the scene this image was drawn from (null if the
     // list carried none), so hit-tests match the picture on screen.
@@ -69,20 +72,25 @@ signals:
     void auxFrame(const QString& id, const QImage& img, std::shared_ptr<const fugue::render::HitScene> hit);
     // A secondary map's list was unchanged: only its scene is newer.
     void auxSceneOnly(const QString& id, std::shared_ptr<const fugue::render::HitScene> hit);
-    void gpuListReady(); // wake-up only; one pending notification until takeDirectFrames()
+    void gpuListReady();  // wake-up only; one pending notification until takeDirectFrames()
     void fallbackFrame(const QString& id, GpuDrawList list, const QImage& image);
+
 protected:
     void run() override;
+
 private:
-    bool useGpu_; // guarded by mu_; the worker snapshots this once per batch
+    bool useGpu_;  // guarded by mu_; the worker snapshots this once per batch
     bool rendererDirty_ = true;
-    struct Fallback { GpuDrawList list; std::string reason; };
-    std::map<std::string, Fallback> fallbacks_; // guarded by mu_; GUI rejects superseded results
-    DirectFrames directFrames_; // guarded by mu_
+    struct Fallback {
+        GpuDrawList list;
+        std::string reason;
+    };
+    std::map<std::string, Fallback> fallbacks_;  // guarded by mu_; GUI rejects superseded results
+    DirectFrames directFrames_;                  // guarded by mu_
     std::atomic<uint64_t> gpuExecuted_{0}, cpuFallbacks_{0};
     mutable std::mutex metricsMu_;
     Metrics metrics_;
-    std::map<std::string, fugue::app::MapHistory> mapHistory_; // guarded by metricsMu_
+    std::map<std::string, fugue::app::MapHistory> mapHistory_;  // guarded by metricsMu_
     void prepared(const std::string& id, double ms);
     void countDropped(const std::string& id);
     std::mutex mu_;
@@ -90,10 +98,10 @@ private:
     std::optional<fugue::render::DrawList> slot_;
     bool stop_ = false;
     std::atomic<uint64_t> executed_{0}, dropped_{0}, unchanged_{0};
-    std::optional<fugue::render::DrawList> last_;   // the last EXECUTED list (this thread only)
-    std::map<std::string, fugue::render::DrawList> auxSlots_;   // guarded by mu_
-    std::set<std::string> auxRemove_;                           // guarded by mu_ (removeAux)
-    std::set<std::string> auxForget_;                           // guarded by mu_ (forgetAux)
+    std::optional<fugue::render::DrawList> last_;              // the last EXECUTED list (this thread only)
+    std::map<std::string, fugue::render::DrawList> auxSlots_;  // guarded by mu_
+    std::set<std::string> auxRemove_;                          // guarded by mu_ (removeAux)
+    std::set<std::string> auxForget_;                          // guarded by mu_ (forgetAux)
     std::weak_ptr<const fugue::render::HitScene> lastHit_;     // the main map's latest scene, for a renderer switch
-    std::map<std::string, GpuDrawList> auxLast_;                // this thread only
+    std::map<std::string, GpuDrawList> auxLast_;               // this thread only
 };

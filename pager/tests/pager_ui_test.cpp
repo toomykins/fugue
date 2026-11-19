@@ -43,7 +43,8 @@ class PagerUi : public QObject {
 private slots:
     void initTestCase() {
         qputenv("HOME", home_.path().toUtf8());
-        for (auto v : {"FUGUE_PAGER_CONFIG", "FUGUE_IDENTITY", "FUGUE_BYOND_SID", "FUGUE_KEYTXT", "XDG_STATE_HOME"}) qunsetenv(v);
+        for (auto v : {"FUGUE_PAGER_CONFIG", "FUGUE_IDENTITY", "FUGUE_BYOND_SID", "FUGUE_KEYTXT", "XDG_STATE_HOME"})
+            qunsetenv(v);
         QDir().mkpath(home_.path() + "/bin");
         QFile f(home_.path() + "/bin/fugue");
         f.open(QIODevice::WriteOnly);
@@ -58,15 +59,16 @@ private slots:
         cfg.servers = account::defaultServers();
         w.setState(cfg, check(cfg));
         QCOMPARE(w.page(), PagerWindow::SignInPage);
-        QVERIFY(!w.detailsVisible());   // nothing technical on screen
+        QVERIFY(!w.detailsVisible());  // nothing technical on screen
         // the Home row carries no username/password fields: signing in is the separate Sign in window
         QVERIFY(w.findChild<QLabel*>("notsignedin"));
         QVERIFY(!w.signInVisible());
-        for (QLineEdit* e : w.findChildren<QLineEdit*>()) QVERIFY2(e->window() != &w || e->echoMode() != QLineEdit::Password, qPrintable(e->objectName()));
+        for (QLineEdit* e : w.findChildren<QLineEdit*>())
+            QVERIFY2(e->window() != &w || e->echoMode() != QLineEdit::Password, qPrintable(e->objectName()));
         QSignalSpy guest(&w, &PagerWindow::guestRequested);
         w.findChild<QPushButton*>("guest")->click();
         QCOMPARE(guest.count(), 1);
-        w.setState(cfg, check(cfg));   // what the launcher does after saving
+        w.setState(cfg, check(cfg));  // what the launcher does after saving
         QCOMPARE(w.page(), PagerWindow::ServersPage);
         QCOMPARE(w.accountText(), QString("Playing as a guest"));
         QCOMPARE(w.findChild<QPushButton*>("account")->text(), QString("Sign in"));
@@ -78,8 +80,8 @@ private slots:
         QVERIFY(!w.signInVisible());
         QCOMPARE(w.page(), PagerWindow::ServersPage);
     }
-// The Sign in window follows stock BYOND 516's login dialog: Account, Password, Get an account / Forgot password?
-// links, an automatic sign-in box, and no "Save password" (Fugue never keeps a password).
+    // The Sign in window follows stock BYOND 516's login dialog: Account, Password, Get an account / Forgot password?
+    // links, an automatic sign-in box, and no "Save password" (Fugue never keeps a password).
     void signInWindowEmitsAndSpeaksPlainly() {
         PagerWindow w;
         account::Config cfg;
@@ -92,14 +94,15 @@ private slots:
         QVERIFY(d->findChild<QLabel*>("getaccount")->text().contains("https://secure.byond.com/Join"));
         QVERIFY(d->findChild<QLabel*>("forgotpassword")->text().contains("command=forgot_password"));
         QVERIFY(d->findChild<QCheckBox*>("autosignin"));
-        for (QCheckBox* c : d->findChildren<QCheckBox*>()) QVERIFY2(!c->text().contains("password", Qt::CaseInsensitive), qPrintable(c->text()));
+        for (QCheckBox* c : d->findChildren<QCheckBox*>())
+            QVERIFY2(!c->text().contains("password", Qt::CaseInsensitive), qPrintable(c->text()));
         QVERIFY(d->findChild<QPushButton*>("dlgguest"));
         QSignalSpy spy(&w, &PagerWindow::signInRequested);
         QSignalSpy saved(&w, &PagerWindow::savedSignInChosen);
         w.submitSignIn("", "");
         QCOMPARE(spy.count(), 0);
         QCOMPARE(w.signInErrorText(), QString("Enter your BYOND username and password."));
-        w.submitSignIn("NobodySavedHere", "");   // no saved sign-in on this computer: a password is needed
+        w.submitSignIn("NobodySavedHere", "");  // no saved sign-in on this computer: a password is needed
         QCOMPARE(spy.count(), 0);
         QCOMPARE(saved.count(), 0);
         QCOMPARE(w.signInErrorText(), QString("Enter your BYOND username and password."));
@@ -112,10 +115,10 @@ private slots:
         QVERIFY(!d->findChild<QPushButton*>("dlgguest")->isEnabled());
         QVERIFY(!w.findChild<QPushButton*>("guest")->isEnabled());
         w.setSigningIn(false);
-        QVERIFY(d->findChild<QLineEdit*>("password")->text().isEmpty());   // never kept past one attempt
+        QVERIFY(d->findChild<QLineEdit*>("password")->text().isEmpty());  // never kept past one attempt
         w.setSignInError("Wrong username or password.");
         QCOMPARE(w.signInErrorText(), QString("Wrong username or password."));
-        QVERIFY(d->isVisible());   // a failure keeps the window up, with the plain sentence in it
+        QVERIFY(d->isVisible());  // a failure keeps the window up, with the plain sentence in it
         QCOMPARE(w.page(), PagerWindow::SignInPage);
         // the dialog's own Play as guest closes it and asks for guest
         QSignalSpy guest(&w, &PagerWindow::guestRequested);
@@ -138,7 +141,7 @@ private slots:
         QVERIFY(w.accountText().contains("UiTester"));
         QSignalSpy out(&w, &PagerWindow::signOutRequested);
         auto* b = w.findChild<QPushButton*>("account");
-        QCOMPARE(b->text(), QString("Logout"));   // the account row's action label
+        QCOMPARE(b->text(), QString("Logout"));  // the account row's action label
         b->click();
         QCOMPARE(out.count(), 1);
         // an account saved but with no identity on this box asks for the password, with the name filled in
@@ -156,14 +159,18 @@ private slots:
     void savedSignInNeedsNoPassword() {
         QVERIFY(account::saveAccount("Saved One", account::Account{Bytes(21, 3), 1, 2}));
         const QString keyTxt = home_.path() + "/.fugue/key.txt";
-        { QFile f(keyTxt); QVERIFY(f.open(QIODevice::WriteOnly)); f.write("BEGIN KEY Saved One\nsynthetic\n`\nEND KEY\n"); }
+        {
+            QFile f(keyTxt);
+            QVERIFY(f.open(QIODevice::WriteOnly));
+            f.write("BEGIN KEY Saved One\nsynthetic\n`\nEND KEY\n");
+        }
         PagerWindow w;
         account::Config cfg;
         cfg.servers = account::defaultServers();
-        w.setState(cfg, check(cfg));   // signed out (after a Logout): no account in pager.json
+        w.setState(cfg, check(cfg));  // signed out (after a Logout): no account in pager.json
         w.showSignIn();
         auto* user = w.signInDialog()->findChild<QComboBox*>("username");
-        QVERIFY(user->findText("savedone") >= 0);   // offered from this computer's saved sign-ins
+        QVERIFY(user->findText("savedone") >= 0);  // offered from this computer's saved sign-ins
         user->setEditText("Saved One");
         QVERIFY2(w.signInDialog()->findChild<QLabel*>("signinnote")->text().contains("no password needed"),
                  qPrintable(w.signInDialog()->findChild<QLabel*>("signinnote")->text()));
@@ -174,7 +181,7 @@ private slots:
         QCOMPARE(saved.count(), 1);
         QCOMPARE(saved.at(0).at(0).toString(), QString("Saved One"));
         QVERIFY(!w.signInVisible());
-        cfg.account = "Saved One";   // what the launcher does with it
+        cfg.account = "Saved One";  // what the launcher does with it
         w.setState(cfg, check(cfg));
         QCOMPARE(w.page(), PagerWindow::ServersPage);
         // typing a password still signs in at BYOND (e.g. after a password change)
@@ -190,7 +197,11 @@ private slots:
     void autoSignInIsOnePreferenceAndHoldsTheAccount() {
         QVERIFY(account::saveAccount("Held One", account::Account{Bytes(21, 4), 1, 2}));
         const QString keyTxt = home_.path() + "/.fugue/key.txt";
-        { QFile f(keyTxt); QVERIFY(f.open(QIODevice::WriteOnly)); f.write("BEGIN KEY Held One\nsynthetic\n`\nEND KEY\n"); }
+        {
+            QFile f(keyTxt);
+            QVERIFY(f.open(QIODevice::WriteOnly));
+            f.write("BEGIN KEY Held One\nsynthetic\n`\nEND KEY\n");
+        }
         PagerWindow w;
         account::Config cfg;
         cfg.account = "Held One";
@@ -248,7 +259,7 @@ private slots:
         gpu->setChecked(false);
         QCOMPARE(QSettings(ini, QSettings::IniFormat).value("renderer").toString(), QString("cpu"));
         w.preferencesDialog()->hide();
-        QVERIFY(setSavedRenderer(ini.toStdString(), true));   // as the game's Renderer menu writes it
+        QVERIFY(setSavedRenderer(ini.toStdString(), true));  // as the game's Renderer menu writes it
         w.showPreferences();
         QVERIFY(gpu->isChecked());
         w.preferencesDialog()->hide();
@@ -266,11 +277,12 @@ private slots:
         auto* right = w.findChild<QTabWidget*>("right");
         for (int i = 0; i < right->count(); i++) QVERIFY(right->isTabEnabled(i) && right->tabText(i) != "Feed");
         for (QPushButton* b : w.findChildren<QPushButton*>())
-            QVERIFY2(b->window() != &w || b->isEnabled() || b->objectName() == "join" || b->objectName() == "warm",   // both follow the selection
+            QVERIFY2(b->window() != &w || b->isEnabled() || b->objectName() == "join" ||
+                         b->objectName() == "warm",  // both follow the selection
                      qPrintable(b->objectName() + " " + b->text()));
         for (QAction* x : w.gearMenu()->actions()) QVERIFY2(x->isSeparator() || x->isEnabled(), qPrintable(x->text()));
         w.show();
-        w.showTab(PagerWindow::LogTab);   // Details has the Setup and Log tabs
+        w.showTab(PagerWindow::LogTab);  // Details has the Setup and Log tabs
         QVERIFY(w.findChild<QPlainTextEdit*>("log")->isVisible());
     }
     void joinIsASignalAndAGuestMayTryAHubServer() {
@@ -283,16 +295,16 @@ private slots:
         QCOMPARE(w.bookmarkCount(), 2);
         // sorted: never-played entries by lowercase name, the hub world before the local server
         w.selectBookmark(0);
-        QVERIFY(w.joinEnabled());                 // a hub server is not refused to a guest up front
+        QVERIFY(w.joinEnabled());  // a hub server is not refused to a guest up front
         QVERIFY(w.joinBlockerText().isEmpty());
         w.selectBookmark(1);
         QVERIFY(w.joinEnabled());
         QVERIFY(w.joinBlockerText().isEmpty());
         QSignalSpy spy(&w, &PagerWindow::joinRequested);
         auto joins = w.findChildren<QPushButton*>("join");
-        QCOMPARE(joins.size(), 1);   // one Join, on the selected game's tab
+        QCOMPARE(joins.size(), 1);  // one Join, on the selected game's tab
         w.selectBookmark(0);
-        joins[0]->click();   // a guest joins a hub server too: the world decides whether it takes guests
+        joins[0]->click();  // a guest joins a hub server too: the world decides whether it takes guests
         QCOMPARE(spy.count(), 1);
         auto hub = std::find_if(cfg.servers.begin(), cfg.servers.end(), [](const account::Server& s) { return s.hub; });
         QVERIFY(hub != cfg.servers.end());
@@ -307,10 +319,10 @@ private slots:
         QVERIFY(!w.joinEnabled());
         QCOMPARE(w.statusText(), QString("The game is running."));
         w.joinRow(1);
-        QCOMPARE(spy.count(), 2);   // no second join while the game runs
+        QCOMPARE(spy.count(), 2);  // no second join while the game runs
     }
-// Download resources: a signal for the selected game (the caller runs the client's --prefetch pass), blocked like Join while a game runs.
-// While it runs the button reads Cancel download. Join stays usable (the caller stops the download first), and its progress shows in the game tab's note.
+    // Download resources: a signal for the selected game (the caller runs the client's --prefetch pass), blocked like Join while a game runs.
+    // While it runs the button reads Cancel download. Join stays usable (the caller stops the download first), and its progress shows in the game tab's note.
     void downloadResourcesIsASignalAndCanBeCancelledOrJoined() {
         PagerWindow w;
         account::Config cfg;
@@ -323,7 +335,7 @@ private slots:
         auto btns = w.findChildren<QPushButton*>("warm");
         QCOMPARE(btns.size(), 1);
         w.selectBookmark(1);
-        w.setClientRunning(true);                  // a game is running: blocked like Join
+        w.setClientRunning(true);  // a game is running: blocked like Join
         QVERIFY(!w.warmEnabled());
         w.warmRow(1);
         QCOMPARE(warm.count(), 0);
@@ -338,13 +350,13 @@ private slots:
         QCOMPARE(btns[0]->text(), QString("Cancel download"));
         QVERIFY(w.joinEnabled());
         QCOMPARE(w.gameNoteText(), QString("Downloading resources: 10 of 983 files"));
-        btns[0]->click();                          // Cancel download: no second download
+        btns[0]->click();  // Cancel download: no second download
         QCOMPARE(cancel.count(), 1);
         QCOMPARE(warm.count(), 1);
-        w.joinRow(1);                              // Join while downloading: the caller stops the download, then joins
+        w.joinRow(1);  // Join while downloading: the caller stops the download, then joins
         QCOMPARE(join.count(), 1);
         QCOMPARE(warm.count(), 1);
-        cfg.markPrefetched(cfg.servers[1]);       // what the caller does on success, then setState
+        cfg.markPrefetched(cfg.servers[1]);  // what the caller does on success, then setState
         w.setState(cfg, check(cfg));
         w.setWarming(false, "Resources downloaded: 982 new files (7.1 MiB). Joining now starts with them.");
         QVERIFY(w.joinEnabled() && w.warmEnabled());
@@ -358,10 +370,16 @@ private slots:
         w.setGuestChosen(true);
         w.setState(cfg, check(cfg));
         QSignalSpy spy(&w, &PagerWindow::serverAdded);
-        QCOMPARE(w.submitAddServer("localhost"), QString("That doesn't look like a server address. Type it like example.com:1234 or byond://example.com:1234."));
+        QCOMPARE(
+            w.submitAddServer("localhost"),
+            QString(
+                "That doesn't look like a server address. Type it like example.com:1234 or byond://example.com:1234."));
         // "x.y" is a world key's shape; a plain host missing its port looks the same, so the sentence covers both
-        QCOMPARE(w.submitAddServer("example.com"), QString("That needs a port number, like example.com:1234. (BYOND hub links like Name.World cannot be opened here yet.)"));
-        QCOMPARE(w.submitAddServer("byond://Some.World"), QString("That needs a port number, like example.com:1234. (BYOND hub links like Name.World cannot be opened here yet.)"));
+        QCOMPARE(w.submitAddServer("example.com"), QString("That needs a port number, like example.com:1234. (BYOND "
+                                                           "hub links like Name.World cannot be opened here yet.)"));
+        QCOMPARE(w.submitAddServer("byond://Some.World"),
+                 QString("That needs a port number, like example.com:1234. (BYOND hub links like Name.World cannot be "
+                         "opened here yet.)"));
         QCOMPARE(spy.count(), 0);
         QCOMPARE(w.submitAddServer("byond://Example.com:1234/"), QString());
         QCOMPARE(spy.count(), 1);
@@ -369,17 +387,18 @@ private slots:
         QCOMPARE(w.submitAddServer("127.0.0.1:47925"), QString());
         QCOMPARE(spy.at(1).at(0).toString(), QString("127.0.0.1:47925"));
     }
-// An added server is labelled once, by its address.
+    // An added server is labelled once, by its address.
     void addedServerIsLabelledOnce() {
         PagerWindow w;
         account::Config cfg;
         cfg.servers = account::defaultServers();
-        connect(&w, &PagerWindow::serverAdded, &w, [&](const QString& a) {   // as the launcher does: remember, save, redraw
-            account::Server s;
-            s.name = s.addr = a.toStdString();
-            cfg.remember(s);
-            w.setState(cfg, check(cfg));
-        });
+        connect(&w, &PagerWindow::serverAdded, &w,
+                [&](const QString& a) {  // as the launcher does: remember, save, redraw
+                    account::Server s;
+                    s.name = s.addr = a.toStdString();
+                    cfg.remember(s);
+                    w.setState(cfg, check(cfg));
+                });
         w.setGuestChosen(true);
         w.setState(cfg, check(cfg));
         w.show();
@@ -444,7 +463,7 @@ private slots:
         cfg.servers = account::defaultServers();
         w.setState(cfg, check(cfg));
         QCOMPARE(w.page(), PagerWindow::SignInPage);
-        QCOMPARE(w.bookmarkCount(), 2);   // the list is on screen while signed out, as in BYOND
+        QCOMPARE(w.bookmarkCount(), 2);  // the list is on screen while signed out, as in BYOND
         w.selectBookmark(1);
         QVERIFY(!w.joinEnabled());
         QSignalSpy spy(&w, &PagerWindow::joinRequested);
@@ -464,7 +483,7 @@ private slots:
         QCOMPARE(w.visibleGameCount(), 2);
         w.setFilter("LOCAL SERV");
         QCOMPARE(w.visibleGameCount(), 1);
-        w.setFilter("127.0.0");   // the address counts too
+        w.setFilter("127.0.0");  // the address counts too
         QCOMPARE(w.visibleGameCount(), 1);
         w.setFilter("nothing like it");
         QCOMPARE(w.visibleGameCount(), 0);
@@ -479,10 +498,14 @@ private slots:
         QVERIFY(account::saveAccount(cfg.account, account::Account{Bytes(21, 7), 1, 2}));
         w.setState(cfg, check(cfg));
         QStringList texts;
-        for (QAction* x : w.gearMenu()->actions()) if (!x->isSeparator()) texts << x->text();
-        QCOMPARE(texts, QStringList({"About Fugue...", "Open Location...", "Logout", "Preferences...", "Show Resources", "Stay on Top", "Exit"}));
-        for (auto n : {"openfile", "dreamdaemon", "dreammaker", "downloads", "updates"}) QVERIFY2(!w.menuAction(n), n);   // not built in Fugue
-        for (auto n : {"about", "openloc", "logout", "prefs", "resources", "ontop", "exit"}) QVERIFY2(w.menuAction(n)->isEnabled(), n);
+        for (QAction* x : w.gearMenu()->actions())
+            if (!x->isSeparator()) texts << x->text();
+        QCOMPARE(texts, QStringList({"About Fugue...", "Open Location...", "Logout", "Preferences...", "Show Resources",
+                                     "Stay on Top", "Exit"}));
+        for (auto n : {"openfile", "dreamdaemon", "dreammaker", "downloads", "updates"})
+            QVERIFY2(!w.menuAction(n), n);  // not built in Fugue
+        for (auto n : {"about", "openloc", "logout", "prefs", "resources", "ontop", "exit"})
+            QVERIFY2(w.menuAction(n)->isEnabled(), n);
         QCOMPARE(w.menuAction("openloc")->shortcut(), QKeySequence("Ctrl+O"));
         QCOMPARE(w.menuAction("logout")->shortcut(), QKeySequence("Ctrl+L"));
         QCOMPARE(w.menuAction("prefs")->shortcut(), QKeySequence("Ctrl+P"));
@@ -499,7 +522,7 @@ private slots:
         w.setState(g, check(g));
         QCOMPARE(w.menuAction("logout")->text(), QString("Sign in..."));
         w.menuAction("logout")->trigger();
-        QVERIFY(w.signInVisible());   // a guest's "Sign in..." opens the Sign in window and changes nothing else
+        QVERIFY(w.signInVisible());  // a guest's "Sign in..." opens the Sign in window and changes nothing else
         QCOMPARE(w.page(), PagerWindow::ServersPage);
         QCOMPARE(out.count(), 1);
         w.signInDialog()->hide();
@@ -530,14 +553,17 @@ private slots:
                  qPrintable(w.preferencesDialog()->findChild<QLabel*>("prefscache")->text()));
         QString asked;
         bool answer = false;
-        w.setConfirmHook([&](const QString&, const QString& text) { asked = text; return answer; });
+        w.setConfirmHook([&](const QString&, const QString& text) {
+            asked = text;
+            return answer;
+        });
         QSignalSpy spy(&w, &PagerWindow::clearCacheRequested);
         clear->click();
         QVERIFY2(asked.contains("Saved sign-in for cachetester"), qPrintable(asked));
         QVERIFY2(asked.contains(home_.path() + "/.fugue/identity-cachetester"), qPrintable(asked));
         QVERIFY2(asked.contains("Downloaded game resources — 2.9 KiB"), qPrintable(asked));
         QVERIFY2(asked.contains("Kept: your saved servers and settings"), qPrintable(asked));
-        QCOMPARE(spy.count(), 0);   // "No": nothing asked for
+        QCOMPARE(spy.count(), 0);  // "No": nothing asked for
         answer = true;
         clear->click();
         QCOMPARE(spy.count(), 1);
@@ -565,14 +591,14 @@ private slots:
         for (auto& l : windowChecklist(st)) want += l + "\n";
         QCOMPARE(w.checklistText().toStdString(), want);
     }
-// No key.txt: the window points at its own Sign in, not at a command-line login.
-// (checklist() keeps the command-line wording.)
+    // No key.txt: the window points at its own Sign in, not at a command-line login.
+    // (checklist() keeps the command-line wording.)
     void checklistPointsAtSignIn() {
         account::Config cfg;
         cfg.account = "NoKeyHere";
         cfg.servers = account::defaultServers();
         auto st = check(cfg);
-        QVERIFY(st.keyTxtErr.has_value());   // the temp HOME has no key.txt
+        QVERIFY(st.keyTxtErr.has_value());  // the temp HOME has no key.txt
         std::string go;
         for (auto& l : checklist(st)) go += l + "\n";
         QVERIFY(go.find("fugue-qt pager -login") != std::string::npos);
@@ -601,7 +627,8 @@ private slots:
         QSystemTrayIcon* tray = w.trayIcon();
         QVERIFY(tray && tray->isVisible());
         QStringList texts;
-        for (QAction* a : tray->contextMenu()->actions()) if (!a->isSeparator()) texts << a->text();
+        for (QAction* a : tray->contextMenu()->actions())
+            if (!a->isSeparator()) texts << a->text();
         QCOMPARE(texts, QStringList({"Open Fugue", "Exit"}));
         QVERIFY(!w.close());
         QVERIFY(w.hiddenToTray());
@@ -702,7 +729,8 @@ private slots:
         QVERIFY(!second.listen(name));
         auto forward = [&](const QString& link) {
             auto f = std::async(std::launch::async, [&] { return forwardToRunning(name, link); });
-            while (f.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready) QCoreApplication::processEvents();
+            while (f.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
+                QCoreApplication::processEvents();
             return f.get();
         };
         QVERIFY(forward("byond://127.0.0.1:53321"));
@@ -722,7 +750,7 @@ private slots:
         a.sun_family = AF_UNIX;
         std::snprintf(a.sun_path, sizeof a.sun_path, "%s", name.toUtf8().constData());
         QCOMPARE(::bind(fd, reinterpret_cast<sockaddr*>(&a), sizeof a), 0);
-        ::close(fd);   // the file stays, as after a crash
+        ::close(fd);  // the file stays, as after a crash
         QVERIFY(QFile::exists(name));
         QVERIFY(!forwardToRunning(name, "", 500));
         QStringList got;
@@ -744,7 +772,10 @@ private slots:
             w.setNoticeHook([](const QString&, const QString&) { QFAIL("no notice while quitting"); });
             int asked = 0;
             bool answer = false;
-            w.setConfirmHook([&](const QString&, const QString&) { asked++; return answer; });
+            w.setConfirmHook([&](const QString&, const QString&) {
+                asked++;
+                return answer;
+            });
             w.show();
             w.setClientRunning(true);
             QEvent quit(QEvent::Quit);

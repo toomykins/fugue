@@ -25,10 +25,13 @@ constexpr quint32 kNum = 0x0008, kNull = 0x0080, kMessage = 0x0800, kColor = 0x0
 class PromptDialog : public QDialog {
 public:
     // Fugue's icon, not the world's, which the parent chain would otherwise supply (shell/fugueicon.h).
-    PromptDialog(QWidget* parent, bool cancellable) : QDialog(parent, flags(cancellable)), cancellable_(cancellable) { setWindowIcon(fugueIcon()); }
+    PromptDialog(QWidget* parent, bool cancellable) : QDialog(parent, flags(cancellable)), cancellable_(cancellable) {
+        setWindowIcon(fugueIcon());
+    }
     static Qt::WindowFlags flags(bool cancellable) {
         Qt::WindowFlags f = Qt::Dialog | Qt::WindowTitleHint;
-        return f | (cancellable ? Qt::WindowCloseButtonHint : Qt::CustomizeWindowHint);   // no close box without the hint
+        return f |
+               (cancellable ? Qt::WindowCloseButtonHint : Qt::CustomizeWindowHint);  // no close box without the hint
     }
     std::function<void(bool ok, const QString& text)> done;
     std::function<QString()> value;
@@ -39,17 +42,25 @@ public:
         hide();
         deleteLater();
     }
+
 protected:
     void closeEvent(QCloseEvent* e) override {
-        if (!cancellable_ && !finished_) { e->ignore(); return; }
+        if (!cancellable_ && !finished_) {
+            e->ignore();
+            return;
+        }
         finish(false);
         e->accept();
     }
-    void reject() override { if (cancellable_) finish(false); }   // Escape
-    void accept() override { if (!accepts || accepts()) finish(true); }    // Enter on the default button
+    void reject() override {
+        if (cancellable_) finish(false);
+    }  // Escape
+    void accept() override {
+        if (!accepts || accepts()) finish(true);
+    }  // Enter on the default button
 public:
-    std::function<bool()> accepts;   // a value the field refuses keeps the dialog open
-    bool none = false;               // finished by the None button
+    std::function<bool()> accepts;  // a value the field refuses keeps the dialog open
+    bool none = false;              // finished by the None button
 private:
     bool cancellable_ = true;
     bool finished_ = false;
@@ -58,7 +69,10 @@ private:
 
 PromptHost::PromptHost(QWidget* anchor, QObject* parent) : QObject(parent), anchor_(anchor) {}
 PromptHost::~PromptHost() {
-    if (cur_) { static_cast<PromptDialog*>(cur_.data())->done = nullptr; cur_->deleteLater(); }
+    if (cur_) {
+        static_cast<PromptDialog*>(cur_.data())->done = nullptr;
+        cur_->deleteLater();
+    }
 }
 
 void PromptHost::present(const PromptRequest& r) {
@@ -91,8 +105,11 @@ void PromptHost::showNext() {
     cur_->show();
     cur_->raise();
     cur_->activateWindow();
-    std::fprintf(stderr, "[prompt] %s id=%u \"%s\" opened%s\n", r.verbArg ? "verb-argument" : r.alert ? "alert" : "input", r.id, r.title.toUtf8().constData(),
-                 queue_.empty() ? "" : " (more queued)");
+    std::fprintf(stderr, "[prompt] %s id=%u \"%s\" opened%s\n",
+                 r.verbArg ? "verb-argument"
+                 : r.alert ? "alert"
+                           : "input",
+                 r.id, r.title.toUtf8().constData(), queue_.empty() ? "" : " (more queued)");
 }
 
 QDialog* PromptHost::build(const PromptRequest& r) {
@@ -110,19 +127,41 @@ QDialog* PromptHost::build(const PromptRequest& r) {
     msg->setTextInteractionFlags(Qt::TextSelectableByMouse);
     msg->setMinimumWidth(280);
     lay->addWidget(msg);
-    if (r.verbArg && r.message.isEmpty()) msg->hide();   // no text above the field when the verb has no desc
+    if (r.verbArg && r.message.isEmpty()) msg->hide();  // no text above the field when the verb has no desc
     quint32 id = r.id;
     bool alert = r.alert, verbArg = r.verbArg;
     auto report = [this, id, alert, verbArg, dlg = QPointer<PromptDialog>(d)](bool ok, const QString& text) {
         if (curDone_ || id != curId_) return;
         curDone_ = true;
         bool none = dlg && dlg->none;
-        std::fprintf(stderr, "[prompt] %s id=%u %s%s\n", verbArg ? "verb-argument" : alert ? "alert" : "input", id,
-                     none ? "none" : ok ? "answered " : "cancelled", ok && !none ? ("\"" + text.left(80) + "\"").toUtf8().constData() : "");
-        if (verbArg) { if (none) emit argNone(id); else if (ok) emit argAccepted(id, text); else emit argCancelled(id); }
-        else if (ok) emit accepted(id, alert, text); else emit cancelled(id, alert);
+        std::fprintf(stderr, "[prompt] %s id=%u %s%s\n",
+                     verbArg ? "verb-argument"
+                     : alert ? "alert"
+                             : "input",
+                     id,
+                     none ? "none"
+                     : ok ? "answered "
+                          : "cancelled",
+                     ok && !none ? ("\"" + text.left(80) + "\"").toUtf8().constData() : "");
+        if (verbArg) {
+            if (none)
+                emit argNone(id);
+            else if (ok)
+                emit argAccepted(id, text);
+            else
+                emit argCancelled(id);
+        } else if (ok)
+            emit accepted(id, alert, text);
+        else
+            emit cancelled(id, alert);
         // open the next one once this one is fully retired
-        QMetaObject::invokeMethod(this, [this] { cur_.clear(); showNext(); }, Qt::QueuedConnection);
+        QMetaObject::invokeMethod(
+            this,
+            [this] {
+                cur_.clear();
+                showNext();
+            },
+            Qt::QueuedConnection);
     };
     d->done = report;
 
@@ -135,7 +174,10 @@ QDialog* PromptHost::build(const PromptRequest& r) {
             b->setObjectName("promptButton:" + labels[i]);
             if (i == 0) b->setDefault(true);
             QString label = labels[i];
-            QObject::connect(b, &QPushButton::clicked, d, [d, label] { d->value = [label] { return label; }; d->finish(true); });
+            QObject::connect(b, &QPushButton::clicked, d, [d, label] {
+                d->value = [label] { return label; };
+                d->finish(true);
+            });
             row->addWidget(b);
         }
         lay->addLayout(row);
@@ -146,17 +188,22 @@ QDialog* PromptHost::build(const PromptRequest& r) {
     ok->setObjectName("promptOk");
     ok->setDefault(true);
     QPushButton* cancel = nullptr;
-    if (cancellable) {   // stock draws "OK" alone for a non-null input()
+    if (cancellable) {  // stock draws "OK" alone for a non-null input()
         cancel = new QPushButton("Cancel", d);
         cancel->setObjectName("promptCancel");
         QObject::connect(cancel, &QPushButton::clicked, d, [d] { d->finish(false); });
     }
-    QObject::connect(ok, &QPushButton::clicked, d, [d] { if (!d->accepts || d->accepts()) d->finish(true); });
+    QObject::connect(ok, &QPushButton::clicked, d, [d] {
+        if (!d->accepts || d->accepts()) d->finish(true);
+    });
     QPushButton* none = nullptr;
-    if (r.verbArg && r.allowNull) {   // stock DreamSeeker: OK, Cancel, None
+    if (r.verbArg && r.allowNull) {  // stock DreamSeeker: OK, Cancel, None
         none = new QPushButton("None", d);
         none->setObjectName("promptNone");
-        QObject::connect(none, &QPushButton::clicked, d, [d] { d->none = true; d->finish(true); });
+        QObject::connect(none, &QPushButton::clicked, d, [d] {
+            d->none = true;
+            d->finish(true);
+        });
     }
 
     QWidget* focus = nullptr;
@@ -165,14 +212,19 @@ QDialog* PromptHost::build(const PromptRequest& r) {
         list->setObjectName("promptList");
         list->addItems(r.choices);
         list->setMinimumHeight(120);
-        auto* le = wirePaste(new QLineEdit(r.def, d));   // a list that could not be fetched still accepts typed values
+        auto* le = wirePaste(new QLineEdit(r.def, d));  // a list that could not be fetched still accepts typed values
         le->setObjectName("promptField");
-        QObject::connect(list, &QListWidget::currentTextChanged, le, [le](const QString& t) { if (!t.isEmpty()) le->setText(t); });
+        QObject::connect(list, &QListWidget::currentTextChanged, le, [le](const QString& t) {
+            if (!t.isEmpty()) le->setText(t);
+        });
         QObject::connect(list, &QListWidget::itemDoubleClicked, d, [d] { d->finish(true); });
         QObject::connect(le, &QLineEdit::returnPressed, d, [d] { d->finish(true); });
         std::string def = r.def.toStdString();
         for (int i = 0; i < list->count(); i++)
-            if (model::inputChoiceMatches(list->item(i)->text().toStdString(), def)) { list->setCurrentRow(i); break; }
+            if (model::inputChoiceMatches(list->item(i)->text().toStdString(), def)) {
+                list->setCurrentRow(i);
+                break;
+            }
         if (list->currentRow() < 0 && list->count()) list->setCurrentRow(0);
         lay->addWidget(list);
         lay->addWidget(le);
@@ -192,7 +244,8 @@ QDialog* PromptHost::build(const PromptRequest& r) {
         swatch->setFixedSize(28, 20);
         auto paint = [swatch, le] {
             QColor c(le->text().trimmed());
-            swatch->setStyleSheet(c.isValid() ? QString("background:%1;border:1px solid #444;").arg(c.name()) : "border:1px solid #444;");
+            swatch->setStyleSheet(c.isValid() ? QString("background:%1;border:1px solid #444;").arg(c.name())
+                                              : "border:1px solid #444;");
         };
         QObject::connect(le, &QLineEdit::textChanged, swatch, paint);
         paint();
@@ -222,8 +275,14 @@ QDialog* PromptHost::build(const PromptRequest& r) {
         le->setProperty("numeric", bool(r.typeMask & kNum));
         if (r.verbArg && (r.typeMask & kNum)) {
             // On stock DreamSeeker, OK on a non-number leaves the `as num` box open and sends nothing.
-            auto numeric = [le] { bool ok = false; le->text().trimmed().toFloat(&ok); return ok; };
-            QObject::connect(le, &QLineEdit::returnPressed, d, [d, numeric] { if (numeric()) d->finish(true); });
+            auto numeric = [le] {
+                bool ok = false;
+                le->text().trimmed().toFloat(&ok);
+                return ok;
+            };
+            QObject::connect(le, &QLineEdit::returnPressed, d, [d, numeric] {
+                if (numeric()) d->finish(true);
+            });
             d->accepts = numeric;
         } else {
             QObject::connect(le, &QLineEdit::returnPressed, d, [d] { d->finish(true); });
@@ -238,7 +297,10 @@ QDialog* PromptHost::build(const PromptRequest& r) {
     if (cancel) row->addWidget(cancel);
     if (none) row->addWidget(none);
     lay->addLayout(row);
-    if (focus) { focus->setFocus(); if (auto* le = qobject_cast<QLineEdit*>(focus)) le->selectAll(); }
+    if (focus) {
+        focus->setFocus();
+        if (auto* le = qobject_cast<QLineEdit*>(focus)) le->selectAll();
+    }
     return d;
 }
 

@@ -10,7 +10,10 @@ bool BrowseRecipeFiler::onResource(uint32_t id, const std::string& name, ByteSpa
     if (recipe) pending_[id] = name;
     for (auto it = pending_.begin(); it != pending_.end();) {
         const render::Icon* ic = res.iconResolved(it->first, ordinals);
-        if (!ic && !res.refusedRecipes().count(it->first)) { ++it; continue; }   // an operand is still to come
+        if (!ic && !res.refusedRecipes().count(it->first)) {
+            ++it;
+            continue;
+        }  // an operand is still to come
         QByteArray png = ic ? LocalOrigin::cellPng(*ic) : QByteArray();
         if (!png.isEmpty()) store.put(it->first, it->second, std::string(png.constData(), size_t(png.size())));
         it = pending_.erase(it);

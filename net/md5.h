@@ -1,4 +1,4 @@
-// MD5 (RFC 1321). Used only for the per-install machine digest, whose 16 raw bytes ride in the 0x1a credential
+// MD5 (RFC 1321). Used only for the per-install machine digest, whose 16 raw bytes ride in the C2S::Login credential
 // at [21:37]. No Qt.
 #pragma once
 #include <array>

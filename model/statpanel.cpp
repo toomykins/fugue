@@ -3,33 +3,20 @@
 #include <charconv>
 #include <cmath>
 #include <cstdio>
-#include <cstdlib>
-#include <cstring>
 #include <set>
-#include "model/json.h"
 #include "net/textmacro.h"
 
 namespace fugue::model {
 
-bool parseStatValue(const std::string& js, StatValue& out) {
-    JVal v;
-    try { v = parseJson(js); } catch (...) { return false; }
-    if (v.kind != JVal::Obj) return false;
-    out = StatValue{};
-    out.kind = uint8_t(v["kind"].n);
-    out.text = net::plainText(v["text"].bytesOrStr());
-    out.appid = v["appid"].u32();
-    out.head = v["head"].u32();
-    out.hasAppid = v["hasAppid"].b;
-    const JVal& n = v["num"];
-    if (n.kind == JVal::Obj) {
-        const std::string& h = n["f64"].s;
-        if (!h.empty()) {
-            uint64_t bits = std::strtoull(h.c_str(), nullptr, 16);
-            std::memcpy(&out.num, &bits, 8);
-        }
-    }
-    return true;
+StatValue statValueOf(const proto::StatValue& v) {
+    StatValue out;
+    out.kind = v.kind;
+    out.text = net::plainText(v.text);
+    out.num = v.num;
+    out.appid = v.appid;
+    out.head = v.head;
+    out.hasAppid = v.hasAppid;
+    return out;
 }
 
 std::string plainAtomName(const std::string& s) { return net::plainText(s); }
@@ -37,19 +24,17 @@ std::string plainAtomName(const std::string& s) { return net::plainText(s); }
 // DreamSeeker prints a stat number as %g: 6 significant digits, exponent form past them (1.23457e+06, 1e-07).
 static std::string trimNum(double f) {
     char b[64];
-    auto r = std::to_chars(b, b + sizeof b, f, std::chars_format::general, 6);   // %.6g, locale-independent
+    auto r = std::to_chars(b, b + sizeof b, f, std::chars_format::general, 6);  // %.6g, locale-independent
     std::string s(b, r.ptr);
     if (s == "-0") s = "0";
     return s;
 }
 
 std::string statText(const World& w, const World::StatLine& l) {
-    StatValue v;
-    if (!parseStatValue(l.valueJson, v)) return "";
+    StatValue v = statValueOf(l.value);
     if (v.isAtom()) {
         auto it = w.appearances.find(v.appid);
-        if (it == w.appearances.end()) return "";
-        try { return plainAtomName(parseJson(it->second.fieldsJson)["name"].bytesOrStr()); } catch (...) { return ""; }
+        return it == w.appearances.end() ? "" : plainAtomName(it->second.fields.name);
     }
     if (v.kind == 0x06) return v.text;
     if (v.kind == 0x2a) return trimNum(v.num);
@@ -58,14 +43,8 @@ std::string statText(const World& w, const World::StatLine& l) {
 
 namespace {
 std::vector<uint16_t> verbIdsOf(const World& w, uint32_t appid) {
-    std::vector<uint16_t> out;
     auto it = w.appearances.find(appid);
-    if (it == w.appearances.end()) return out;
-    try {
-        JVal v = parseJson(it->second.fieldsJson);
-        for (const JVal& x : v["verbs"].a) out.push_back(x.u16());
-    } catch (...) {}
-    return out;
+    return it == w.appearances.end() ? std::vector<uint16_t>{} : it->second.fields.verbs;
 }
 
 bool inPanel(const VerbDef& e) {
@@ -83,18 +62,23 @@ bool verbScope(const World& w, std::vector<uint16_t>& ids) {
     ids.clear();
     if (!w.haveClientAppid || !w.appearances.count(w.clientAppid)) return false;
     if (!w.haveSelf) return false;
-    // The own mob is keyed selfRef | kRegistryA once the 0x0007 announces it; before that its appearance is the 0x0009 bind.
-    // The bare key is the obj ref space: an obj that shares the mob's number is not the mob.
+    // The own mob is keyed selfRef | kRegistryA once the WorldState announces it; before that its appearance is its
+    // MobBind. The bare key is the obj ref space: an obj that shares the mob's number is not the mob.
     uint32_t mobApp = 0;
     bool known = false;
-    if (auto m = w.atoms.find(w.selfRef | kRegistryA); m != w.atoms.end()) { mobApp = m->second.appid; known = true; }
-    else if (auto rb = w.refBind.find(w.selfRef); rb != w.refBind.end()) { mobApp = rb->second; known = true; }
+    if (auto m = w.atoms.find(w.selfRef | kRegistryA); m != w.atoms.end()) {
+        mobApp = m->second.appid;
+        known = true;
+    } else if (auto rb = w.refBind.find(w.selfRef); rb != w.refBind.end()) {
+        mobApp = rb->second;
+        known = true;
+    }
     if (!known || !w.appearances.count(mobApp)) return false;
     std::set<uint16_t> s;
     for (uint16_t id : verbIdsOf(w, w.clientAppid)) s.insert(id);
     for (uint16_t id : verbIdsOf(w, mobApp)) s.insert(id);
     for (uint16_t id : srcAdmittedVerbIds(w)) s.insert(id);
-    if (s.empty()) return false;   // no verbs is indistinguishable from a server that sends no verb sections
+    if (s.empty()) return false;  // no verbs is indistinguishable from a server that sends no verb sections
     ids.assign(s.begin(), s.end());
     return true;
 }
@@ -104,16 +88,16 @@ VerbPanel verbPanel(const World& w) {
     bool scoped = verbScope(w, scope);
     std::set<uint16_t> in(scope.begin(), scope.end());
     VerbPanel p;
-    for (const auto& [id, js] : w.verbById) {
+    for (const auto& [id, verb] : w.verbById) {
         if (scoped && !in.count(uint16_t(id))) continue;
-        VerbDef e;
-        if (!parseVerbDef(js, e)) continue;
+        VerbDef e = verbDefOf(verb);
         std::string l = categoryLabel(e);
         if (!l.empty()) p.byCategory[l].push_back(std::move(e));
     }
     for (auto& [label, verbs] : p.byCategory) {
-        std::sort(verbs.begin(), verbs.end(), [](const VerbDef& a, const VerbDef& b) { return a.name != b.name ? a.name < b.name : a.id < b.id; });
-        p.categories.push_back(label);   // byte order, not case-folded
+        std::sort(verbs.begin(), verbs.end(),
+                  [](const VerbDef& a, const VerbDef& b) { return a.name != b.name ? a.name < b.name : a.id < b.id; });
+        p.categories.push_back(label);  // byte order, not case-folded
     }
     return p;
 }
@@ -142,7 +126,7 @@ bool verbTabCategory(const World& w, const VerbPanel& p, int index, std::string&
     return true;
 }
 bool verbTabCategory(const World& w, int index, std::string& label) {
-    if (index < int(w.stat.tabs.size())) return false;   // a Stat() tab needs no scope
+    if (index < int(w.stat.tabs.size())) return false;  // a Stat() tab needs no scope
     return verbTabCategory(w, verbPanel(w), index, label);
 }
 
@@ -156,15 +140,15 @@ std::string statTabWireName(const World& w, int index) {
 bool statRowRef(const World& w, const StatValue& v, proto::enc::AtomRef& out) {
     if (!v.hasAppid) return false;
     switch (v.kind) {
-    case 0x01:
-        // Stock DreamSeeker names a turf row by its id, [07][head u32], not by the map's [03][x][y]. Bounds are required
-        // so a row is clickable only once the world is known.
-        if (w.bounds.maxX <= 0 || w.bounds.maxY <= 0) return false;
-        out = proto::enc::AtomRef{proto::enc::RefTurfId, v.head, 0, 0};
-        return true;
-    case 0x02: out = proto::enc::objRef(v.head); return true;
-    case 0x03: out = proto::enc::mobRef(v.head); return true;
-    default: return false;
+        case 0x01:
+            // Stock DreamSeeker names a turf row by its id, [07][head u32], not by the map's [03][x][y]. Bounds are required
+            // so a row is clickable only once the world is known.
+            if (w.bounds.maxX <= 0 || w.bounds.maxY <= 0) return false;
+            out = proto::enc::AtomRef{proto::enc::RefTurfId, v.head, 0, 0};
+            return true;
+        case 0x02: out = proto::enc::objRef(v.head); return true;
+        case 0x03: out = proto::enc::mobRef(v.head); return true;
+        default: return false;
     }
 }
 
@@ -188,7 +172,7 @@ bool selectStatTab(World& w, int index, StatTabSelect& out) {
     if (name.empty()) return false;
     auto& st = w.stat;
     st.token++;
-    if (st.token == 0) st.token = 1;   // 0 is the server's "unsolicited/reset" value and must never be ours
+    if (st.token == 0) st.token = 1;  // 0 is the server's "unsolicited/reset" value and must never be ours
     st.owns = true;
     st.selected = index;
     st.lines.clear();

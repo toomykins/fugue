@@ -11,11 +11,18 @@
 namespace fugue::audio {
 
 namespace {
-constexpr size_t kClipCacheBytes = size_t(64) << 20;   // repeated sounds play without re-decoding
-constexpr size_t kBlockFrames = 1024;                   // ~23 ms at 44.1 kHz
+constexpr size_t kClipCacheBytes = size_t(64) << 20;  // repeated sounds play without re-decoding
+constexpr size_t kBlockFrames = 1024;                 // ~23 ms at 44.1 kHz
 uint16_t rd16(const uint8_t* p) { return uint16_t(p[0] | p[1] << 8); }
-uint32_t rd32(const uint8_t* p) { return uint32_t(p[0]) | uint32_t(p[1]) << 8 | uint32_t(p[2]) << 16 | uint32_t(p[3]) << 24; }
-float f32(const uint8_t* p) { uint32_t u = rd32(p); float f; std::memcpy(&f, &u, 4); return f; }
+uint32_t rd32(const uint8_t* p) {
+    return uint32_t(p[0]) | uint32_t(p[1]) << 8 | uint32_t(p[2]) << 16 | uint32_t(p[3]) << 24;
+}
+float f32(const uint8_t* p) {
+    uint32_t u = rd32(p);
+    float f;
+    std::memcpy(&f, &u, 4);
+    return f;
+}
 }  // namespace
 
 // Same framing as proto/dec_s2c_006d_sound.cpp: [ResID u32][Repeat][Wait][Channel u8][Volume u16], then an optional
@@ -26,7 +33,9 @@ bool parseSound(ByteSpan b, SoundMsg& s) {
     if (b.size() < 9) return false;
     const uint8_t* p = b.data();
     s.resID = rd32(p);
-    s.repeat = p[4]; s.wait = p[5]; s.channel = p[6];
+    s.repeat = p[4];
+    s.wait = p[5];
+    s.channel = p[6];
     s.volume = rd16(p + 7);
     if (b.size() < 10) return true;
     s.hasMarker = true;
@@ -34,22 +43,47 @@ bool parseSound(ByteSpan b, SoundMsg& s) {
     size_t o = 10, n = b.size();
     bool ok = (s.marker & ~(kPanBlock | kBlock3D | kChannelOverride)) == 0;
     if (ok && (s.marker & kPanBlock)) {
-        if (n - o < 9) ok = false;
-        else { s.pan = rd16(p + o); s.frequency = f32(p + o + 2); s.priority = p[o + 6]; s.status = p[o + 7]; s.environment = int8_t(p[o + 8]); o += 9; }
+        if (n - o < 9)
+            ok = false;
+        else {
+            s.pan = rd16(p + o);
+            s.frequency = f32(p + o + 2);
+            s.priority = p[o + 6];
+            s.status = p[o + 7];
+            s.environment = int8_t(p[o + 8]);
+            o += 9;
+        }
     }
     if (ok && (s.marker & kBlock3D)) {
-        if (n - o < 16) ok = false;
-        else { s.x = f32(p + o); s.y = f32(p + o + 4); s.z = f32(p + o + 8); s.falloff = f32(p + o + 12); o += 16; }
+        if (n - o < 16)
+            ok = false;
+        else {
+            s.x = f32(p + o);
+            s.y = f32(p + o + 4);
+            s.z = f32(p + o + 8);
+            s.falloff = f32(p + o + 12);
+            o += 16;
+        }
     }
     if (ok && (s.marker & kChannelOverride)) {
-        if (n - o < 2) ok = false;
-        else { s.channelWide = rd16(p + o); o += 2; }
+        if (n - o < 2)
+            ok = false;
+        else {
+            s.channelWide = rd16(p + o);
+            o += 2;
+        }
     }
     if (ok && o != n) ok = false;
     if (!ok) {
         SoundMsg h;
-        h.resID = s.resID; h.repeat = s.repeat; h.wait = s.wait; h.channel = s.channel; h.volume = s.volume;
-        h.hasMarker = true; h.marker = s.marker; h.resolved = false;
+        h.resID = s.resID;
+        h.repeat = s.repeat;
+        h.wait = s.wait;
+        h.channel = s.channel;
+        h.volume = s.volume;
+        h.hasMarker = true;
+        h.marker = s.marker;
+        h.resolved = false;
         s = h;
     }
     return true;
@@ -70,7 +104,10 @@ Cmd toCmd(const SoundMsg& s, std::shared_ptr<const Clip> clip, const std::string
         c.frequency = s.frequency;
     }
     if (s.hasMarker && (s.marker & kBlock3D)) {
-        c.x = s.x; c.y = s.y; c.z = s.z; c.falloff = s.falloff;
+        c.x = s.x;
+        c.y = s.y;
+        c.z = s.z;
+        c.falloff = s.falloff;
         c.spatial = true;
     }
     return c;
@@ -83,7 +120,8 @@ Player::Player(const std::string& spec, int rate) : rate_(rate), mix_(rate), spe
     sink_ = openSink(spec, rate, &why, &skipped);
     sinkNote_ = why;
     sinkName_ = sink_->name();
-    note(std::to_string(rate) + " Hz stereo -> " + sinkName_ + (why.empty() ? "" : ": " + why) + (skipped.empty() ? "" : " (not used: " + skipped + ")"));
+    note(std::to_string(rate) + " Hz stereo -> " + sinkName_ + (why.empty() ? "" : ": " + why) +
+         (skipped.empty() ? "" : " (not used: " + skipped + ")"));
     decoder_ = std::thread([this] { decodeLoop(); });
     output_ = std::thread([this] { outputLoop(); });
 }
@@ -98,7 +136,7 @@ Player::~Player() {
 
 void Player::play(const SoundMsg& s, uint32_t id, Bytes bytes, std::string name) {
     std::lock_guard<std::mutex> g(jobMu_);
-    if (jobs_.size() >= 1024) return;   // a wedged decoder must not grow this without bound
+    if (jobs_.size() >= 1024) return;  // a wedged decoder must not grow this without bound
     jobs_.push_back(Job{s, id, std::move(bytes), std::move(name), false});
     jobCv_.notify_one();
 }
@@ -109,13 +147,22 @@ void Player::stop(const SoundMsg& s) {
     jobCv_.notify_one();
 }
 
-bool Player::hasClip(uint32_t id) const { std::lock_guard<std::mutex> g(cacheMu_); return clips_.count(id) != 0; }
+bool Player::hasClip(uint32_t id) const {
+    std::lock_guard<std::mutex> g(cacheMu_);
+    return clips_.count(id) != 0;
+}
 
-std::string Player::sinkName() const { std::lock_guard<std::mutex> g(sinkNameMu_); return sinkName_; }
+std::string Player::sinkName() const {
+    std::lock_guard<std::mutex> g(sinkNameMu_);
+    return sinkName_;
+}
 
 Player::Stats Player::stats() const {
     Stats s;
-    { std::lock_guard<std::mutex> g(cacheMu_); s = st_; }
+    {
+        std::lock_guard<std::mutex> g(cacheMu_);
+        s = st_;
+    }
     s.live = mix_.active();
     s.blocks = blocks_.load();
     s.peakBlocks = peak_.load();
@@ -126,16 +173,27 @@ Player::Stats Player::stats() const {
 // CPU forever, and the counters are what make the gap reportable.
 std::shared_ptr<const Clip> Player::clipFor(uint32_t id, const Bytes& b, const std::string& name, bool& refused) {
     refused = false;
-    if (auto it = clips_.find(id); it != clips_.end()) { refused = !it->second; return it->second; }
-    if (b.empty()) { st_.evicted++; refused = true; return nullptr; }   // the caller trusted a cache entry that has since gone
+    if (auto it = clips_.find(id); it != clips_.end()) {
+        refused = !it->second;
+        return it->second;
+    }
+    if (b.empty()) {
+        st_.evicted++;
+        refused = true;
+        return nullptr;
+    }  // the caller trusted a cache entry that has since gone
     std::string err;
     bool unsup = false;
     std::shared_ptr<const Clip> c = decode(ByteSpan(b.data(), b.size()), &err, &unsup);
     clips_[id] = c;
     if (!c) {
         refused = true;
-        if (unsup) { st_.undecodable++; std::string k = sniff(ByteSpan(b.data(), b.size())); st_.unsupported[k.empty() ? "unknown" : k]++; }
-        else st_.failed++;
+        if (unsup) {
+            st_.undecodable++;
+            std::string k = sniff(ByteSpan(b.data(), b.size()));
+            st_.unsupported[k.empty() ? "unknown" : k]++;
+        } else
+            st_.failed++;
         char hexId[16];
         std::snprintf(hexId, sizeof hexId, "%08x", id);
         note(std::string("res ") + hexId + (name.empty() ? "" : " (" + name + ")") + " refused: " + err);
@@ -219,18 +277,27 @@ void Player::outputLoop() {
         sinkName_ = sink_->name();
     };
     while (!quit_) {
-        if (retryAt != clk::time_point{} && clk::now() > retryAt) { retryAt = {}; reopen("scheduled retry"); }
+        if (retryAt != clk::time_point{} && clk::now() > retryAt) {
+            retryAt = {};
+            reopen("scheduled retry");
+        }
         mix_.render(buf.data(), kBlockFrames);
         bool loud = false;
-        for (float v : buf) if (v != 0.f) { loud = true; break; }
+        for (float v : buf)
+            if (v != 0.f) {
+                loud = true;
+                break;
+            }
         std::string err;
         if (!sink_->write(buf.data(), kBlockFrames, &err)) reopen(err);
         blocks_++;
         if (loud) peak_++;
         next += period;
         auto now = clk::now();
-        if (next > now) std::this_thread::sleep_for(next - now);
-        else if (now - next > std::chrono::seconds(1)) next = now;
+        if (next > now)
+            std::this_thread::sleep_for(next - now);
+        else if (now - next > std::chrono::seconds(1))
+            next = now;
     }
 }
 
@@ -238,24 +305,41 @@ void Player::outputLoop() {
 
 SoundFeed::R SoundFeed::dispatch(const SoundMsg& s, bool fresh) {
     // A STOP carries no resource and never waits for one. 0xffff on channel 0 stops everything.
-    if (s.isStop()) { p_.stop(s); return R::Ok; }
+    if (s.isStop()) {
+        p_.stop(s);
+        return R::Ok;
+    }
     uint32_t id = 0;
-    if (!env_.resolve(s.resID, id)) return R::Wait;   // re-resolved on every retry: the 0x000e list may still be growing
-    if (p_.hasClip(id)) { p_.play(s, id, {}, {}); return R::Ok; }
-    if (!env_.held(id)) { if (fresh) wanted_.push_back(id); return R::Wait; }
+    if (!env_.resolve(s.resID, id)) return R::Wait;  // re-resolved on every retry: the 0x000e list may still be growing
+    if (p_.hasClip(id)) {
+        p_.play(s, id, {}, {});
+        return R::Ok;
+    }
+    if (!env_.held(id)) {
+        if (fresh) wanted_.push_back(id);
+        return R::Wait;
+    }
     Bytes b;
     std::string name;
-    if (!env_.read(id, b, name)) return R::Wait;   // failed verification: the pump has re-declared it
+    if (!env_.read(id, b, name)) return R::Wait;  // failed verification: the pump has re-declared it
     p_.play(s, id, std::move(b), std::move(name));
     return R::Ok;
 }
 
 void SoundFeed::onFrame(ByteSpan body, int64_t nowMs) {
     SoundMsg s;
-    if (!parseSound(body, s)) { malformed_++; return; }
+    if (!parseSound(body, s)) {
+        malformed_++;
+        return;
+    }
     if (dispatch(s, true) == R::Wait) {
-        if (pending_.size() < kPendingCap) pending_.push_back({s, nowMs + kPendingTtlMs});
-        else { expired_++; note("play on channel " + std::to_string(s.channelId()) + " dropped: " + std::to_string(kPendingCap) + " plays already wait for their files"); }
+        if (pending_.size() < kPendingCap)
+            pending_.push_back({s, nowMs + kPendingTtlMs});
+        else {
+            expired_++;
+            note("play on channel " + std::to_string(s.channelId()) + " dropped: " + std::to_string(kPendingCap) +
+                 " plays already wait for their files");
+        }
     }
 }
 
@@ -268,10 +352,12 @@ void SoundFeed::pump(int64_t nowMs) {
             expired_++;
             uint32_t id = 0;
             char what[64];
-            if (env_.resolve(p.s.resID, id)) std::snprintf(what, sizeof what, "res %08x", id);
-            else std::snprintf(what, sizeof what, "resource ordinal %u (not in the resource list)", p.s.resID);
-            note(std::string("play on channel ") + std::to_string(p.s.channelId()) + " dropped: " + what + " did not arrive within " +
-                 std::to_string(kPendingTtlMs / 1000) + " s");
+            if (env_.resolve(p.s.resID, id))
+                std::snprintf(what, sizeof what, "res %08x", id);
+            else
+                std::snprintf(what, sizeof what, "resource ordinal %u (not in the resource list)", p.s.resID);
+            note(std::string("play on channel ") + std::to_string(p.s.channelId()) + " dropped: " + what +
+                 " did not arrive within " + std::to_string(kPendingTtlMs / 1000) + " s");
             continue;
         }
         keep.push_back(p);

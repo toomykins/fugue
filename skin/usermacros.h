@@ -41,13 +41,13 @@ const MacroEntry* lookupLayered(const MacroSet* skin, const MacroSet& game, cons
                                 bool repeat);
 HeldMatch matchLayered(const MacroSet* skin, const MacroSet& game, const MacroSet& global, const MacroKey& k);
 // The same for the Any macro that answers the key (MacroSet::findAny); it fires before the key's own.
-const MacroEntry* lookupLayeredAny(const MacroSet* skin, const MacroSet& game, const MacroSet& global, const MacroKey& k,
-                                   bool repeat);
+const MacroEntry* lookupLayeredAny(const MacroSet* skin, const MacroSet& game, const MacroSet& global,
+                                   const MacroKey& k, bool repeat);
 
 // Storage paths under the client's state dir. worldKey "" = the global list.
 std::string userMacrosPath(const std::string& stateDir, const std::string& worldKey);
-std::string worldKeyFor(const std::string& host, int port);   // "127.0.0.1_45000" (filesystem-safe)
-MacroSet loadUserMacros(const std::string& path);              // missing file = empty set
-bool saveUserMacros(const std::string& path, const MacroSet& s, std::string* err = nullptr);   // creates directories
+std::string worldKeyFor(const std::string& host, int port);  // "127.0.0.1_45000" (filesystem-safe)
+MacroSet loadUserMacros(const std::string& path);            // missing file = empty set
+bool saveUserMacros(const std::string& path, const MacroSet& s, std::string* err = nullptr);  // creates directories
 
 }  // namespace fugue::skin

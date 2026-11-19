@@ -22,7 +22,9 @@ QPixmap drawHome(int px) {
     aa(g);
     const qreal s = px / 16.0;
     QPainterPath roof;
-    roof.moveTo(1 * s, 8 * s); roof.lineTo(8 * s, 1.5 * s); roof.lineTo(15 * s, 8 * s);
+    roof.moveTo(1 * s, 8 * s);
+    roof.lineTo(8 * s, 1.5 * s);
+    roof.lineTo(15 * s, 8 * s);
     g.setPen(QPen(Qt::white, 1.8 * s, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
     g.drawPath(roof);
     g.setPen(Qt::NoPen);
@@ -41,7 +43,10 @@ QPixmap drawGear(int px) {
     for (int i = 0; i < 16; i++) {
         qreal a = i * M_PI / 8, r = (i % 2 == 0) ? ro : ri;
         QPointF pt(c + r * qCos(a), c + r * qSin(a));
-        if (i == 0) path.moveTo(pt); else path.lineTo(pt);
+        if (i == 0)
+            path.moveTo(pt);
+        else
+            path.lineTo(pt);
     }
     path.closeSubpath();
     path.addEllipse(QPointF(c, c), px * 0.14, px * 0.14);
@@ -72,7 +77,7 @@ QPixmap drawDetails(int px) {
     }
     return p;
 }
-QPixmap drawGames(int px) {   // a joystick
+QPixmap drawGames(int px) {  // a joystick
     QPixmap p = canvas(px);
     QPainter g(&p);
     aa(g);
@@ -111,7 +116,11 @@ QPixmap gameIcon(const QString& name, int px) {
     g.setBrush(grad);
     g.drawRoundedRect(QRectF(0.5, 0.5, px - 1, px - 1), px * 0.22, px * 0.22);
     QString letter;
-    for (QChar ch : name) if (ch.isLetterOrNumber()) { letter = ch.toUpper(); break; }
+    for (QChar ch : name)
+        if (ch.isLetterOrNumber()) {
+            letter = ch.toUpper();
+            break;
+        }
     QFont f = g.font();
     f.setBold(true);
     f.setPixelSize(int(px * 0.68));
@@ -167,7 +176,7 @@ QPixmap avatar(int px) {
     return p;
 }
 
-QPixmap find(int px) {   // a magnifier over a star
+QPixmap find(int px) {  // a magnifier over a star
     QPixmap p = canvas(px);
     QPainter g(&p);
     aa(g);
@@ -179,7 +188,7 @@ QPixmap find(int px) {   // a magnifier over a star
     return p;
 }
 
-QPixmap recent(int px) {   // a clock face
+QPixmap recent(int px) {  // a clock face
     QPixmap p = canvas(px);
     QPainter g(&p);
     aa(g);

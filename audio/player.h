@@ -30,8 +30,7 @@
 
 namespace fugue::audio {
 
-constexpr int kAudioRate = 44100;   // every clip is resampled anyway (sound.frequency); 44.1 kHz needs no negotiation
-constexpr uint32_t kSoundMsg = 0x006d;
+constexpr int kAudioRate = 44100;  // every clip is resampled anyway (sound.frequency); 44.1 kHz needs no negotiation
 constexpr uint8_t kPanBlock = 0x01, kBlock3D = 0x02, kChannelOverride = 0x10;
 
 // One 0x006d frame as typed fields. A frame whose marker block this model cannot account for keeps its head fields only
@@ -68,7 +67,7 @@ public:
     // Thread-safe. `bytes` may be empty when hasClip(id) said the clip is already decoded.
     void play(const SoundMsg& s, uint32_t id, Bytes bytes, std::string name);
     void stop(const SoundMsg& s);
-    bool hasClip(uint32_t id) const;   // decoded (or known-undecodable) - the caller can skip reading the bytes
+    bool hasClip(uint32_t id) const;  // decoded (or known-undecodable) - the caller can skip reading the bytes
 
     std::string sinkName() const;
     const std::string& sinkNote() const { return sinkNote_; }
@@ -76,13 +75,20 @@ public:
         int played = 0, stops = 0, undecodable = 0, failed = 0, evicted = 0;
         std::map<std::string, int> byFormat, unsupported;
         size_t live = 0;
-        uint64_t blocks = 0, peakBlocks = 0;   // blocks written; blocks whose mix was non-silent (proof PCM reached the sink)
+        uint64_t blocks = 0,
+                 peakBlocks = 0;  // blocks written; blocks whose mix was non-silent (proof PCM reached the sink)
     };
     Stats stats() const;
     Mixer& mixer() { return mix_; }
 
 private:
-    struct Job { SoundMsg msg; uint32_t id = 0; Bytes bytes; std::string name; bool stop = false; };
+    struct Job {
+        SoundMsg msg;
+        uint32_t id = 0;
+        Bytes bytes;
+        std::string name;
+        bool stop = false;
+    };
     void decodeLoop();
     void outputLoop();
     std::shared_ptr<const Clip> clipFor(uint32_t id, const Bytes& b, const std::string& name, bool& refused);
@@ -99,10 +105,10 @@ private:
     std::deque<Job> jobs_;
 
     mutable std::mutex cacheMu_;
-    std::map<uint32_t, std::shared_ptr<const Clip>> clips_;   // id -> decoded; nullptr = negative-cached (refused)
+    std::map<uint32_t, std::shared_ptr<const Clip>> clips_;  // id -> decoded; nullptr = negative-cached (refused)
     std::deque<uint32_t> order_;
     size_t cacheBytes_ = 0;
-    Stats st_;   // guarded by cacheMu_ (blocks/peakBlocks by the atomics below)
+    Stats st_;  // guarded by cacheMu_ (blocks/peakBlocks by the atomics below)
 
     std::atomic<uint64_t> blocks_{0}, peak_{0};
     std::atomic<bool> quit_{false};
@@ -113,9 +119,9 @@ private:
 class SoundFeed {
 public:
     struct Env {
-        std::function<bool(uint32_t ordinal, uint32_t& id)> resolve;          // the 0x000e list, as it stands NOW
-        std::function<bool(uint32_t id)> held;                                // bytes are stored (readable)
-        std::function<bool(uint32_t id, Bytes& b, std::string& name)> read;   // read them
+        std::function<bool(uint32_t ordinal, uint32_t& id)> resolve;         // the 0x000e list, as it stands NOW
+        std::function<bool(uint32_t id)> held;                               // bytes are stored (readable)
+        std::function<bool(uint32_t id, Bytes& b, std::string& name)> read;  // read them
     };
     // How long a play waits for its bytes. A stop does not cancel a play still waiting for its file; the TTL is the
     // backstop that keeps a file that never comes from holding a pending slot (kPendingCap) for the whole session.
@@ -123,17 +129,25 @@ public:
     static constexpr size_t kPendingCap = 128;
     SoundFeed(Player& p, Env env) : p_(p), env_(std::move(env)) {}
     void onFrame(ByteSpan body, int64_t nowMs);
-    void pump(int64_t nowMs);   // retry the pending list; cheap when it is empty
+    void pump(int64_t nowMs);  // retry the pending list; cheap when it is empty
     size_t pending() const { return pending_.size(); }
     // Resources a new play is waiting for. They move to the front of the declaration queue (ResourcePump::prioritize),
     // since the pump otherwise declares the whole list in order.
-    std::vector<uint32_t> takeWanted() { std::vector<uint32_t> v; v.swap(wanted_); return v; }
+    std::vector<uint32_t> takeWanted() {
+        std::vector<uint32_t> v;
+        v.swap(wanted_);
+        return v;
+    }
     int expired() const { return expired_; }
     int malformed() const { return malformed_; }
+
 private:
     enum class R { Ok, Wait };
     R dispatch(const SoundMsg& s, bool fresh);
-    struct Pending { SoundMsg s; int64_t deadline; };
+    struct Pending {
+        SoundMsg s;
+        int64_t deadline;
+    };
     Player& p_;
     Env env_;
     std::vector<Pending> pending_;

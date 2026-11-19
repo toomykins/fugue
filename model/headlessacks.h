@@ -6,8 +6,8 @@
 //   navshim   : a machine browse page (asset_cache_browser, tooltip*) is a script that navigates to a literal
 //               `byond://?...` URL. The Topic that navigation produces releases a server loop.
 //
-// The headless client applies both (collect). The GUI shell uses only navAck, for machine pages it never hosts
-// (shell/browsehost.cpp). Its web pages perform the goonchat handshake themselves, so posting it here too would
+// The headless client applies both (collect). The GUI shell uses only navAck, for the machine pages it never hosts
+// (hostlessBrowser, shell/browsehost.cpp). Its web pages perform the goonchat handshake themselves, so posting it here too would
 // double-post.
 #pragma once
 #include <map>
@@ -18,8 +18,11 @@
 
 namespace fugue::model {
 
-// asset_cache_browser and tooltip* windows.
+// asset_cache_browser and tooltip* windows: the pages the headless client answers for.
 bool machineBrowser(const std::string& window);
+// The machine pages the GUI shell answers and never hosts: asset_cache_browser only. A tooltip* page is a real page
+// (vg's tooltip.js draws the tooltip in the browser control the world created for it).
+bool hostlessBrowser(const std::string& window);
 
 // The literal destination an unconditional inline-script navigation asks for, or nullopt.
 std::optional<std::string> navShimHref(const std::string& html);

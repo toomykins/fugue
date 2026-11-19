@@ -17,9 +17,9 @@
 
 namespace fugue::account {
 
-std::optional<std::string> homeDir();       // $HOME, or %USERPROFILE% on Windows when HOME is absent
-std::string fugueDir(std::string* err = nullptr);   // ~/.fugue
-std::string qtStateDir();                   // ~/.fugue/qt  (C++-only state)
+std::optional<std::string> homeDir();              // $HOME, or %USERPROFILE% on Windows when HOME is absent
+std::string fugueDir(std::string* err = nullptr);  // ~/.fugue
+std::string qtStateDir();                          // ~/.fugue/qt  (C++-only state)
 
 // Atomic 0600 write (temp file in the same dir, fsync, rename); creates missing parent dirs 0700.
 bool atomicWrite(const std::string& path, const std::string& data, std::string* err = nullptr);
@@ -33,13 +33,13 @@ struct Account {
 std::string identityPath(const std::string& account, std::string* err = nullptr);
 bool saveAccount(const std::string& account, const Account& a, std::string* err = nullptr);
 std::optional<Account> loadAccount(const std::string& account, std::string* err = nullptr);
-std::string formatIdentityFile(const Account& a);   // install_id / inner_key written as 0x + 8 digits (0x%08x)
+std::string formatIdentityFile(const Account& a);  // install_id / inner_key written as 0x + 8 digits (0x%08x)
 
 // ---- sid files ----
-std::optional<std::string> byondConfigSid();                          // borrow from ~/.byond/cfg/byond.txt etc.
-std::optional<std::string> pagerSid(std::string* err = nullptr);      // byond-sid
-std::string installSidPath();                                         // XDG_STATE_HOME/fugue/sid else ~/.fugue/sid
-std::optional<std::string> installSid(std::string* err = nullptr);    // read-or-create the machine-identity seed
+std::optional<std::string> byondConfigSid();                        // borrow from ~/.byond/cfg/byond.txt etc.
+std::optional<std::string> pagerSid(std::string* err = nullptr);    // byond-sid
+std::string installSidPath();                                       // XDG_STATE_HOME/fugue/sid else ~/.fugue/sid
+std::optional<std::string> installSid(std::string* err = nullptr);  // read-or-create the machine-identity seed
 
 // ---- pager.json ----
 struct Timestamp {
@@ -50,21 +50,21 @@ struct Timestamp {
     static Timestamp now();
 };
 std::optional<Timestamp> parseRfc3339(const std::string& s);
-std::string formatRfc3339(const Timestamp& t);   // UTC, fraction trimmed
+std::string formatRfc3339(const Timestamp& t);  // UTC, fraction trimmed
 
 struct Server {
     std::string name, addr;
     bool hub = false;
     std::vector<std::string> flags;
     Timestamp lastPlayed, lastPrefetch;
-    QJsonObject extra;   // keys this build does not know: carried through a save
+    QJsonObject extra;  // keys this build does not know: carried through a save
 };
 struct Config {
     std::string account, keytxt, client;
     std::vector<Server> servers;
-    QJsonObject extra;   // unknown top-level keys
+    QJsonObject extra;  // unknown top-level keys
 
-    int find(const std::string& addr) const;       // case-insensitive, -1 if absent
+    int find(const std::string& addr) const;  // case-insensitive, -1 if absent
     void remember(Server s);
     void markPrefetched(Server s);
     void clearPrefetched();
@@ -80,7 +80,8 @@ std::string serializeConfig(const Config& c);
 // ---- key.txt discovery ----
 std::vector<std::string> keyTxtCandidates(const std::string& explicitPath);
 // Prefers a file holding a block for `account` (case-insensitive); else the first existing; else error naming every path tried.
-std::optional<std::string> resolveKeyTxt(const std::string& explicitPath, const std::string& account, std::string* err = nullptr);
+std::optional<std::string> resolveKeyTxt(const std::string& explicitPath, const std::string& account,
+                                         std::string* err = nullptr);
 std::string keyTxtWithBlock(const std::string& existing, const std::string& block);
 
 }  // namespace fugue::account

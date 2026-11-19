@@ -23,15 +23,26 @@ constexpr int kCssBase = 7;
 
 bool isUniSpace(char32_t r) {
     switch (r) {
-    case '\t': case '\n': case '\v': case '\f': case '\r': case ' ': case 0x85: case 0xA0: case 0x1680:
-    case 0x2028: case 0x2029: case 0x202f: case 0x205f: case 0x3000:
-        return true;
+        case '\t':
+        case '\n':
+        case '\v':
+        case '\f':
+        case '\r':
+        case ' ':
+        case 0x85:
+        case 0xA0:
+        case 0x1680:
+        case 0x2028:
+        case 0x2029:
+        case 0x202f:
+        case 0x205f:
+        case 0x3000: return true;
     }
     return r >= 0x2000 && r <= 0x200a;
 }
 bool isSpaceByte(char c) { return c == ' ' || c == '\t' || c == '\r' || c == '\n'; }
 
-DecodedRune decodeLastRune(string_view s, size_t end) {   // The rune that ends just before offset `end`.
+DecodedRune decodeLastRune(string_view s, size_t end) {  // The rune that ends just before offset `end`.
     if (end == 0) return {0xFFFD, 0};
     long start = long(end) - 1;
     if (static_cast<unsigned char>(s[size_t(start)]) < 0x80) return {static_cast<unsigned char>(s[size_t(start)]), 1};
@@ -66,8 +77,12 @@ std::vector<string_view> fields(string_view s) {
     while (i < s.size()) {
         DecodedRune d = decodeRune(s, i);
         if (isUniSpace(d.r)) {
-            if (startF != string_view::npos) { out.push_back(s.substr(startF, i - startF)); startF = string_view::npos; }
-        } else if (startF == string_view::npos) startF = i;
+            if (startF != string_view::npos) {
+                out.push_back(s.substr(startF, i - startF));
+                startF = string_view::npos;
+            }
+        } else if (startF == string_view::npos)
+            startF = i;
         i += size_t(d.size);
     }
     if (startF != string_view::npos) out.push_back(s.substr(startF));
@@ -79,11 +94,18 @@ string toLower(string_view s) {
     o.reserve(s.size());
     for (size_t i = 0; i < s.size();) {
         unsigned char c = static_cast<unsigned char>(s[i]);
-        if (c < 0x80) { o.push_back((c >= 'A' && c <= 'Z') ? char(c + 32) : char(c)); i++; continue; }
+        if (c < 0x80) {
+            o.push_back((c >= 'A' && c <= 'Z') ? char(c + 32) : char(c));
+            i++;
+            continue;
+        }
         DecodedRune d = decodeRune(s, i);
-        if (d.r == 0x212A && d.size == 3) o.push_back('k');
-        else if (d.r == 0x130 && d.size == 2) o.push_back('i');
-        else o.append(s.substr(i, size_t(d.size)));
+        if (d.r == 0x212A && d.size == 3)
+            o.push_back('k');
+        else if (d.r == 0x130 && d.size == 2)
+            o.push_back('i');
+        else
+            o.append(s.substr(i, size_t(d.size)));
         i += size_t(d.size);
     }
     return o;
@@ -102,7 +124,10 @@ bool goAtoi(string_view s, int64_t& out) {
     if (s.empty()) return false;
     size_t i = 0;
     bool neg = false;
-    if (s[0] == '+' || s[0] == '-') { neg = s[0] == '-'; i = 1; }
+    if (s[0] == '+' || s[0] == '-') {
+        neg = s[0] == '-';
+        i = 1;
+    }
     if (i == s.size()) return false;
     uint64_t v = 0;
     const uint64_t limit = uint64_t(INT64_MAX) + unsigned(neg);
@@ -126,23 +151,37 @@ int64_t goInt(double x) {
 bool goParseFloat(string_view s, double& out) {
     size_t i = 0;
     bool neg = false;
-    if (i < s.size() && (s[i] == '+' || s[i] == '-')) { neg = s[i] == '-'; i++; }
+    if (i < s.size() && (s[i] == '+' || s[i] == '-')) {
+        neg = s[i] == '-';
+        i++;
+    }
     size_t digits = 0, dots = 0;
     string body;
     for (; i < s.size(); i++) {
-        if (s[i] >= '0' && s[i] <= '9') { digits++; body.push_back(s[i]); }
-        else if (s[i] == '.' && dots == 0) { dots++; body.push_back('.'); }
-        else return false;
+        if (s[i] >= '0' && s[i] <= '9') {
+            digits++;
+            body.push_back(s[i]);
+        } else if (s[i] == '.' && dots == 0) {
+            dots++;
+            body.push_back('.');
+        } else
+            return false;
     }
     if (digits == 0) return false;
-    if (body.back() == '.') body.pop_back();          // "5." is legal
+    if (body.back() == '.') body.pop_back();  // "5." is legal
     if (body.front() == '.') body.insert(body.begin(), '0');
     double v = 0;
     auto r = parseDouble(body.data(), body.data() + body.size(), v);
     if (r.ec == std::errc::result_out_of_range) {
         // overflow (a nonzero integer part) is a range error; underflow reads as a tiny positive.
         bool bigInt = false;
-        for (char c : body) { if (c == '.') break; if (c != '0') { bigInt = true; break; } }
+        for (char c : body) {
+            if (c == '.') break;
+            if (c != '0') {
+                bigInt = true;
+                break;
+            }
+        }
         if (bigInt) return false;
         v = 4.9e-324;
     } else if (r.ec != std::errc() || r.ptr != body.data() + body.size()) {
@@ -156,54 +195,95 @@ bool goParseFloat(string_view s, double& out) {
 
 void appendRune(string& o, char32_t r) {
     if (r > 0x10FFFF || (r >= 0xD800 && r < 0xE000)) r = 0xFFFD;
-    if (r < 0x80) o.push_back(char(r));
-    else if (r < 0x800) { o.push_back(char(0xC0 | (r >> 6))); o.push_back(char(0x80 | (r & 0x3F))); }
-    else if (r < 0x10000) { o.push_back(char(0xE0 | (r >> 12))); o.push_back(char(0x80 | ((r >> 6) & 0x3F))); o.push_back(char(0x80 | (r & 0x3F))); }
-    else { o.push_back(char(0xF0 | (r >> 18))); o.push_back(char(0x80 | ((r >> 12) & 0x3F))); o.push_back(char(0x80 | ((r >> 6) & 0x3F))); o.push_back(char(0x80 | (r & 0x3F))); }
+    if (r < 0x80)
+        o.push_back(char(r));
+    else if (r < 0x800) {
+        o.push_back(char(0xC0 | (r >> 6)));
+        o.push_back(char(0x80 | (r & 0x3F)));
+    } else if (r < 0x10000) {
+        o.push_back(char(0xE0 | (r >> 12)));
+        o.push_back(char(0x80 | ((r >> 6) & 0x3F)));
+        o.push_back(char(0x80 | (r & 0x3F)));
+    } else {
+        o.push_back(char(0xF0 | (r >> 18)));
+        o.push_back(char(0x80 | ((r >> 12) & 0x3F)));
+        o.push_back(char(0x80 | ((r >> 6) & 0x3F)));
+        o.push_back(char(0x80 | (r & 0x3F)));
+    }
 }
 
 string decodeEntities(string_view s) {
     if (s.find('&') == string_view::npos) return string(s);
     string b;
     for (size_t i = 0; i < s.size();) {
-        if (s[i] != '&') { b.push_back(s[i]); i++; continue; }
+        if (s[i] != '&') {
+            b.push_back(s[i]);
+            i++;
+            continue;
+        }
         size_t semi = s.find(';', i);
-        if (semi == string_view::npos || semi - i > 10) { b.push_back(s[i]); i++; continue; }
+        if (semi == string_view::npos || semi - i > 10) {
+            b.push_back(s[i]);
+            i++;
+            continue;
+        }
         size_t rel = semi - i;
         string_view ent = s.substr(i + 1, rel - 1);
         string low = toLower(ent);
         bool done = true;
-        if (low == "nbsp") b.push_back(' ');
-        else if (low == "amp") b.push_back('&');
-        else if (low == "lt") b.push_back('<');
-        else if (low == "gt") b.push_back('>');
-        else if (low == "quot") b.push_back('"');
-        else if (low == "apos") b.push_back('\'');
-        else done = false;
+        if (low == "nbsp")
+            b.push_back(' ');
+        else if (low == "amp")
+            b.push_back('&');
+        else if (low == "lt")
+            b.push_back('<');
+        else if (low == "gt")
+            b.push_back('>');
+        else if (low == "quot")
+            b.push_back('"');
+        else if (low == "apos")
+            b.push_back('\'');
+        else
+            done = false;
         if (!done) {
             bool ok = false;
             if (!ent.empty() && ent[0] == '#') {
                 string_view num = ent.substr(1);
                 int base = 10;
-                if (!num.empty() && (num[0] == 'x' || num[0] == 'X')) { num = num.substr(1); base = 16; }
+                if (!num.empty() && (num[0] == 'x' || num[0] == 'X')) {
+                    num = num.substr(1);
+                    base = 16;
+                }
                 // Optional sign, at least one digit of the base, 32-bit range.
                 size_t k = 0;
                 bool neg = false;
-                if (k < num.size() && (num[k] == '+' || num[k] == '-')) { neg = num[k] == '-'; k++; }
+                if (k < num.size() && (num[k] == '+' || num[k] == '-')) {
+                    neg = num[k] == '-';
+                    k++;
+                }
                 if (k < num.size()) {
                     int64_t n = 0;
                     bool good = true;
                     for (; k < num.size(); k++) {
                         int d = -1;
                         char c = num[k];
-                        if (c >= '0' && c <= '9') d = c - '0';
-                        else if (base == 16 && c >= 'a' && c <= 'f') d = c - 'a' + 10;
-                        else if (base == 16 && c >= 'A' && c <= 'F') d = c - 'A' + 10;
-                        if (d < 0) { good = false; break; }
-                        n = n * base + d;   // <= 9 chars: cannot overflow int64
+                        if (c >= '0' && c <= '9')
+                            d = c - '0';
+                        else if (base == 16 && c >= 'a' && c <= 'f')
+                            d = c - 'a' + 10;
+                        else if (base == 16 && c >= 'A' && c <= 'F')
+                            d = c - 'A' + 10;
+                        if (d < 0) {
+                            good = false;
+                            break;
+                        }
+                        n = n * base + d;  // <= 9 chars: cannot overflow int64
                     }
                     if (neg) n = -n;
-                    if (good && n > 0 && n < 0x110000) { appendRune(b, char32_t(n)); ok = true; }
+                    if (good && n > 0 && n < 0x110000) {
+                        appendRune(b, char32_t(n));
+                        ok = true;
+                    }
                 }
             }
             if (!ok) b.append(s.substr(i, rel + 1));
@@ -235,8 +315,10 @@ int sizeFromCSS(double cssPx) { return clampSize(goInt(cssPx * kBaseSize / kCssB
 
 bool cssIsBold(string_view v0) {
     string v = toLower(trimSpace(v0));
-    for (const char* k : {"bold", "bolder", "700", "800", "900", "600"}) if (v == k) return true;
-    for (const char* k : {"normal", "lighter", "100", "200", "300", "400", "500"}) if (v == k) return false;
+    for (const char* k : {"bold", "bolder", "700", "800", "900", "600"})
+        if (v == k) return true;
+    for (const char* k : {"normal", "lighter", "100", "200", "300", "400", "500"})
+        if (v == k) return false;
     int64_t n;
     if (goAtoi(v, n)) return n >= 600;
     return false;
@@ -281,8 +363,10 @@ void applyProps(Style& s, const Props& props) {
             s.bold = cssIsBold(v);
         } else if (k == "font-style") {
             string t = toLower(trimSpace(v));
-            if (t == "italic" || t == "oblique") s.italic = true;
-            else if (t == "normal") s.italic = false;
+            if (t == "italic" || t == "oblique")
+                s.italic = true;
+            else if (t == "normal")
+                s.italic = false;
         }
         // colour, text-align, outline and font-family never change a measurement.
     }
@@ -337,7 +421,10 @@ struct Tag {
 Tag splitTag(string_view tag) {
     Tag t;
     tag = trimSpace(trimSuffix(trimSpace(tag), "/"));
-    if (!tag.empty() && tag[0] == '/') { t.closing = true; tag = tag.substr(1); }
+    if (!tag.empty() && tag[0] == '/') {
+        t.closing = true;
+        tag = tag.substr(1);
+    }
     size_t i = 0;
     while (i < tag.size() && !isSpaceByte(tag[i])) i++;
     t.name = toLower(tag.substr(0, i));
@@ -358,12 +445,22 @@ Tag splitTag(string_view tag) {
         if (!rest.empty() && (rest[0] == '\'' || rest[0] == '"')) {
             char q = rest[0];
             size_t end = rest.substr(1).find(q);
-            if (end == string_view::npos) { val = rest.substr(1); rest = {}; }
-            else { val = rest.substr(1, end); rest = rest.substr(end + 2); }
+            if (end == string_view::npos) {
+                val = rest.substr(1);
+                rest = {};
+            } else {
+                val = rest.substr(1, end);
+                rest = rest.substr(end + 2);
+            }
         } else {
             size_t end = rest.find_first_of(" \t\r\n");
-            if (end == string_view::npos) { val = rest; rest = {}; }
-            else { val = rest.substr(0, end); rest = rest.substr(end); }
+            if (end == string_view::npos) {
+                val = rest;
+                rest = {};
+            } else {
+                val = rest.substr(0, end);
+                rest = rest.substr(end);
+            }
         }
         t.attrs[key] = decodeEntities(val);
     }
@@ -428,15 +525,23 @@ std::vector<string> splitKeepSpaces(string_view s) {
     bool inSpace = false;
     for (size_t i = 0; i < s.size(); i++) {
         bool sp = isSpaceByte(s[i]);
-        if (i == 0) { inSpace = sp; continue; }
-        if (sp != inSpace) { out.emplace_back(s.substr(start, i - start)); start = i; inSpace = sp; }
+        if (i == 0) {
+            inSpace = sp;
+            continue;
+        }
+        if (sp != inSpace) {
+            out.emplace_back(s.substr(start, i - start));
+            start = i;
+            inSpace = sp;
+        }
     }
     if (start < s.size()) out.emplace_back(s.substr(start));
     return out;
 }
 
 bool oneOf(const string& n, std::initializer_list<const char*> l) {
-    for (const char* k : l) if (n == k) return true;
+    for (const char* k : l)
+        if (n == k) return true;
     return false;
 }
 
@@ -449,15 +554,23 @@ std::vector<Token> parseMaptext(string_view markup, const Sheet& sheet, const St
             toks.push_back({part, stack.back(), false, trimSpace(part).empty()});
         }
     };
-    auto pop = [&] { if (stack.size() > 1) stack.pop_back(); };
+    auto pop = [&] {
+        if (stack.size() > 1) stack.pop_back();
+    };
     size_t i = 0;
     while (i < markup.size()) {
         size_t lt = markup.find('<', i);
-        if (lt == string_view::npos) { emitText(decodeEntities(markup.substr(i))); break; }
+        if (lt == string_view::npos) {
+            emitText(decodeEntities(markup.substr(i)));
+            break;
+        }
         if (lt > i) emitText(decodeEntities(markup.substr(i, lt - i)));
         i = lt;
         size_t gt = markup.find('>', i);
-        if (gt == string_view::npos) { emitText(decodeEntities(markup.substr(i))); break; }
+        if (gt == string_view::npos) {
+            emitText(decodeEntities(markup.substr(i)));
+            break;
+        }
         string_view tagText = markup.substr(i + 1, gt - i - 1);
         i = gt + 1;
         Tag t = splitTag(tagText);
@@ -475,15 +588,23 @@ std::vector<Token> parseMaptext(string_view markup, const Sheet& sheet, const St
             }
         } else if (name == "img" || name == "beep") {
             // dropped
-        } else if (oneOf(name, {"span", "font", "a", "b", "i", "u", "em", "strong", "small", "big", "center", "tt", "code",
-                                "s", "cite", "var", "kbd", "samp", "dfn", "acronym", "pre"})) {
-            if (t.closing) { pop(); continue; }
+        } else if (oneOf(name, {"span", "font", "a", "b",    "i",   "u",   "em",   "strong", "small",   "big", "center",
+                                "tt",   "code", "s", "cite", "var", "kbd", "samp", "dfn",    "acronym", "pre"})) {
+            if (t.closing) {
+                pop();
+                continue;
+            }
             Style st = stack.back();
-            if (name == "b" || name == "strong") st.bold = true;
-            else if (oneOf(name, {"i", "em", "cite", "var", "dfn"})) st.italic = true;
-            else if (name == "small") { if (auto px = parseCSSFontSize("smaller", st.size)) st.size = *px; }
-            else if (name == "big") { if (auto px = parseCSSFontSize("larger", st.size)) st.size = *px; }
-            else if (oneOf(name, {"tt", "code", "kbd", "samp", "pre"})) st.mono = true;
+            if (name == "b" || name == "strong")
+                st.bold = true;
+            else if (oneOf(name, {"i", "em", "cite", "var", "dfn"}))
+                st.italic = true;
+            else if (name == "small") {
+                if (auto px = parseCSSFontSize("smaller", st.size)) st.size = *px;
+            } else if (name == "big") {
+                if (auto px = parseCSSFontSize("larger", st.size)) st.size = *px;
+            } else if (oneOf(name, {"tt", "code", "kbd", "samp", "pre"}))
+                st.mono = true;
             applyTagStyle(st, t.attrs, sheet);
             stack.push_back(st);
         }
@@ -494,13 +615,13 @@ std::vector<Token> parseMaptext(string_view markup, const Sheet& sheet, const St
 // ---- layout (reduced to the measured numbers) ---------------------------------------------------------------
 
 MaptextMeasure layoutMeasure(string_view markup, const Sheet& sheet, int width) {
-    const Style base;   // default style: size 11, raster
+    const Style base;  // default style: size 11, raster
     std::vector<Token> toks = parseMaptext(markup, sheet, base);
     const GoFace& baseFace = faceOf(base);
 
     MaptextMeasure lay;
     bool anyLine = false;
-    bool hasRuns = false;    // line has at least one run
+    bool hasRuns = false;  // line has at least one run
     int lineW = 0;
     bool pendingSpace = false;
     Style pendingStyle;
@@ -525,9 +646,15 @@ MaptextMeasure layoutMeasure(string_view markup, const Sheet& sheet, int width) 
     };
 
     for (const Token& t : toks) {
-        if (t.brk) { flush(); continue; }
+        if (t.brk) {
+            flush();
+            continue;
+        }
         if (t.space) {
-            if (hasRuns) { pendingSpace = true; pendingStyle = t.style; }
+            if (hasRuns) {
+                pendingSpace = true;
+                pendingStyle = t.style;
+            }
             continue;
         }
         const GoFace& face = faceOf(t.style);
@@ -543,7 +670,7 @@ MaptextMeasure layoutMeasure(string_view markup, const Sheet& sheet, int width) 
             string_view rest = t.text;
             while (face.width(rest) > width) {
                 string_view cut = face.clip(rest, width);
-                if (cut.empty()) cut = rest.substr(0, 1);   // one byte, so the cut can split a multi-byte rune
+                if (cut.empty()) cut = rest.substr(0, 1);  // one byte, so the cut can split a multi-byte rune
                 add(cut, t.style);
                 flush();
                 rest = rest.substr(cut.size());
@@ -569,30 +696,13 @@ MeasureTextAnswer measureTextAnswer(string_view text, string_view style, uint16_
     return {uint16_t(m.width), uint16_t(m.height)};
 }
 
-std::optional<MeasureTextRequest> decodeMeasureTextRequest(const uint8_t* b, size_t n) {
-    // cstr(): the bytes up to the first NUL and the count consumed (0 = unterminated).
-    auto cstr = [&](size_t from, string& out) -> size_t {
-        for (size_t i = from; i < n; i++)
-            if (b[i] == 0) { out.assign(reinterpret_cast<const char*>(b) + from, i - from); return i - from + 1; }
-        out.clear();
-        return 0;
-    };
-    MeasureTextRequest r;
-    size_t c1 = cstr(0, r.text);
-    if (c1 == 0) return std::nullopt;
-    size_t c2 = cstr(c1, r.style);
-    size_t p = c1 + c2;
-    if (n - p != 6) return std::nullopt;
-    r.width = uint16_t(b[p] | (b[p + 1] << 8));
-    r.id = uint32_t(b[p + 2]) | (uint32_t(b[p + 3]) << 8) | (uint32_t(b[p + 4]) << 16) | (uint32_t(b[p + 5]) << 24);
-    return r;
-}
-
 string measureTextReplyBody(const MeasureTextRequest& req) {
     MeasureTextAnswer a = measureTextAnswer(req.text, req.style, req.width);
     string o(8, '\0');
-    o[0] = char(a.width & 0xff);  o[1] = char(a.width >> 8);
-    o[2] = char(a.height & 0xff); o[3] = char(a.height >> 8);
+    o[0] = char(a.width & 0xff);
+    o[1] = char(a.width >> 8);
+    o[2] = char(a.height & 0xff);
+    o[3] = char(a.height >> 8);
     for (int i = 0; i < 4; i++) o[4 + i] = char((req.id >> (8 * i)) & 0xff);
     return o;
 }

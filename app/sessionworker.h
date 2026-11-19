@@ -22,6 +22,7 @@
 #include <set>
 #include <string>
 #include <variant>
+#include "model/recorder.h"
 #include "net/input.h"
 #include "net/reconnect.h"
 #include "net/session.h"
@@ -38,9 +39,10 @@ struct VerbMenuItem {
     QString name;
     quint16 id = 0;
     bool viaArgument = false;
-    quint8 kind = 0;     // the clicked atom: 1 obj 2 mob 3 turf
-    quint32 ref = 0;     // its wire ref (turf: [x-1 u16][y-1 u16])
-    QString atom;        // its name as the menu row shows it (a runtime-list pick names it to the server: net::atomArgumentText)
+    quint8 kind = 0;  // the clicked atom: 1 obj 2 mob 3 turf
+    quint32 ref = 0;  // its wire ref (turf: [x-1 u16][y-1 u16])
+    QString
+        atom;  // its name as the menu row shows it (a runtime-list pick names it to the server: net::atomArgumentText)
 };
 Q_DECLARE_METATYPE(VerbMenuItem)
 Q_DECLARE_METATYPE(QList<VerbMenuItem>)
@@ -57,7 +59,12 @@ Q_DECLARE_METATYPE(QList<MenuAtom>)
 class SessionWorker : public QThread {
     Q_OBJECT
 public:
-    SessionWorker(fugue::net::SessionConfig cfg, RenderThread* rt) : cfg_(std::move(cfg)), rt_(rt) {}
+    SessionWorker(fugue::net::SessionConfig cfg, RenderThread* rt)
+        : cfg_(std::move(cfg)),
+          rt_(rt),
+          rec_(fugue::model::Recorder::fromEnv(cfg_.host + ":" + std::to_string(cfg_.port))) {}
+    // FUGUE_RECORD_DIR's recorder (model/recorder.h), or null. Its markers may be written from any thread.
+    fugue::model::Recorder* recorder() const { return rec_.get(); }
     void requestStop() { stop_ = true; }
     // Ends the current session and connects again (DreamSeeker's .reconnect, Client > Reconnect). Thread-safe.
     void requestReconnect() { reconnect_ = true; }
@@ -71,10 +78,11 @@ public:
 
     // ---- thread-safe: callable from the GUI thread; each only appends to the inbox ----
     void postMouse(const fugue::shell::MapPointer& p, bool rightClickToWire);
-    void postCommand(const QString& line, bool promptNull = false);   // a command-bar line / macro command: verb or `say hi`;
-                                                                      // promptNull: a stat-panel verb click (InputModel::verbCommand)
-    void postStockMove(int dir);                    // a skin's `.north`...`.southwest`: always the stock move (client.North()...)
-    void postTopic(const QString& href);            // byond://?... link click
+    void postCommand(const QString& line,
+                     bool promptNull = false);  // a command-bar line / macro command: verb or `say hi`;
+                                                // promptNull: a stat-panel verb click (InputModel::verbCommand)
+    void postStockMove(int dir);          // a skin's `.north`...`.southwest`: always the stock move (client.North()...)
+    void postTopic(const QString& href);  // byond://?... link click
     // Right click on the map (no right-click=true): ask the session thread which verbs the atom under the cursor offers.
     // The answer comes back as verbMenuReady().
     void postMenuQuery(const fugue::shell::MapPointer& p, const QPoint& globalPos);
@@ -90,67 +98,117 @@ public:
     // verbatim; Cancel sends nothing, as stock DreamSeeker does; None (a nullable argument) sends it null.
     void postArgAnswer(quint32 id, const QString& text);
     void postArgCancel(quint32 id);
-    void postArgNone(quint32 id);                   // None: the nullable argument goes out null
-    // The INFO control: select tab `index` of the strip (0x006b), click the atom row at `row`, run a verb-category entry.
+    void postArgNone(quint32 id);  // None: the nullable argument goes out null
+    // The INFO control: select tab `index` of the strip (StatTab), click the atom row at `row`, run a verb-category
+    // entry.
     void postStatTab(int index);
     // an atom row's value was clicked: control = the INFO control's id, button "left"/"middle", mods = StatPanelWidget::RowMods,
     // icon/iconX/iconY = the click in the row's drawn icon cell (StatPanelWidget::rowClicked)
-    void postStatRow(int row, const std::string& control, const std::string& button, int mods, bool dbl, bool icon, int iconX, int iconY);
+    void postStatRow(int row, const std::string& control, const std::string& button, int mods, bool dbl, bool icon,
+                     int iconX, int iconY);
     // DreamSeeker's command-bar completion for a space typed at the end of `line` (net::InputModel::spaceCompletion),
     // answered from a snapshot of the verb list the session thread publishes. Thread-safe; false = type a plain space.
     bool spaceCompletion(const QString& line, QString& out) const;
 
     std::atomic<uint64_t> framesIngested{0};
 signals:
-    void loggedIn(const QString& err);          // "" = ok
-    void skinLoaded();                          // a (new) skin went into the live skin; the GUI syncs from it on its own
+    void loggedIn(const QString& err);  // "" = ok
+    void skinLoaded();                  // a (new) skin went into the live skin; the GUI syncs from it on its own
     void verbMenuReady(const QPoint& globalPos, const QString& atomName, const QList<VerbMenuItem>& items);
-    void verbStackReady(const QPoint& globalPos, const QList<MenuAtom>& atoms);   // the two-level right-click menu
+    void verbStackReady(const QPoint& globalPos, const QList<MenuAtom>& atoms);  // the two-level right-click menu
     void chatLines(const QStringList& html);
-    void promptRequested(const fugue::shell::PromptRequest& r);   // an alert()/input() the player must answer, or a missing verb argument
-    void promptWithdrawn(quint32 id, bool alert);                  // the server dropped that alert()/input(): close its dialog unanswered
-    void statView(const fugue::shell::StatView& v);               // the INFO control's tab strip + rows (changed)
-    void browseHtml(const QString& name, const QString& params, const QString& html);   // a page to show (every 0x0084, every browse_file offer)
-    void outputFile(const QString& control, const QString& html);   // output(file, "win.ctl"): the page for that browser control
-    void pageCall(const QString& target, const QString& fn, const QStringList& args);   // output(v, "win.ctl:fn") into a page's JS; target = "win.ctl"
+    void promptRequested(
+        const fugue::shell::PromptRequest& r);  // an alert()/input() the player must answer, or a missing verb argument
+    void promptWithdrawn(quint32 id,
+                         bool alert);  // the server dropped that alert()/input(): close its dialog unanswered
+    void statView(const fugue::shell::StatView& v);  // the INFO control's tab strip + rows (changed)
+    void browseHtml(const QString& name, const QString& params,
+                    const QString& html);  // a page to show (every Browse, every browse_file offer)
+    void outputFile(const QString& control,
+                    const QString& html);  // output(file, "win.ctl"): the page for that browser control
+    void pageCall(const QString& target, const QString& fn,
+                  const QStringList& args);  // output(v, "win.ctl:fn") into a page's JS; target = "win.ctl"
     void browseClosed(const QString& name);
-    void externalLink(const QString& url);      // link(url) to a web or mail address, for the desktop to open
-    void worldAddress(const QString& host, quint16 port);   // a link() moved this window to another server address
+    void externalLink(const QString& url);  // link(url) to a web or mail address, for the desktop to open
+    void worldAddress(const QString& host, quint16 port);  // a link() moved this window to another server address
     void worldName(const QString& name);
-    void frameTiming(qint64 tickNs, qint64 frameNs);   // the world tick and the client frame (0x0037), when they change
+    void frameTiming(qint64 tickNs, qint64 frameNs);  // the world tick and the client frame (Timing), when they change
     // The main window's icon file (skin/winicon.h): its bytes as the world sent them, or empty for "no icon / not here yet".
     void windowIcon(const QString& name, const QByteArray& bytes);
-    void popupMenus(bool shown);                // client.show_popup_menus (each 0x003b)
-    void localOutput(const QString& line);      // a client-side refusal DreamSeeker prints itself (unknown verb, bad argument)
+    void popupMenus(bool shown);                // client.show_popup_menus (each MouseSubs)
+    void worldCommand(const QString& command);  // winset(src, null, "command=..."): run as if typed
+    void localOutput(
+        const QString& line);  // a client-side refusal DreamSeeker prints itself (unknown verb, bad argument)
 protected:
     void run() override;
+
 private:
     fugue::net::SessionEnding runSession(fugue::net::Session& s, bool first, bool afterReboot);
-    void noteSessionEnd(const std::string& line);   // stderr and <state dir>/session.log
-    struct MouseJob { fugue::shell::MapPointer p; bool rightClick; };
-    struct CmdJob { std::string line; bool promptNull = false; };
-    struct MoveJob { int dir; };
-    struct TopicJob { std::string href; };
-    struct MenuJob { fugue::shell::MapPointer p; QPoint global; };
-    struct AtomVerbJob { quint16 verbId; quint8 kind; quint32 ref; bool viaArgument; std::string atom; };
-    struct PromptJob { quint32 id; bool alert; bool cancel; std::string text; };
-    struct StatTabJob { int index; };
-    struct StatRowJob { int row; std::string control, button; int mods; bool dbl; bool icon; int iconX, iconY; };
-    struct ArgJob { quint32 id; bool cancel; std::string text; bool none = false; };
-    using Job = std::variant<MouseJob, CmdJob, MoveJob, TopicJob, MenuJob, AtomVerbJob, PromptJob, StatTabJob, StatRowJob, ArgJob>;
+    void noteSessionEnd(const std::string& line);  // stderr and <state dir>/session.log
+    struct MouseJob {
+        fugue::shell::MapPointer p;
+        bool rightClick;
+    };
+    struct CmdJob {
+        std::string line;
+        bool promptNull = false;
+    };
+    struct MoveJob {
+        int dir;
+    };
+    struct TopicJob {
+        std::string href;
+    };
+    struct MenuJob {
+        fugue::shell::MapPointer p;
+        QPoint global;
+    };
+    struct AtomVerbJob {
+        quint16 verbId;
+        quint8 kind;
+        quint32 ref;
+        bool viaArgument;
+        std::string atom;
+    };
+    struct PromptJob {
+        quint32 id;
+        bool alert;
+        bool cancel;
+        std::string text;
+    };
+    struct StatTabJob {
+        int index;
+    };
+    struct StatRowJob {
+        int row;
+        std::string control, button;
+        int mods;
+        bool dbl;
+        bool icon;
+        int iconX, iconY;
+    };
+    struct ArgJob {
+        quint32 id;
+        bool cancel;
+        std::string text;
+        bool none = false;
+    };
+    using Job = std::variant<MouseJob, CmdJob, MoveJob, TopicJob, MenuJob, AtomVerbJob, PromptJob, StatTabJob,
+                             StatRowJob, ArgJob>;
     void post(Job j);
     mutable std::mutex verbsMu_;
-    std::shared_ptr<const fugue::net::InputModel> verbSnap_;   // the session thread's im, re-published when 0x0011 lands
+    std::shared_ptr<const fugue::net::InputModel> verbSnap_;  // the session thread's im, re-published when Verb lands
     std::mutex inMu_;
     std::deque<Job> inbox_;
     fugue::net::SessionConfig cfg_;
     RenderThread* rt_;
+    std::unique_ptr<fugue::model::Recorder> rec_;
     std::shared_ptr<fugue::skin::LiveSkin> live_;
     std::shared_ptr<fugue::shell::BrowseRscStore> rsc_;
     std::string audioSpec_;
     std::atomic<bool> stop_{false};
     std::atomic<bool> reconnect_{false};
-    std::string linkTarget_;   // host:port a link() asked to join; session thread only
-    std::set<std::string> openPopups_;   // browse() popups open, carried into the next session; session thread only
+    std::string linkTarget_;            // host:port a link() asked to join; session thread only
+    std::set<std::string> openPopups_;  // browse() popups open, carried into the next session; session thread only
     std::string sessionLog_;
 };

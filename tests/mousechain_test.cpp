@@ -13,13 +13,17 @@ SpritePtr solid(uint8_t a) {
     auto s = std::make_shared<Sprite>();
     s->w = s->h = 32;
     s->px.assign(32 * 32 * 4, 0);
-    for (size_t i = 0; i < s->px.size(); i += 4) { s->px[i] = 200; s->px[i + 3] = a; }
+    for (size_t i = 0; i < s->px.size(); i += 4) {
+        s->px[i] = 200;
+        s->px[i + 3] = a;
+    }
     return s;
 }
 // a 15x15 view at 32px, origin (1,1): every cell a floor turf; an /obj (ref 7, "door") on cell (5,5).
 HitScene scene() {
     HitScene s;
-    s.cols = s.rows = 15; s.originX = s.originY = 1;
+    s.cols = s.rows = 15;
+    s.originX = s.originY = 1;
     s.atoms.push_back({"floor", 1, kAtomTurf, 0, 0, 0, false});
     s.atoms.push_back({"door", 1, kAtomObj, 7, 5, 5, false});
     auto sp = solid(255);
@@ -29,21 +33,35 @@ HitScene scene() {
     return s;
 }
 // pixel centre of world cell (x,y)
-void centre(int x, int y, int& px, int& py) { px = (x - 1) * 32 + 16; py = 480 - 1 - ((y - 1) * 32 + 16); }
+void centre(int x, int y, int& px, int& py) {
+    px = (x - 1) * 32 + 16;
+    py = 480 - 1 - ((y - 1) * 32 + 16);
+}
 PointerEvent ev(int cx, int cy, int64_t t, int button = 1) {
     PointerEvent e;
     centre(cx, cy, e.imgX, e.imgY);
-    e.winX = e.imgX; e.winY = e.imgY; e.button = button; e.tMs = t;
+    e.winX = e.imgX;
+    e.winY = e.imgY;
+    e.button = button;
+    e.tMs = t;
     return e;
 }
-QList<int> subs(const std::vector<Bytes>& f) { QList<int> l; for (auto& b : f) l << int(b[0]); return l; }
+QList<int> subs(const std::vector<Bytes>& f) {
+    QList<int> l;
+    for (auto& b : f) l << int(b[0]);
+    return l;
 }
+}  // namespace
 
 class MouseChainTest : public QObject {
     Q_OBJECT
     HitScene sc = scene();
     ChainEnv env(enc::MouseHooks h = enc::allMouseHooks(), bool right = false) {
-        ChainEnv e; e.scene = &sc; e.hooks = h; e.rightClickToWire = right; return e;
+        ChainEnv e;
+        e.scene = &sc;
+        e.hooks = h;
+        e.rightClickToWire = right;
+        return e;
     }
 private slots:
     void plainClickIsDownThenUpClick() {
@@ -67,7 +85,8 @@ private slots:
         QVERIFY(std::equal(t.begin(), t.end(), u[1].begin() + 4));
     }
     void subscriptionMaskGatesEveryFrame() {
-        enc::MouseHooks h; h.click = true;  // Click only
+        enc::MouseHooks h;
+        h.click = true;  // Click only
         MouseChain c;
         QVERIFY(c.press(ev(5, 5, 0), env(h)).empty());
         QCOMPARE(subs(c.release(ev(5, 5, 90), env(h))), (QList<int>{enc::kMouseClick}));
@@ -77,31 +96,40 @@ private slots:
     }
     void doubleClickAddsOneFrameAfterDownOnly() {
         MouseChain c;
-        c.press(ev(5, 5, 0), env()); c.release(ev(5, 5, 60), env());
+        c.press(ev(5, 5, 0), env());
+        c.release(ev(5, 5, 60), env());
         auto d2 = c.press(ev(5, 5, 300), env());  // 300 ms later: inside the 400 ms window
         QCOMPARE(subs(d2), (QList<int>{enc::kMouseDown, enc::kMouseDblClick}));
-        QCOMPARE(subs(c.release(ev(5, 5, 360), env())), (QList<int>{enc::kMouseUp, enc::kMouseClick}));  // Click is NOT replaced
+        QCOMPARE(subs(c.release(ev(5, 5, 360), env())),
+                 (QList<int>{enc::kMouseUp, enc::kMouseClick}));  // Click is NOT replaced
         // a third rapid press starts a fresh pair
         QCOMPARE(subs(c.press(ev(5, 5, 400), env())), (QList<int>{enc::kMouseDown}));
         c.release(ev(5, 5, 420), env());
     }
     void doubleClickWindowAndDeclaration() {
         MouseChain c;
-        c.press(ev(5, 5, 0), env()); c.release(ev(5, 5, 60), env());
+        c.press(ev(5, 5, 0), env());
+        c.release(ev(5, 5, 60), env());
         QCOMPARE(subs(c.press(ev(5, 5, 500), env())), (QList<int>{enc::kMouseDown}));  // 500 ms: two independent clicks
         c.release(ev(5, 5, 560), env());
-        enc::MouseHooks nodbl = enc::allMouseHooks(); nodbl.dblClick = false;
+        enc::MouseHooks nodbl = enc::allMouseHooks();
+        nodbl.dblClick = false;
         MouseChain d;
-        d.press(ev(5, 5, 0), env(nodbl)); d.release(ev(5, 5, 60), env(nodbl));
-        QCOMPARE(subs(d.press(ev(5, 5, 200), env(nodbl))), (QList<int>{enc::kMouseDown}));  // undeclared: just a second click
-        MouseChain e;  // far apart: not a double click
-        e.press(ev(5, 5, 0), env()); e.release(ev(5, 5, 60), env());
+        d.press(ev(5, 5, 0), env(nodbl));
+        d.release(ev(5, 5, 60), env(nodbl));
+        QCOMPARE(subs(d.press(ev(5, 5, 200), env(nodbl))),
+                 (QList<int>{enc::kMouseDown}));  // undeclared: just a second click
+        MouseChain e;                             // far apart: not a double click
+        e.press(ev(5, 5, 0), env());
+        e.release(ev(5, 5, 60), env());
         QCOMPARE(subs(e.press(ev(9, 9, 200), env())), (QList<int>{enc::kMouseDown}));
     }
     void phantomDragBelowThresholdIsStillAClick() {
         MouseChain c;
         c.press(ev(5, 5, 0), env());
-        PointerEvent m = ev(5, 5, 20); m.winX += 2; m.imgX += 2;  // moved 2 px
+        PointerEvent m = ev(5, 5, 20);
+        m.winX += 2;
+        m.imgX += 2;  // moved 2 px
         QVERIFY(c.move(m, env()).empty());
         auto u = c.release(m, env());
         QCOMPARE(subs(u), (QList<int>{enc::kMouseUp, enc::kMouseClick}));
@@ -121,7 +149,9 @@ private slots:
         QCOMPARE(c.note(), std::string("drop"));
     }
     void dragWorldWithoutDropGetsBareMouseUp() {
-        enc::MouseHooks h = enc::allMouseHooks(); h.drop = false; h.drag = false;  // Click/Down/Up declared, no drag/drop
+        enc::MouseHooks h = enc::allMouseHooks();
+        h.drop = false;
+        h.drag = false;  // Click/Down/Up declared, no drag/drop
         MouseChain c;
         c.press(ev(5, 5, 0), env(h));
         QVERIFY(c.move(ev(7, 5, 40), env(h)).empty());  // no MouseDrag frames
@@ -130,7 +160,8 @@ private slots:
         QCOMPARE(c.note(), std::string("move-only"));
     }
     void dragFramesOnlyWhenDragDeclared() {
-        enc::MouseHooks h = enc::allMouseHooks(); h.drag = false;  // drop but no drag
+        enc::MouseHooks h = enc::allMouseHooks();
+        h.drag = false;  // drop but no drag
         MouseChain c;
         c.press(ev(5, 5, 0), env(h));
         QVERIFY(c.move(ev(6, 5, 20), env(h)).empty());
@@ -143,12 +174,50 @@ private slots:
         QVERIFY(c.release(ev(5, 5, 50, 3), env()).empty());
         auto d = c.press(ev(5, 5, 100, 3), env(enc::allMouseHooks(), true));
         QCOMPARE(d.size(), size_t(1));
-        QVERIFY(QString::fromLatin1(reinterpret_cast<const char*>(d[0].data()), int(d[0].size())).contains("right=1;button=right"));
+        QVERIFY(QString::fromLatin1(reinterpret_cast<const char*>(d[0].data()), int(d[0].size()))
+                    .contains("right=1;button=right"));
+    }
+    // A right press the world kept to the popup (show_popup_menus TRUE) whose release finds the flag FALSE: MouseUp and
+    // Click, no MouseDown; the same atom the release names.
+    void unsentRightPressEndsAsUpAndClick() {
+        MouseChain c;
+        auto u = c.releaseUnpressed(ev(5, 5, 100, 3), env(enc::allMouseHooks(), true));
+        QCOMPARE(subs(u), (QList<int>{enc::kMouseUp, enc::kMouseClick}));
+        QCOMPARE(c.note(), std::string("click(unpressed)"));
+        Bytes want = enc::encodeAtomRef(enc::objRef(7));
+        QVERIFY(std::equal(want.begin(), want.end(), u[1].begin() + 4));
+        QVERIFY(std::string(u[1].begin(), u[1].end()).find("right=1;button=right;") != std::string::npos);
+        enc::MouseHooks clickOnly;
+        clickOnly.click = true;
+        QCOMPARE(subs(c.releaseUnpressed(ev(5, 5, 200, 3), env(clickOnly, true))), (QList<int>{enc::kMouseClick}));
+        QVERIFY(c.releaseUnpressed(ev(5, 5, 300, 3), env(enc::MouseHooks{}, true)).empty());
+        QVERIFY(!c.held());
+    }
+    // The report that ends a popup: with the right button still down the params carry right=1 (no button=right), ahead of
+    // screen-loc; with no button they do not.
+    void hoverWhileRightHeldCarriesRight() {
+        const std::string held = [&] {
+            HoverTracker h;
+            ChainEnv e = env();
+            e.clientHover = true;
+            auto f = h.at(ev(5, 5, 0, 3), e, false);
+            return f.empty() ? std::string() : std::string(f[0].begin(), f[0].end());
+        }();
+        QVERIFY(!held.empty());
+        QVERIFY(held.find("right=1;screen-loc=") != std::string::npos);
+        QVERIFY(held.find("button=") == std::string::npos);
+        HoverTracker h;
+        ChainEnv e = env();
+        e.clientHover = true;
+        auto f = h.at(ev(5, 5, 0, 0), e, false);
+        QVERIFY(!f.empty());
+        QVERIFY(std::string(f[0].begin(), f[0].end()).find("right=1") == std::string::npos);
     }
     void nothingUnderThePointerSendsNothing() {
         HitScene s = scene();
         s.world.clear();  // a view that draws nothing
-        ChainEnv e; e.scene = &s;
+        ChainEnv e;
+        e.scene = &s;
         MouseChain c;
         QVERIFY(c.press(ev(5, 5, 0), e).empty());
         QVERIFY(c.release(ev(5, 5, 50), e).empty());

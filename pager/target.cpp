@@ -14,11 +14,13 @@ bool splitHostPort(const std::string& hp, std::string* host, std::string* port) 
         if (end + 1 == hp.size()) return false;
         if (end + 1 != i) return false;
         *host = hp.substr(1, end - 1);
-        j = 1; k = end + 1;
+        j = 1;
+        k = end + 1;
     } else {
         *host = hp.substr(0, i);
         if (host->find(':') != std::string::npos) return false;
-        j = 0; k = i;
+        j = 0;
+        k = i;
     }
     if (hp.find('[', j) != std::string::npos) return false;
     if (hp.find(']', k) != std::string::npos) return false;
@@ -37,13 +39,17 @@ bool cutPrefixFold(std::string& s, const char* prefix) {
     return true;
 }
 bool allDigitsDotted(const std::string& s) {
-    for (char c : s) if (c != '.' && (c < '0' || c > '9')) return false;
+    for (char c : s)
+        if (c != '.' && (c < '0' || c > '9')) return false;
     return true;
 }
 }  // namespace
 
 std::optional<std::string> parseTarget(std::string_view in, std::string* err) {
-    auto fail = [&](std::string m) { if (err) *err = std::move(m); return std::nullopt; };
+    auto fail = [&](std::string m) {
+        if (err) *err = std::move(m);
+        return std::nullopt;
+    };
     std::string s = trimSpace(in);
     if (s.empty()) return fail("no server address given");
     if (cutPrefixFold(s, "+connect")) s = trimSpace(s);
@@ -56,7 +62,8 @@ std::optional<std::string> parseTarget(std::string_view in, std::string* err) {
         size_t dots = 0;
         for (char c : s) dots += c == '.';
         if (dots == 1 && s.find_first_of(":/") == std::string::npos && !allDigitsDotted(s))
-            return fail(goQuote(s) + " is a hub WORLD reference (byond://Key.World), not an address \xe2\x80\x94 "
+            return fail(goQuote(s) +
+                        " is a hub WORLD reference (byond://Key.World), not an address \xe2\x80\x94 "
                         "Fugue does not look hub worlds up by name. Use the server's host:port");
         return fail(goQuote(s) + " has no port \xe2\x80\x94 a BYOND address is host:port (e.g. play.example.org:7777)");
     }

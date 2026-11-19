@@ -1,20 +1,23 @@
-// s2c 0x00ef: the world's skin by resource id (0xffffffff = no skin).
+// S2C::SkinResource: the world's skin by resource id (0xffffffff = no skin).
 #include "proto/registry.h"
 
 namespace fugue::proto {
-namespace {
 
 // Layout [resid u32][hub cstring][flags u16], with no length guards.
-canon::Json decode(State&, ByteSpan body) {
+SkinResource decodeSkinResource(ByteSpan body) {
     Reader r(body);
-    uint32_t resID = r.u32();
-    std::string hub = r.cstr();
-    uint16_t flags = r.u16();
+    SkinResource m;
+    m.resID = r.u32();
+    m.hub = r.cstr();
+    m.flags = r.u16();
     r.expectEnd();
-    return canon::Object().u("resID", resID).str("hub", hub).u("flags", flags).build();
+    return m;
 }
 
-FUGUE_REGISTER_DECODER(Dir::S2C, 0x00ef, "cpp:stock-dd-wire", decode);
+canon::Json toJson(const SkinResource& m) {
+    return canon::Object().u("resID", m.resID).str("hub", m.hub).u("flags", m.flags).build();
+}
 
-}  // namespace
+FUGUE_REGISTER_DECODER(Dir::S2C, S2C::SkinResource, "cpp:stock-dd-wire", jsonOf<decodeSkinResource>);
+
 }  // namespace fugue::proto

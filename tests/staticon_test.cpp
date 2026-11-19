@@ -19,12 +19,14 @@ Bytes unhex(const std::string& h) {
     for (size_t i = 0; i + 1 < h.size(); i += 2) b.push_back(uint8_t(v(h[i]) << 4 | v(h[i + 1])));
     return b;
 }
-struct Px { int r, g, b, a; };
+struct Px {
+    int r, g, b, a;
+};
 bool operator==(const Px& x, const Px& y) { return x.r == y.r && x.g == y.g && x.b == y.b && x.a == y.a; }
-constexpr Px kRed{255, 0, 0, 255}, kWhite{255, 255, 255, 255}, kBlack{0, 0, 0, 255}, kMagenta{255, 0, 255, 255}, kDot{0, 160, 0, 255},
-    kCyan{0, 255, 255, 255}, kOrange{255, 128, 0, 255}, kBrown{128, 64, 0, 255}, kNavy{0, 0, 128, 255}, kYellow{255, 255, 0, 255},
-    kClear{0, 0, 0, 0};
-}
+constexpr Px kRed{255, 0, 0, 255}, kWhite{255, 255, 255, 255}, kBlack{0, 0, 0, 255}, kMagenta{255, 0, 255, 255},
+    kDot{0, 160, 0, 255}, kCyan{0, 255, 255, 255}, kOrange{255, 128, 0, 255}, kBrown{128, 64, 0, 255},
+    kNavy{0, 0, 128, 255}, kYellow{255, 255, 0, 255}, kClear{0, 0, 0, 0};
+}  // namespace
 
 class StatIcon : public QObject {
     Q_OBJECT
@@ -58,8 +60,11 @@ class StatIcon : public QObject {
     bool rowAppid(const std::string& name, uint32_t& appid) const {
         const model::World& w = sess_.world();
         for (const auto& l : w.stat.lines) {
-            model::StatValue v;
-            if (model::parseStatValue(l.valueJson, v) && v.isAtom() && model::statText(w, l) == name) { appid = v.appid; return true; }
+            model::StatValue v = model::statValueOf(l.value);
+            if (v.isAtom() && model::statText(w, l) == name) {
+                appid = v.appid;
+                return true;
+            }
         }
         return false;
     }
@@ -79,10 +84,8 @@ private slots:
         QCOMPARE(model::iconSizeOf(sess_.world()), 32);
         // the Tile tab: the turf, the eleven objs on it, the nullspace obj
         int atoms = 0;
-        for (const auto& l : sess_.world().stat.lines) {
-            model::StatValue v;
-            if (model::parseStatValue(l.valueJson, v) && v.isAtom()) atoms++;
-        }
+        for (const auto& l : sess_.world().stat.lines)
+            if (model::statValueOf(l.value).isAtom()) atoms++;
         QCOMPARE(atoms, 13);
     }
 
@@ -90,14 +93,27 @@ private slots:
         std::vector<uint8_t> px;
         QVERIFY(icon("floor", px));
         QCOMPARE(int(px.size()), 32 * 32 * 4);
-        QVERIFY(at(px, 0, 0) == (Px{64, 64, 64, 255})); QVERIFY(at(px, 1, 0) == (Px{96, 96, 96, 255}));
-        QVERIFY(icon("o_red", px)); QVERIFY(at(px, 2, 2) == kWhite); QVERIFY(at(px, 10, 10) == kRed); QVERIFY(at(px, 31, 31) == kRed);
-        QVERIFY(icon("o_dirE", px)); QVERIFY(at(px, 10, 10) == kMagenta);  // the appearance's dir
-        QVERIFY(icon("o_ovl", px)); QVERIFY(at(px, 10, 10) == kRed); QVERIFY(at(px, 28, 28) == kDot);
-        QVERIFY(icon("o_col", px)); QVERIFY(at(px, 10, 10) == kWhite); QVERIFY(at(px, 2, 2) == kBlack);  // colour ignored
-        QVERIFY(icon("o_alpha", px)); QVERIFY(at(px, 10, 10) == kRed);  // alpha ignored
-        QVERIFY(icon("o_px", px)); QVERIFY(at(px, 2, 2) == kWhite); QVERIFY(at(px, 10, 10) == kRed);  // pixel_x ignored
-        QVERIFY(icon("o_null_dirW", px)); QVERIFY(at(px, 10, 10) == kYellow);  // never on the map; still its west frame
+        QVERIFY(at(px, 0, 0) == (Px{64, 64, 64, 255}));
+        QVERIFY(at(px, 1, 0) == (Px{96, 96, 96, 255}));
+        QVERIFY(icon("o_red", px));
+        QVERIFY(at(px, 2, 2) == kWhite);
+        QVERIFY(at(px, 10, 10) == kRed);
+        QVERIFY(at(px, 31, 31) == kRed);
+        QVERIFY(icon("o_dirE", px));
+        QVERIFY(at(px, 10, 10) == kMagenta);  // the appearance's dir
+        QVERIFY(icon("o_ovl", px));
+        QVERIFY(at(px, 10, 10) == kRed);
+        QVERIFY(at(px, 28, 28) == kDot);
+        QVERIFY(icon("o_col", px));
+        QVERIFY(at(px, 10, 10) == kWhite);
+        QVERIFY(at(px, 2, 2) == kBlack);  // colour ignored
+        QVERIFY(icon("o_alpha", px));
+        QVERIFY(at(px, 10, 10) == kRed);  // alpha ignored
+        QVERIFY(icon("o_px", px));
+        QVERIFY(at(px, 2, 2) == kWhite);
+        QVERIFY(at(px, 10, 10) == kRed);  // pixel_x ignored
+        QVERIFY(icon("o_null_dirW", px));
+        QVERIFY(at(px, 10, 10) == kYellow);  // never on the map; still its west frame
     }
 
     void iconlessRows() {
@@ -106,17 +122,24 @@ private slots:
         QVERIFY(rowAppid("o_noicon", a));
         QVERIFY2(!icon("o_noicon", px), "no icon, no overlay: stock draws the name alone");
         QVERIFY(icon("o_noicon_ovl", px));  // the overlay alone in the cell
-        QVERIFY(at(px, 10, 10) == kClear); QVERIFY(at(px, 28, 28) == kDot);
+        QVERIFY(at(px, 10, 10) == kClear);
+        QVERIFY(at(px, 28, 28) == kDot);
     }
 
     void cellIsTheWorldIconSize() {
         std::vector<uint8_t> px;
         QVERIFY(icon("o_16", px));  // native size, top-left
         QCOMPARE(int(px.size()), 32 * 32 * 4);
-        QVERIFY(at(px, 1, 1) == kWhite); QVERIFY(at(px, 10, 10) == kBrown); QVERIFY(at(px, 15, 15) == kBrown);
-        QVERIFY(at(px, 16, 10) == kClear); QVERIFY(at(px, 10, 16) == kClear); QVERIFY(at(px, 20, 20) == kClear);
+        QVERIFY(at(px, 1, 1) == kWhite);
+        QVERIFY(at(px, 10, 10) == kBrown);
+        QVERIFY(at(px, 15, 15) == kBrown);
+        QVERIFY(at(px, 16, 10) == kClear);
+        QVERIFY(at(px, 10, 16) == kClear);
+        QVERIFY(at(px, 20, 20) == kClear);
         QVERIFY(icon("o_64", px));  // shrunk into the cell
-        QVERIFY(at(px, 7, 7) == kWhite); QVERIFY(at(px, 8, 8) == kNavy); QVERIFY(at(px, 31, 31) == kNavy);
+        QVERIFY(at(px, 7, 7) == kWhite);
+        QVERIFY(at(px, 8, 8) == kNavy);
+        QVERIFY(at(px, 31, 31) == kNavy);
         // a 16-pixel cell (a world.icon_size = 16 world): every 32x32 icon shrinks, AVERAGING (stock's stripes read 88 grey)
         uint32_t floor = 0;
         QVERIFY(rowAppid("floor", floor));
@@ -128,8 +151,10 @@ private slots:
 
     void animatesWithTheClock() {
         std::vector<uint8_t> px;
-        QVERIFY(icon("o_anim", px, 0)); QVERIFY(at(px, 10, 10) == kCyan);
-        QVERIFY(icon("o_anim", px, int64_t(1'500'000'000))); QVERIFY(at(px, 10, 10) == kOrange);   // delay 10,10 ds: frame 2 at 1.5 s
+        QVERIFY(icon("o_anim", px, 0));
+        QVERIFY(at(px, 10, 10) == kCyan);
+        QVERIFY(icon("o_anim", px, int64_t(1'500'000'000)));
+        QVERIFY(at(px, 10, 10) == kOrange);  // delay 10,10 ds: frame 2 at 1.5 s
     }
 };
 

@@ -56,7 +56,7 @@ class OutputTargetTest : public QObject {
     uint64_t send(model::Session& s, const std::string& value, const std::string& control) {
         uint64_t before = s.world().chatTotal;
         auto b = outputFrame(value, control);
-        s.ingest(0x00a7, ByteSpan(b.data(), b.size()));
+        s.ingest(S2C::Output, ByteSpan(b.data(), b.size()));
         return s.world().chatTotal - before;
     }
 private slots:
@@ -68,13 +68,15 @@ private slots:
         QCOMPARE(send(s, "plain", ""), uint64_t(1));
         QCOMPARE(send(s, "to+output", "output"), uint64_t(1));
         QCOMPARE(send(s, "to+output", "mainwindow.output"), uint64_t(1));
-        QCOMPARE(send(s, "%3cspan%3echat%3c%2fspan%3e", "browseroutput:output"), uint64_t(1));   // the chat page's output()
-        const std::string page = "%3chtml%3e%3chead%3e%3clink+rel%3d%22stylesheet%22+href%3d%22nanotrasen.css%22+%2f%3e"
-                                 "%3c%2fhead%3e%3cbody%3e%3c%2fbody%3e%3c%2fhtml%3e";
-        QCOMPARE(send(s, page, "browser_[0x21000123].browser"), uint64_t(0));   // no such window here
+        QCOMPARE(send(s, "%3cspan%3echat%3c%2fspan%3e", "browseroutput:output"),
+                 uint64_t(1));  // the chat page's output()
+        const std::string page =
+            "%3chtml%3e%3chead%3e%3clink+rel%3d%22stylesheet%22+href%3d%22nanotrasen.css%22+%2f%3e"
+            "%3c%2fhead%3e%3cbody%3e%3c%2fbody%3e%3c%2fhtml%3e";
+        QCOMPARE(send(s, page, "browser_[0x21000123].browser"), uint64_t(0));  // no such window here
         live->winset("browser_[0x21000123].browser", "parent=mainwindow;type=browser");
-        QCOMPARE(send(s, page, "browser_[0x21000123].browser"), uint64_t(0));   // a runtime BROWSER
-        QCOMPARE(send(s, page, "browseroutput"), uint64_t(0));                  // the skin's own BROWSER
+        QCOMPARE(send(s, page, "browser_[0x21000123].browser"), uint64_t(0));  // a runtime BROWSER
+        QCOMPARE(send(s, page, "browseroutput"), uint64_t(0));                 // the skin's own BROWSER
         QCOMPARE(send(s, "x", "nosuchctl"), uint64_t(0));
         QCOMPARE(send(s, "x", "lbl"), uint64_t(0));
         QCOMPARE(send(s, "x", "map"), uint64_t(0));

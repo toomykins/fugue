@@ -29,7 +29,7 @@ std::string displayCommand(const std::vector<std::string>& argv);
 
 // The environment a child gets: the pager's, minus every password variable.
 QProcessEnvironment childEnvironment();
-extern const char* const kPasswordVars[];   // names only
+extern const char* const kPasswordVars[];  // names only
 
 // Runs this binary again as argv0 + args with childEnvironment() plus extraEnv ("NAME=value") and only stdin/stdout/stderr
 // open: in place of this process (returns only on failure), or detached.
@@ -42,7 +42,7 @@ std::string clientLogPath();
 // "Play as guest" is remembered, so a guest is not sent to the Sign in window on every launch. A marker file under
 // ~/.fugue/qt (never in pager.json, which is rewritten without unknown keys). Written when guest is picked, removed by a
 // successful sign-in. It matters only while no account is saved.
-std::string guestChoicePath();               // ~/.fugue/qt/pager-guest; "" if no HOME
+std::string guestChoicePath();  // ~/.fugue/qt/pager-guest; "" if no HOME
 bool guestRemembered();
 bool rememberGuest(bool on, std::string* err = nullptr);
 
@@ -50,15 +50,15 @@ bool rememberGuest(bool on, std::string* err = nullptr);
 // saved account with a saved sign-in opens signed in. OFF (a marker file next to pager-guest; a setting, so Clear cache keeps
 // it): the pager opens on the Sign in window with the account picked, and plays as nobody until the player confirms (no
 // password: the identity is kept).
-std::string autoSignInOffPath();             // ~/.fugue/qt/pager-no-autosignin; "" if no HOME
+std::string autoSignInOffPath();  // ~/.fugue/qt/pager-no-autosignin; "" if no HOME
 bool autoSignIn();
 bool setAutoSignIn(bool on, std::string* err = nullptr);
 
 // The client's renderer setting, which its Client > Renderer menu also writes (GPU builds): `renderer` = cpu|gpu in
 // <state dir>/display.ini. The state dir is the client's --state-dir when non-empty, else net::defaultStateDir().
-std::string clientStateDir(const std::vector<std::string>& clientFlags);   // the last --state-dir value; "" if none
+std::string clientStateDir(const std::vector<std::string>& clientFlags);  // the last --state-dir value; "" if none
 std::string displaySettingsPath(const std::string& stateDir);
-bool savedRendererGpu(const std::string& displayIni);   // anything but "gpu" is CPU, as the client reads it
+bool savedRendererGpu(const std::string& displayIni);  // anything but "gpu" is CPU, as the client reads it
 bool setSavedRenderer(const std::string& displayIni, bool gpu, std::string* err = nullptr);
 
 // Headless join: run argv, stream its merged output to `out` (and client.log, 0600), forward SIGINT/SIGTERM as SIGINT to the
@@ -70,7 +70,7 @@ int runHeadless(const std::vector<std::string>& argv, FILE* out);
 // windows to .desktop files by app id (GNOME; any Wayland compositor) finds this one and its Icon=.
 const char* const kAppId = "io.github.toomykins.Fugue";
 const char* const kDesktopFile = "io.github.toomykins.Fugue.desktop";
-const char* const kLegacyDesktopFile = "fugue.desktop";   // a second Fugue entry: removed only if its content is ours
+const char* const kLegacyDesktopFile = "fugue.desktop";  // a second Fugue entry: removed only if its content is ours
 std::string desktopQuote(const std::string& s);
 std::string desktopEntry(const std::string& exe);
 // The Windows byond:// handler command: `"<exe>" pager --url "%1"`.
@@ -78,7 +78,11 @@ std::string urlHandlerCommand(const std::string& exe);
 // `--url <link>`, the handler's whole argument list: the link, or nullopt when there is anything else, or the link holds
 // a quote, whitespace or a control character (it could have been split into extra arguments).
 std::optional<std::string> handlerUrl(const std::vector<std::string>& args, std::string* err = nullptr);
-struct DesktopResult { std::string desktopPath, mimeappsPath, err; std::vector<std::string> iconPaths; bool ok = false; };
+struct DesktopResult {
+    std::string desktopPath, mimeappsPath, err;
+    std::vector<std::string> iconPaths;
+    bool ok = false;
+};
 // Writes ONLY under $XDG_DATA_HOME (default ~/.local/share): applications/<app id>.desktop,
 // applications/mimeapps.list, and each of `icons` (size, PNG bytes) as icons/hicolor/<s>x<s>/apps/<app id>.png
 // - the Flatpak's own hicolor layout, so Icon=<app id> resolves the same way.

@@ -10,7 +10,7 @@
 //                          A page request with a QUERY is a Topic: answered 204 so the document is kept, and
 //                          handed to onTopic.
 //   GET  <missing file>    404 with the MIME type of the name asked for: a text/html 404 body makes a stylesheet
-//                          request render as a white panel. A name the world announced (0x00fe) is held open up to
+//                          request render as a white panel. A name the world announced (BrowseRsc) is held open up to
 //                          kMissWaitMs; an unknown name is held up to kUnnamedWaitMs, and only while an unnamed record
 //                          is outstanding. At most kMaxHeld requests are held at once, but an announced name is never
 //                          refused for the cap (it evicts an unknown-name hold, or is held over the cap).
@@ -42,8 +42,8 @@ public:
     // "http://127.0.0.1:PORT/SECRET/" - every URL the shell builds starts with it.
     QString base() const;
     QString urlFor(const QString& file) const;
-    bool owns(const QUrl& u) const;                  // under base()?
-    QString fileOf(const QUrl& u) const;             // the path after base(), decoded
+    bool owns(const QUrl& u) const;       // under base()?
+    QString fileOf(const QUrl& u) const;  // the path after base(), decoded
 
     void setPage(const QString& file, const QString& html);
     void removePage(const QString& file);
@@ -68,11 +68,14 @@ public:
     static QByteArray cellPng(const render::Icon& icon);
     // waited: requests held open. heldRefused: 404ed at once because kMaxHeld or kMaxHeldUnnamed was reached, or
     // evicted for an announced name. heldPeak: most held at once.
-    struct Stats { int pages = 0, rsc = 0, notFound = 0, topics = 0, bridge = 0, refused = 0, waited = 0, heldRefused = 0, heldPeak = 0; };
+    struct Stats {
+        int pages = 0, rsc = 0, notFound = 0, topics = 0, bridge = 0, refused = 0, waited = 0, heldRefused = 0,
+            heldPeak = 0;
+    };
     int held() const { return int(held_.size()); }
     const Stats& stats() const { return st_; }
 signals:
-    void topic(const QString& href);                 // "?_src_=..." (leading '?')
+    void topic(const QString& href);  // "?_src_=..." (leading '?')
 private:
     struct Conn;
     using ConnP = std::shared_ptr<Conn>;
@@ -89,7 +92,7 @@ private:
     std::shared_ptr<BrowseRscStore> store_;
     BridgeFn bridge_;
     Stats st_;
-    std::vector<ConnP> held_;   // requests being held open, oldest first
+    std::vector<ConnP> held_;  // requests being held open, oldest first
 };
 
 }  // namespace fugue::shell

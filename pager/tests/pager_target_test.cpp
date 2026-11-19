@@ -32,7 +32,8 @@ private slots:
         QTest::addColumn<QString>("needle");
         QTest::newRow("empty") << "" << "no server address given";
         QTest::newRow("world ref") << "byond://Example.World" << "hub WORLD reference";
-        QTest::newRow("world ref advice") << "Example.World" << "Fugue does not look hub worlds up by name. Use the server's host:port";
+        QTest::newRow("world ref advice")
+            << "Example.World" << "Fugue does not look hub worlds up by name. Use the server's host:port";
         QTest::newRow("no port") << "127.0.0.1" << "has no port";
         QTest::newRow("no host") << ":6000" << "has no host";
         QTest::newRow("bad port") << "h:0" << "bad port";

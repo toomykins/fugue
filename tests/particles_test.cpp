@@ -32,12 +32,15 @@ std::string slurp(const std::string& p) {
     std::ifstream f(p, std::ios::binary);
     return std::string((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
 }
-constexpr int64_t kT0 = 1'000'000'000'000'000'000;   // a whole number of ticks
+constexpr int64_t kT0 = 1'000'000'000'000'000'000;  // a whole number of ticks
 constexpr int64_t kDs = 100'000'000;
 constexpr uint32_t kResSq = 0x46cdb13c, kResP = 0x7b19df8d;
 
 // A pixel window around one tile of the 15x15 view (bottom-left (1,1)): coordinates from the tile's top-left.
-struct Px { int x, y; uint8_t r, g, b; };
+struct Px {
+    int x, y;
+    uint8_t r, g, b;
+};
 std::vector<Px> around(const render::RgbaImage& f, int tx, int ty, int pad = 64) {
     std::vector<Px> out;
     int x0 = (tx - 1) * 32, y0 = (15 - ty) * 32;
@@ -72,7 +75,10 @@ class Particles : public QObject {
         render::DrawList dl;
         render::SceneStats st;
         std::string err;
-        if (!render::assembleMapControl(s, res_, clockNs, dl, st, &err)) { qWarning("assemble: %s", err.c_str()); return {}; }
+        if (!render::assembleMapControl(s, res_, clockNs, dl, st, &err)) {
+            qWarning("assemble: %s", err.c_str());
+            return {};
+        }
         return render::execute(dl);
     }
     // FUGUE_PARTICLES_DUMP=<dir>: the frames the statistics below are taken over, as PNGs (for comparing by eye).
@@ -82,7 +88,8 @@ class Particles : public QObject {
         char n[64];
         std::snprintf(n, sizeof n, "/f%04d.png", k);
         auto png = render::encodePng(f);
-        std::ofstream(std::string(d) + n, std::ios::binary).write(reinterpret_cast<const char*>(png.data()), std::streamsize(png.size()));
+        std::ofstream(std::string(d) + n, std::ios::binary)
+            .write(reinterpret_cast<const char*>(png.data()), std::streamsize(png.size()));
     }
     const model::ParticleSet& set(const model::Session& s, uint32_t obj) { return s.world().particles.at(obj); }
 
@@ -96,10 +103,11 @@ private slots:
         while (std::getline(f, line)) {
             QVERIFY(line.rfind("0x", 0) == 0);
             size_t sp = line.find(' ', line.find("len="));
-            frames_.push_back({uint16_t(std::stoul(line.substr(2, 4), nullptr, 16)), sp == std::string::npos ? Bytes{} : unhex(line.substr(sp + 1))});
+            frames_.push_back({uint16_t(std::stoul(line.substr(2, 4), nullptr, 16)),
+                               sp == std::string::npos ? Bytes{} : unhex(line.substr(sp + 1))});
         }
         QCOMPARE(int(frames_.size()), 31);
-        for (size_t l : {26, 29, 30, 31, 32}) QCOMPARE(frames_[l - 2].first, uint16_t(0x0008));
+        for (size_t l : {26, 29, 30, 31, 32}) QCOMPARE(frames_[l - 2].first, uint16_t(S2C::InView));
         for (uint32_t id : {kResSq, kResP}) {
             char n[16];
             std::snprintf(n, sizeof n, "%08x", id);
@@ -117,34 +125,43 @@ private slots:
         const auto& ps = s.world().particles;
         QCOMPARE(int(ps.size()), 10);
         const model::ParticleSet& dots = set(s, 0);
-        QCOMPARE(int(dots.width), 200); QCOMPARE(int(dots.count), 100);
+        QCOMPARE(int(dots.width), 200);
+        QCOMPARE(int(dots.count), 100);
         QCOMPARE(dots.spawning, 1.0f);
-        QCOMPARE(dots.bound1[0], -1000.0f); QCOMPARE(dots.bound2[2], 1000.0f);
-        QCOMPARE(int(dots.gen[model::PLifespan].type), 0x80); QCOMPARE(dots.gen[model::PLifespan].a[0], 20.0f);
+        QCOMPARE(dots.bound1[0], -1000.0f);
+        QCOMPARE(dots.bound2[2], 1000.0f);
+        QCOMPARE(int(dots.gen[model::PLifespan].type), 0x80);
+        QCOMPARE(dots.gen[model::PLifespan].a[0], 20.0f);
         QCOMPARE(dots.gen[model::PFade].a[0], 10.0f);
         QCOMPARE(int(dots.gen[model::PVelocity].type), 0x81);
         QCOMPARE(dots.gen[model::PVelocity].a, (std::vector<float>{1.5f, 0, 0}));
-        QCOMPARE(dots.gen[model::PColor].colors, std::vector<uint32_t>{0xff00ff00u});   // #00FF00, RGBA bytes
+        QCOMPARE(dots.gen[model::PColor].colors, std::vector<uint32_t>{0xff00ff00u});  // #00FF00, RGBA bytes
         QVERIFY(!dots.gen[model::PIcon].present());
 
-        const model::ParticleSet& g = set(s, 7);   // /particles/gens
-        QCOMPARE(int(g.width), 64); QCOMPARE(int(g.height), 32); QCOMPARE(int(g.count), 7);
+        const model::ParticleSet& g = set(s, 7);  // /particles/gens
+        QCOMPARE(int(g.width), 64);
+        QCOMPARE(int(g.height), 32);
+        QCOMPARE(int(g.count), 7);
         QCOMPARE(g.spawning, 0.25f);
         QCOMPARE(g.bound1, (std::array<float, 3>{-50, -60, -70}));
         QCOMPARE(g.bound2, (std::array<float, 3>{51, 61, 71}));
         QCOMPARE(g.gravity, (std::array<float, 3>{0.01f, 0.02f, 0.03f}));
         auto& G = g.gen;
-        QCOMPARE(int(G[model::PLifespan].type), 0); QCOMPARE(G[model::PLifespan].b[0], 9.0f);
-        QCOMPARE(int(G[model::PFade].rand), 1);      // NORMAL_RAND
-        QCOMPARE(int(G[model::PFadein].rand), 2);    // LINEAR_RAND
+        QCOMPARE(int(G[model::PLifespan].type), 0);
+        QCOMPARE(G[model::PLifespan].b[0], 9.0f);
+        QCOMPARE(int(G[model::PFade].rand), 1);    // NORMAL_RAND
+        QCOMPARE(int(G[model::PFadein].rand), 2);  // LINEAR_RAND
         QCOMPARE(int(G[model::PColor].type), 2);
         QCOMPARE(G[model::PColor].colors, (std::vector<uint32_t>{0xff0000ffu, 0xffff0000u}));
-        QCOMPARE(int(G[model::PPosition].type), 0x21); QCOMPARE(int(G[model::PPosition].sub), 0);   // circle
-        QCOMPARE(int(G[model::PVelocity].sub), 1); QCOMPARE(int(G[model::PVelocity].rand), 3);       // sphere, SQUARE_RAND
-        QCOMPARE(int(G[model::PDrift].sub), 2);                                                     // square
-        QCOMPARE(int(G[model::PGrow].sub), 3);                                                      // cube
-        QCOMPARE(int(G[model::PScale].type), 1);                                                    // vector
-        QCOMPARE(int(G[model::PRotation].type), 0); QCOMPARE(G[model::PRotation].a[0], -45.0f);
+        QCOMPARE(int(G[model::PPosition].type), 0x21);
+        QCOMPARE(int(G[model::PPosition].sub), 0);  // circle
+        QCOMPARE(int(G[model::PVelocity].sub), 1);
+        QCOMPARE(int(G[model::PVelocity].rand), 3);  // sphere, SQUARE_RAND
+        QCOMPARE(int(G[model::PDrift].sub), 2);      // square
+        QCOMPARE(int(G[model::PGrow].sub), 3);       // cube
+        QCOMPARE(int(G[model::PScale].type), 1);     // vector
+        QCOMPARE(int(G[model::PRotation].type), 0);
+        QCOMPARE(G[model::PRotation].a[0], -45.0f);
         QCOMPARE(int(G[model::PSpin].type), 0);
         QCOMPARE(int(G[model::PFriction].type), 0);
         QCOMPARE(int(G[model::PIcon].ids.size()), 2);
@@ -153,21 +170,27 @@ private slots:
         QCOMPARE(G[model::PIconState].strs[1].first, std::string("dust"));
         QCOMPARE(G[model::PIconState].strs[1].second, 1.0f);
 
-        const model::ParticleSet& gr = set(s, 8);   // /particles/grad: matrix(1, 0.5, 2, 0, 1, 3)
+        const model::ParticleSet& gr = set(s, 8);  // /particles/grad: matrix(1, 0.5, 2, 0, 1, 3)
         QCOMPARE(int(gr.gradient.size()), 3);
-        QCOMPARE(gr.gradient[1].pos, 0.5f); QCOMPARE(gr.gradient[1].rgba, 0xff00ff00u);
+        QCOMPARE(gr.gradient[1].pos, 0.5f);
+        QCOMPARE(gr.gradient[1].rgba, 0xff00ff00u);
         QVERIFY(gr.gradientLoop);
         QVERIFY(gr.hasTransform);
         // a,d | b,e | c,f fill the x, y and z rows
-        QCOMPARE(gr.transform[0], 1.0f); QCOMPARE(gr.transform[1], 0.0f);
-        QCOMPARE(gr.transform[4], 0.5f); QCOMPARE(gr.transform[5], 1.0f);
-        QCOMPARE(gr.transform[8], 2.0f); QCOMPARE(gr.transform[9], 3.0f);
-        QCOMPARE(gr.transform[12], 0.0f); QCOMPARE(gr.transform[15], 1.0f);
+        QCOMPARE(gr.transform[0], 1.0f);
+        QCOMPARE(gr.transform[1], 0.0f);
+        QCOMPARE(gr.transform[4], 0.5f);
+        QCOMPARE(gr.transform[5], 1.0f);
+        QCOMPARE(gr.transform[8], 2.0f);
+        QCOMPARE(gr.transform[9], 3.0f);
+        QCOMPARE(gr.transform[12], 0.0f);
+        QCOMPARE(gr.transform[15], 1.0f);
         QCOMPARE(int(gr.gen[model::PColorChange].type), 0x80);
-        QCOMPARE(int(gr.gen[model::PVelocity].type), 0x20);   // box
+        QCOMPARE(int(gr.gen[model::PVelocity].type), 0x20);  // box
 
-        const model::ParticleSet& x4 = set(s, 6);   // a 4x4 list: translation in the w row
-        QCOMPARE(x4.transform[12], 6.0f); QCOMPARE(x4.transform[13], 9.0f);
+        const model::ParticleSet& x4 = set(s, 6);  // a 4x4 list: translation in the w row
+        QCOMPARE(x4.transform[12], 6.0f);
+        QCOMPARE(x4.transform[13], 9.0f);
     }
 
     // The same /particles datum updated keeps its particles; null detaches the set; a new datum starts empty.
@@ -184,7 +207,7 @@ private slots:
         QCOMPARE(int(set(s, 9).live.size()), alive);
         ingestLine(s, 30);
         QCOMPARE(set(s, 9).spawning, 0.0f);
-        (void)map(s, kT0 + 60 * kDs);   // spawning 0: the last particles live out their 10 ticks
+        (void)map(s, kT0 + 60 * kDs);  // spawning 0: the last particles live out their 10 ticks
         QVERIFY(set(s, 9).live.empty());
         QVERIFY(!model::particlesActive(set(s, 9)));
         ingestLine(s, 31);
@@ -202,21 +225,32 @@ private slots:
         model::Session s;
         ingestUpTo(s, 28);
         render::RgbaImage f = map(s, kT0 + 5 * kDs);
-        QCOMPARE(f.w, 480); QCOMPARE(f.h, 480);
-        struct Probe { const char* name; int tx, ty; uint8_t r, g, b; int x0, x1, y0, y1; };
+        QCOMPARE(f.w, 480);
+        QCOMPARE(f.h, 480);
+        struct Probe {
+            const char* name;
+            int tx, ty;
+            uint8_t r, g, b;
+            int x0, x1, y0, y1;
+        };
         const Probe probes[] = {
-            {"one", 3, 4, 255, 0, 0, 12, 19, 12, 19},    {"off", 6, 4, 0, 255, 0, 17, 24, 5, 12},
-            {"half", 9, 4, 0, 0, 255, 14, 21, 16, 23},   {"dot1", 12, 4, 255, 255, 255, 16, 16, 15, 15},
+            {"one", 3, 4, 255, 0, 0, 12, 19, 12, 19},     {"off", 6, 4, 0, 255, 0, 17, 24, 5, 12},
+            {"half", 9, 4, 0, 0, 255, 14, 21, 16, 23},    {"dot1", 12, 4, 255, 255, 255, 16, 16, 15, 15},
             {"xlate", 3, 8, 255, 255, 0, 12, 19, 12, 19}, {"xlate4", 6, 8, 0, 255, 255, 18, 25, 3, 10},
         };
         for (const Probe& p : probes) {
             int x0 = 999, x1 = -999, y0 = 999, y1 = -999, n = 0;
             for (const Px& q : around(f, p.tx, p.ty, 32)) {
                 if (q.r != p.r || q.g != p.g || q.b != p.b) continue;
-                x0 = std::min(x0, q.x); x1 = std::max(x1, q.x); y0 = std::min(y0, q.y); y1 = std::max(y1, q.y); n++;
+                x0 = std::min(x0, q.x);
+                x1 = std::max(x1, q.x);
+                y0 = std::min(y0, q.y);
+                y1 = std::max(y1, q.y);
+                n++;
             }
             QVERIFY2(x0 == p.x0 && x1 == p.x1 && y0 == p.y0 && y1 == p.y1,
-                     qPrintable(QString("%1: x %2..%3 y %4..%5 (%6 px)").arg(p.name).arg(x0).arg(x1).arg(y0).arg(y1).arg(n)));
+                     qPrintable(
+                         QString("%1: x %2..%3 y %4..%5 (%6 px)").arg(p.name).arg(x0).arg(x1).arg(y0).arg(y1).arg(n)));
         }
     }
 
@@ -231,15 +265,18 @@ private slots:
             int64_t t = kT0 + (40 + k) * kDs + (k % 3) * (kDs / 3);
             render::RgbaImage f = map(s, t);
             int n = 0, minX = 99, maxX = -99;
-            double sum[4] = {}; int cnt[4] = {};
+            double sum[4] = {};
+            int cnt[4] = {};
             for (const Px& q : around(f, 3, 12, 32)) {
                 if (q.r || q.b || !q.g) continue;
                 QCOMPARE(q.y, 16);
                 n++;
                 int dx = q.x - 16;
-                minX = std::min(minX, dx); maxX = std::max(maxX, dx);
+                minX = std::min(minX, dx);
+                maxX = std::max(maxX, dx);
                 int band = dx < 15 ? 0 : dx < 20 ? 1 : dx < 25 ? 2 : 3;
-                sum[band] += q.g; cnt[band]++;
+                sum[band] += q.g;
+                cnt[band]++;
             }
             QVERIFY2(n >= 19 && n <= 20, qPrintable(QString::number(n)));
             QCOMPARE(minX, 0);
@@ -270,16 +307,30 @@ private slots:
             for (const Px& q : v) {
                 if (q.r != q.g || q.g != q.b) continue;
                 n++;
-                sx += q.x - 16; sy += q.y - 16; inten += q.r;
-                minX = std::min(minX, q.x - 16); maxX = std::max(maxX, q.x - 16);
-                minY = std::min(minY, q.y - 16); maxY = std::max(maxY, q.y - 16);
+                sx += q.x - 16;
+                sy += q.y - 16;
+                inten += q.r;
+                minX = std::min(minX, q.x - 16);
+                maxX = std::max(maxX, q.x - 16);
+                minY = std::min(minY, q.y - 16);
+                maxY = std::max(maxY, q.y - 16);
             }
             QVERIFY(n > 0);
-            px += n; cx += sx / n; cy += sy / n; frames++;
+            px += n;
+            cx += sx / n;
+            cy += sy / n;
+            frames++;
         }
         double meanPx = px / frames, meanCx = cx / frames, meanCy = cy / frames, meanI = inten / px;
-        QString got = QString("px %1 centroid %2,%3 x %4..%5 y %6..%7 int %8").arg(meanPx).arg(meanCx).arg(meanCy)
-                          .arg(minX).arg(maxX).arg(minY).arg(maxY).arg(meanI);
+        QString got = QString("px %1 centroid %2,%3 x %4..%5 y %6..%7 int %8")
+                          .arg(meanPx)
+                          .arg(meanCx)
+                          .arg(meanCy)
+                          .arg(minX)
+                          .arg(maxX)
+                          .arg(minY)
+                          .arg(maxY)
+                          .arg(meanI);
         QVERIFY2(std::fabs(meanPx - 154) < 154 * 0.12, qPrintable(got));
         QVERIFY2(std::fabs(meanCx - -16.6) < 2.0, qPrintable(got));
         QVERIFY2(std::fabs(meanCy - -2.0) < 2.0, qPrintable(got));
@@ -287,13 +338,18 @@ private slots:
         QVERIFY2(minY >= -32 && minY <= -24 && maxY >= 22 && maxY <= 29, qPrintable(got));
         QVERIFY2(std::fabs(meanI - 99) < 12, qPrintable(got));
 
-        ingestLine(s, 29);   // velocity (0,3): north
+        ingestLine(s, 29);  // velocity (0,3): north
         for (int k = 130; k < 160; k++) (void)map(s, kT0 + k * kDs);
         double ny = 0;
         for (int k = 0; k < 30; k++) {
             render::RgbaImage f = map(s, kT0 + (160 + k) * kDs);
-            double sy = 0; int n = 0;
-            for (const Px& q : around(f, 12, 12)) if (q.r == q.g && q.g == q.b) { sy += q.y - 16; n++; }
+            double sy = 0;
+            int n = 0;
+            for (const Px& q : around(f, 12, 12))
+                if (q.r == q.g && q.g == q.b) {
+                    sy += q.y - 16;
+                    n++;
+                }
             QVERIFY(n > 0);
             ny += sy / n;
         }
@@ -338,7 +394,7 @@ private slots:
         };
         model::ParticleSet a = make(2, 100, 10);
         for (int k = 0; k <= 50; k++) model::advanceParticles(a, kT0 + k * kDs, kDs, 1);
-        QCOMPARE(int(a.live.size()), 21);   // ages 0, 0.5, ..., 10 (age == life is still alive)
+        QCOMPARE(int(a.live.size()), 21);  // ages 0, 0.5, ..., 10 (age == life is still alive)
         model::ParticleSet c = make(5, 12, 100);
         for (int k = 0; k <= 50; k++) model::advanceParticles(c, kT0 + k * kDs, kDs, 1);
         QCOMPARE(int(c.live.size()), 12);
@@ -346,7 +402,8 @@ private slots:
         model::ParticleSet h = make(1, 100, 20);
         for (int k = 0; k <= 200; k++) model::advanceParticles(h, kT0 + int64_t(k) * 30'000'000, 30'000'000, 1);
         QVERIFY(std::abs(int(h.live.size()) - 21) <= 1);
-        for (size_t i = 1; i < h.live.size(); i++) QVERIFY(std::fabs((h.live[i].born - h.live[i - 1].born) - 1.0) < 0.31);
+        for (size_t i = 1; i < h.live.size(); i++)
+            QVERIFY(std::fabs((h.live[i].born - h.live[i - 1].born) - 1.0) < 0.31);
 
         // A particle keeps what it spawned with (its icon_state) across steps on which nothing dies.
         model::ParticleSet ic = make(0.5f, 10, 16);
@@ -356,7 +413,10 @@ private slots:
         ic.gen[model::PIconState].strs = {{"sq", 1.0f}};
         for (int k = 0; k <= 40; k++) model::advanceParticles(ic, kT0 + k * kDs, kDs, 1);
         QCOMPARE(int(ic.live.size()), 8);
-        for (const model::Particle& p : ic.live) { QCOMPARE(p.iconState, std::string("sq")); QCOMPARE(p.icon, 1u); }
+        for (const model::Particle& p : ic.live) {
+            QCOMPARE(p.iconState, std::string("sq"));
+            QCOMPARE(p.icon, 1u);
+        }
 
         model::ParticleSet fr = make(0.05f, 1, 100);
         fr.gen[model::PVelocity].type = 0x81;
@@ -383,13 +443,23 @@ private slots:
     void generatorShapes() {
         std::mt19937 rng(7);
         model::ParticleGen box;
-        box.type = 0x20; box.a = {-15, -15, 0}; box.b = {15, 15, 0};
+        box.type = 0x20;
+        box.a = {-15, -15, 0};
+        box.b = {15, 15, 0};
         model::ParticleGen circle;
-        circle.type = 0x21; circle.sub = 0; circle.a = {3}; circle.b = {6};
+        circle.type = 0x21;
+        circle.sub = 0;
+        circle.a = {3};
+        circle.b = {6};
         model::ParticleGen sq;
-        sq.type = 0x21; sq.sub = 2; sq.a = {2}; sq.b = {2};
+        sq.type = 0x21;
+        sq.sub = 2;
+        sq.a = {2};
+        sq.b = {2};
         model::ParticleGen num;
-        num.type = 0; num.a = {5}; num.b = {9};
+        num.type = 0;
+        num.a = {5};
+        num.b = {9};
         double meanX = 0;
         for (int i = 0; i < 2000; i++) {
             auto b = model::particleGenVec(box, rng);
@@ -409,7 +479,7 @@ private slots:
         g.gradientLoop = true;
         QCOMPARE(model::particleGradient(g, 0.5f), 0xff00ff00u);
         QCOMPARE(model::particleGradient(g, 1.5f), 0xff00ff00u);   // wraps
-        QCOMPARE(model::particleGradient(g, 0.25f), 0xff008080u);   // halfway from red to green
+        QCOMPARE(model::particleGradient(g, 0.25f), 0xff008080u);  // halfway from red to green
     }
 };
 

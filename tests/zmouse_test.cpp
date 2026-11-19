@@ -80,13 +80,15 @@ class ZMouseTest : public QObject {
     }
     void build(Phase& p, size_t lastLine) {
         p.s.setIngestClockNs(kT0);
-        for (size_t i = 0; i < frames_.size() && i + 2 <= lastLine; i++) p.s.ingest(frames_[i].first, frames_[i].second);
+        for (size_t i = 0; i < frames_.size() && i + 2 <= lastLine; i++)
+            p.s.ingest(frames_[i].first, frames_[i].second);
         p.s.noteResource(net::resId(grid_), grid_, "grid.dmi");
         DrawList dl, dc;
         SceneStats st;
         std::string err;
         QVERIFY2(assembleMapControl(p.s, res_, kT0, dl, st, &err, /*withHit=*/true), err.c_str());
-        QVERIFY2(assembleSecondaryMap(p.s, res_, kT0, kCamShort, dc, st, &err, {}, nullptr, /*withHit=*/true), err.c_str());
+        QVERIFY2(assembleSecondaryMap(p.s, res_, kT0, kCamShort, dc, st, &err, {}, nullptr, /*withHit=*/true),
+                 err.c_str());
         QVERIFY(dl.hit && dc.hit);
         p.main = std::make_shared<HitScene>(*dl.hit);
         p.cam = std::make_shared<HitScene>(*dc.hit);
@@ -134,14 +136,18 @@ private slots:
         while (std::getline(f, line)) {
             QVERIFY(line.rfind("0x", 0) == 0);
             size_t sp = line.find(' ', line.find("len="));
-            frames_.push_back({uint16_t(std::stoul(line.substr(2, 4), nullptr, 16)), sp == std::string::npos ? Bytes{} : unhex(line.substr(sp + 1))});
+            frames_.push_back({uint16_t(std::stoul(line.substr(2, 4), nullptr, 16)),
+                               sp == std::string::npos ? Bytes{} : unhex(line.substr(sp + 1))});
         }
         QCOMPARE(int(frames_.size()), 56);
         std::ifstream v(dir_ + "/c2s.txt");
         QVERIFY(v);
         std::string step;
         while (std::getline(v, line)) {
-            if (line.rfind("# ", 0) == 0) { step = line.substr(2, line.find_first_of(":(, ", 2) - 2); continue; }
+            if (line.rfind("# ", 0) == 0) {
+                step = line.substr(2, line.find_first_of(":(, ", 2) - 2);
+                continue;
+            }
             if (!line.empty() && line[0] != '#') c2s_[step].push_back(unhex(line));
         }
         QCOMPARE(int(c2s_["P1-cam"].size()), 6);
@@ -189,10 +195,10 @@ private slots:
     void dragEndsOverNothing() {
         Phase p;
         build(p, 40);
-        ChainEnv em = env(*p.main, "main.map"), ec = env(*p.cam, kCam), out = env(*p.main, "main.out"), popup = env(*p.main, "campop"),
-                 none = env(*p.main, "");
+        ChainEnv em = env(*p.main, "main.map"), ec = env(*p.cam, kCam), out = env(*p.main, "main.out"),
+                 popup = env(*p.main, "campop"), none = env(*p.main, "");
         for (ChainEnv* e : {&out, &popup, &none}) e->offMap = true;
-        PointerEvent away;   // off every map only the screen position counts (past the drag threshold)
+        PointerEvent away;  // off every map only the screen position counts (past the drag threshold)
         away.winX = 500;
         MouseChain c;
         one(c.press(at(*p.main, 8, 8, 16, 16, 1000, 0), em), "P1-release-outside", 2);
@@ -212,7 +218,8 @@ private slots:
     // A drag within the camera map: the drop's over-location is the map's short id for a turf by id, the turf for one by
     // cell (run 2 of the same world).
     void dragWithinTheCamera() {
-        for (auto [last, phase] : {std::pair{size_t(40), std::string("P1")}, std::pair{size_t(57), std::string("P3")}}) {
+        for (auto [last, phase] :
+             {std::pair{size_t(40), std::string("P1")}, std::pair{size_t(57), std::string("P3")}}) {
             Phase p;
             build(p, last);
             ChainEnv ec = env(*p.cam, kCam);

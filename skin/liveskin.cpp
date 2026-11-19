@@ -19,11 +19,15 @@ std::string dims(int w, int h) { return std::to_string(w) + "x" + std::to_string
 
 // The winset keys stored as properties (applyPropLocked); macro, focus, parent, type and splitter have their own arms.
 bool storedKey(const std::string& k) {
-    static const char* keys[] = {"is-visible", "is-disabled", "is-checked", "right-click", "pos", "size", "left", "right", "text",
-                                 "background-color", "text-color", "on-close", "title", "use-title", "style", "command",
-                                 "icon-size", "zoom", "zoom-mode", "letterbox", "icon", "font-family", "font-size", "font-style",
-                                 "tab-background-color", "tab-text-color", "prefix-color", "suffix-color"};
-    for (const char* s : keys) if (k == s) return true;
+    static const char* keys[] = {
+        "is-visible",     "is-disabled",  "is-checked",   "right-click", "pos",
+        "size",           "left",         "right",        "text",        "background-color",
+        "text-color",     "on-close",     "title",        "use-title",   "style",
+        "command",        "icon-size",    "zoom",         "zoom-mode",   "letterbox",
+        "icon",           "font-family",  "font-size",    "font-style",  "tab-background-color",
+        "tab-text-color", "prefix-color", "suffix-color", "anchor1",     "anchor2"};
+    for (const char* s : keys)
+        if (k == s) return true;
     return false;
 }
 
@@ -32,7 +36,7 @@ bool storedKey(const std::string& k) {
 // A window or pane's pos and size are left as sent: stock answers them oddly (-1,-1 and 6x-1) and nothing here reads them.
 const char* valueOfEmpty(const std::string& k, bool control) {
     if (k == "is-visible" || k == "is-disabled" || k == "is-checked") return "false";
-    if (k == "size" && control) return "0x0";   // fill to the parent's far edge
+    if (k == "size" && control) return "0x0";  // fill to the parent's far edge
     if (k == "pos" && control) return "-1,-1";
     if (k == "font-size" || k == "zoom") return "0";
     if (k == "background-color" || k == "text-color") return "#b47229";
@@ -44,11 +48,16 @@ double clampFrac(double f) { return f < 0 ? 0 : (f > 1 ? 1 : f); }
 std::string boolParam(bool b) { return b ? "true" : "false"; }
 
 bool macroParam(const MacroEntry& e, const std::string& k, std::string& v) {
-    if (k == "id") v = e.id;
-    else if (k == "name") v = e.spec;
-    else if (k == "command") v = e.command;
-    else if (k == "is-disabled") v = boolParam(e.disabled);
-    else return false;
+    if (k == "id")
+        v = e.id;
+    else if (k == "name")
+        v = e.spec;
+    else if (k == "command")
+        v = e.command;
+    else if (k == "is-disabled")
+        v = boolParam(e.disabled);
+    else
+        return false;
     return true;
 }
 
@@ -56,8 +65,10 @@ bool macroParam(const MacroEntry& e, const std::string& k, std::string& v) {
 // else with %f ("33.299999" after `splitter=33.3`).
 std::string splitterText(float f) {
     char buf[64];
-    if (f == std::floor(f) && std::fabs(f) < 1e15f) std::snprintf(buf, sizeof buf, "%lld", (long long)f);
-    else std::snprintf(buf, sizeof buf, "%f", double(f));
+    if (f == std::floor(f) && std::fabs(f) < 1e15f)
+        std::snprintf(buf, sizeof buf, "%lld", (long long)f);
+    else
+        std::snprintf(buf, sizeof buf, "%f", double(f));
     return buf;
 }
 
@@ -75,19 +86,28 @@ std::string splitterText(float f) {
 // published by setClientEnv (the GUI's dpi and screen size, the session's url); the stock value is the default until
 // it is set. `focus` likewise follows the GUI once it reports (setGuiFocus).
 enum class Global { Focus, Windows, Panes, Menus, Macros, Env, BrowserOptions };
-struct GlobalParam { const char* name; Global what; const char* envDefault; };
+struct GlobalParam {
+    const char* name;
+    Global what;
+    const char* envDefault;
+};
 const GlobalParam kGlobalParams[] = {
     {"focus", Global::Focus, ""},
     {"browser-options", Global::BrowserOptions, ""},
-    {"sound", Global::Env, "true"},     {"hwmode", Global::Env, "true"},   // the client draws every blend mode, so never software mode
+    {"sound", Global::Env, "true"},
+    {"hwmode", Global::Env, "true"},  // the client draws every blend mode, so never software mode
     {"url", Global::Env, ""},
-    {"num-lock", Global::Env, "false"}, {"caps-lock", Global::Env, "false"}, {"scroll-lock", Global::Env, "false"},
+    {"num-lock", Global::Env, "false"},
+    {"caps-lock", Global::Env, "false"},
+    {"scroll-lock", Global::Env, "false"},
     {"dpi", Global::Env, "1"},
-    {"screen-pos", Global::Env, ""},    {"screen-size", Global::Env, ""},
+    {"screen-pos", Global::Env, ""},
+    {"screen-size", Global::Env, ""},
 };
 
 const GlobalParam* globalParam(const std::string& name) {
-    for (const GlobalParam& g : kGlobalParams) if (name == g.name) return &g;
+    for (const GlobalParam& g : kGlobalParams)
+        if (name == g.name) return &g;
     return nullptr;
 }
 
@@ -96,10 +116,16 @@ const GlobalParam* globalParam(const std::string& name) {
 // reads the two bytes past a short name's terminator from the block the name was built in, so an answer can depend on
 // names asked before it. This reproduces that.
 std::optional<Global> stockListTest(const std::string& n, const char (&block)[8]) {
-    auto at = [&](size_t i) { return n.size() <= 7 ? block[i] : n[i]; };   // i <= 7 < n.size() for a long name
-    struct Test { const char* t; size_t len; Global what; };
-    static const Test tests[] = {{"window", 6, Global::Windows}, {"pane", 4, Global::Panes},
-                                 {"menu", 4, Global::Menus},     {"macro", 5, Global::Macros}};
+    auto at = [&](size_t i) { return n.size() <= 7 ? block[i] : n[i]; };  // i <= 7 < n.size() for a long name
+    struct Test {
+        const char* t;
+        size_t len;
+        Global what;
+    };
+    static const Test tests[] = {{"window", 6, Global::Windows},
+                                 {"pane", 4, Global::Panes},
+                                 {"menu", 4, Global::Menus},
+                                 {"macro", 5, Global::Macros}};
     for (const Test& t : tests)
         if ((n.compare(0, t.len, t.t, t.len) == 0 && at(t.len) == '\0') || (at(t.len) == 's' && at(t.len + 1) == '\0'))
             return t.what;
@@ -112,7 +138,7 @@ std::optional<Global> stockListTest(const std::string& n, const char (&block)[8]
 void nameBlockWrite(char (&block)[8], const std::string& s) {
     if (s.size() <= 15) std::memcpy(block, s.c_str(), std::min<size_t>(s.size() + 1, sizeof block));
 }
-void nameBlockClobber(char (&block)[8]) { block[6] = block[7] = '\x01'; }   // neither 's' nor NUL
+void nameBlockClobber(char (&block)[8]) { block[6] = block[7] = '\x01'; }  // neither 's' nor NUL
 
 // Whether a control's `pos` / `size` is the same in any box (skin/layout.h anchor rules): pos when anchor1 is none or
 // 0,0; size when the .dmf size is non-zero and the anchors do not stretch it.
@@ -188,7 +214,7 @@ LiveSkin::Kind LiveSkin::resolveLocked(const std::string& name) const {
     // A control the skin declares but the layout does not place is still a control.
     if (declaresLocked(name)) return Kind::Control;
     if (knownPopupLocked(name)) return Kind::Popup;
-    if (windowLocked(name)) return Kind::Window;   // (E2) a skin window: macro / title / focus targets
+    if (windowLocked(name)) return Kind::Window;  // (E2) a skin window: macro / title / focus targets
     if (isMenuTarget(name)) return Kind::Menu;
     if (runtimeLocked(name)) return Kind::Runtime;
     size_t i;
@@ -205,14 +231,18 @@ bool LiveSkin::hasConsumerLocked(Kind kind, const WinsetPair& p) const {
         // A skin window's `pos` is consumed by winget only. The main window's is its real screen place, which the GUI
         // publishes, so a winset of it is not stored.
         if (k == "pos" && kind == Kind::Window) return file_ && windowLocked(p.target) != findMainWindow(*file_);
+        // A floating window (layout.h Tree::floats) is shown, hidden and sized by shell/skinwindow.
+        if (kind == Kind::Window && file_)
+            if (const Block* w = windowLocked(p.target)) return isFloatingWindow(*file_, *w);
         return false;
     }
-    // A runtime control (runtime_): winget is the consumer.
-    if (kind == Kind::Runtime) return k == "is-disabled" || k == "text";
+    // A runtime control (runtime_): winget is the consumer, and shell/skinwindow for a BROWSER's anchors.
+    if (kind == Kind::Runtime) return k == "is-disabled" || k == "text" || k == "anchor1" || k == "anchor2";
     if (k == "is-disabled") return kind == Kind::Control || kind == Kind::Menu;
     // A menu item's is-checked is flipped by a click before its command runs, and the command reads it back in a
     // condition. Written by shell/skinwindow, consumed by menuLocked and winget.
-    if (k == "is-checked") return (kind == Kind::Control && controlTypeLocked(p.target) == "BUTTON") || kind == Kind::Menu;
+    if (k == "is-checked")
+        return (kind == Kind::Control && controlTypeLocked(p.target) == "BUTTON") || kind == Kind::Menu;
     // A MAP's scaling properties. Consumed by shell/skinwindow (MapWidget::setMapScale).
     if (k == "icon-size" || k == "zoom" || k == "zoom-mode" || k == "letterbox")
         return kind == Kind::Control && controlTypeLocked(p.target) == "MAP";
@@ -221,12 +251,14 @@ bool LiveSkin::hasConsumerLocked(Kind kind, const WinsetPair& p) const {
     if (k == "title") return kind == Kind::Popup || kind == Kind::Window;
     // A window's `icon`, consumed by mainIcon() (skin/winicon.h) and by shell/skinwindow's setSkinIcon.
     if (k == "icon") return kind == Kind::Window;
-    if (k == "background-color") return kind == Kind::Control || kind == Kind::Window;   // a window's fills its box (shell/skinwindow)
+    if (k == "background-color")
+        return kind == Kind::Control || kind == Kind::Window;  // a window's fills its box (shell/skinwindow)
     if (k == "style") return kind == Kind::Control;
     if (k == "text-color") {
         std::string t = controlTypeLocked(p.target);
         // A MAP's is maptext's default colour (defaultMapStyle).
-        return kind == Kind::Control && (t == "OUTPUT" || t == "BROWSER" || t == "INFO" || t == "INPUT" || t == "LABEL" || t == "MAP" || t == "BUTTON");
+        return kind == Kind::Control && (t == "OUTPUT" || t == "BROWSER" || t == "INFO" || t == "INPUT" ||
+                                         t == "LABEL" || t == "MAP" || t == "BUTTON");
     }
     // An INFO's tab strip and stat rows (a Stat() row's name is the prefix, its value the suffix).
     if (k == "tab-background-color" || k == "tab-text-color" || k == "prefix-color" || k == "suffix-color")
@@ -241,7 +273,8 @@ bool LiveSkin::hasConsumerLocked(Kind kind, const WinsetPair& p) const {
         std::string t = controlTypeLocked(p.target);
         return kind == Kind::Control && (t == "BUTTON" || t == "LABEL" || t == "INPUT" || t == "INFO");
     }
-    if (k == "right-click") return kind == Kind::Control && controlTypeLocked(p.target) == "MAP";   // consumed by shell/skinwindow (map)
+    if (k == "right-click")
+        return kind == Kind::Control && controlTypeLocked(p.target) == "MAP";  // consumed by shell/skinwindow (map)
     // An INPUT's `command`: the bar's default command, shown as its sticky text (`!say "`). Consumed by shell/skinwindow.
     if (k == "command") return kind == Kind::Control && controlTypeLocked(p.target) == "INPUT";
     return false;
@@ -256,7 +289,11 @@ void LiveSkin::uncheckSiblingsLocked(const std::string& target) {
         for (const Elem* e : b.controls()) {
             if (e->type() != "BUTTON") continue;
             bool match = ieq(b.name + "." + e->name, target) || ieq(e->name, target);
-            if (match && group.empty()) { group = e->str("group", ""); selfWin = b.name; selfName = e->name; }
+            if (match && group.empty()) {
+                group = e->str("group", "");
+                selfWin = b.name;
+                selfName = e->name;
+            }
         }
     }
     if (group.empty()) return;
@@ -283,7 +320,7 @@ bool LiveSkin::applyPropLocked(const WinsetPair& p) {
         // an INPUT's text by the player's typing (setInputText) and a winset alike.
         if (const Control* c = tree_.byName(p.target)) target = c->window + "." + c->name;
     }
-    if (kind == Kind::Menu) target = menuElemLocked(p.target);   // one spelling: the bare elem name
+    if (kind == Kind::Menu) target = menuElemLocked(p.target);  // one spelling: the bare elem name
     if (kind == Kind::Runtime) target = runtimeLocked(p.target)->name;
     if (kind == Kind::Window) target = windowLocked(p.target)->name;
     // A world-set place answers verbatim until the GUI reports where the window really went (setWindowPos).
@@ -307,9 +344,12 @@ bool LiveSkin::setFocusLocked(const std::string& target, bool on) {
     const Elem* e = c ? nullptr : declaresLocked(target);
     std::string type = c ? c->type : e ? e->type() : "";
     if (type != "INPUT" && type != "MAP") return false;
-    if (on) { focus_ = target; focusSeq_++; }
-    else if (focus_ == target) focus_.clear();
-    guiFocusSet_ = false;   // the world's choice answers until the GUI reports where the keyboard really went
+    if (on) {
+        focus_ = target;
+        focusSeq_++;
+    } else if (focus_ == target)
+        focus_.clear();
+    guiFocusSet_ = false;  // the world's choice answers until the GUI reports where the keyboard really went
     return true;
 }
 
@@ -321,11 +361,14 @@ void LiveSkin::relayoutLocked() {
         if (const Block* mw = findMainWindow(*file_))
             if (const Elem* m = mw->main()) {
                 int64_t dw, dh;
-                if (m->size("size", dw, dh) && dw > 0 && dh > 0) { w = int(dw); h = int(dh); }
+                if (m->size("size", dw, dh) && dw > 0 && dh > 0) {
+                    w = int(dw);
+                    h = int(dh);
+                }
             }
         cl = Rect{0, 0, w, h};
     }
-    tree_ = layoutSkin(*file_, cl, splits_, &props_, /*inferSlots=*/false);   // stock's empty sides (setPaneShown)
+    tree_ = layoutSkin(*file_, cl, splits_, &props_, /*inferSlots=*/false);  // stock's empty sides (setPaneShown)
     gen_++;
 }
 
@@ -336,8 +379,8 @@ void LiveSkin::applyPairLocked(const WinsetPair& p, WinsetResult& r) {
         // Stock DreamSeeker 516 reads browser-options as a comma-separated list: find = 2, devtools = 1, byondstorage = 4,
         // zoom = 8, refresh = 16. `+x` sets a bit, `-x` clears it, and an unsigned first item replaces the whole set.
         // Unknown items are ignored.
-        static const std::pair<const char*, unsigned> bits[] = {{"find", 2}, {"devtools", 1}, {"byondstorage", 4},
-                                                                {"zoom", 8}, {"refresh", 16}};
+        static const std::pair<const char*, unsigned> bits[] = {
+            {"find", 2}, {"devtools", 1}, {"byondstorage", 4}, {"zoom", 8}, {"refresh", 16}};
         bool first = true;
         size_t i = 0;
         const std::string& v = p.value;
@@ -349,7 +392,8 @@ void LiveSkin::applyPairLocked(const WinsetPair& p, WinsetResult& r) {
             first = false;
             if (sign) item.erase(0, 1);
             for (const auto& b : bits)
-                if (ieq(item, b.first)) browserOptions_ = sign == '-' ? browserOptions_ & ~b.second : browserOptions_ | b.second;
+                if (ieq(item, b.first))
+                    browserOptions_ = sign == '-' ? browserOptions_ & ~b.second : browserOptions_ | b.second;
             i = j == std::string::npos ? v.size() + 1 : j + 1;
         } while (i <= v.size());
         // Still counted unhandled: only `find` reaches the webview (browserOptions(), shell/browserpane.h). The other
@@ -357,27 +401,64 @@ void LiveSkin::applyPairLocked(const WinsetPair& p, WinsetResult& r) {
         r.unhandled.push_back(p.raw);
         return;
     }
-    if (!p.ok) { r.unhandled.push_back(p.raw); return; }
-    if ((p.key == "name" || p.key == "command" || p.key == "is-disabled" || p.key == "parent") && resolveLocked(p.target) == Kind::Macro) {
-        if (applyMacroPairLocked(p)) { r.applied.push_back(p.target + "." + p.key); changed = true; }
-        else r.unhandled.push_back(p.raw);
+    if (!p.ok && p.target.empty() && lowerAscii(trimSpace(p.key)) == "command") {
+        r.commands.push_back(p.value);
+        return;
+    }
+    if (!p.ok) {
+        r.unhandled.push_back(p.raw);
+        return;
+    }
+    if (!p.target.empty() && p.target[0] == ':') {
+        std::string id = typeSelectorLocked(p.target);
+        if (id.empty()) {
+            r.unhandled.push_back(p.raw);
+            return;
+        }
+        WinsetPair q = p;
+        q.target = id;
+        applyPairLocked(q, r);
+        return;
+    }
+    if ((p.key == "name" || p.key == "command" || p.key == "is-disabled" || p.key == "parent") &&
+        resolveLocked(p.target) == Kind::Macro) {
+        if (applyMacroPairLocked(p)) {
+            r.applied.push_back(p.target + "." + p.key);
+            changed = true;
+        } else
+            r.unhandled.push_back(p.raw);
     } else if (storedKey(p.key)) {
-        if (applyPropLocked(p)) { r.applied.push_back(p.target + "." + p.key); changed = true; }
-        else r.unhandled.push_back(p.raw);
+        if (applyPropLocked(p)) {
+            r.applied.push_back(p.target + "." + p.key);
+            changed = true;
+        } else
+            r.unhandled.push_back(p.raw);
     } else if (p.key == "macro") {
         // The set is named on a WINDOW, so the target is not resolved; an unknown SET is refused (the
         // difference between "switch the keyboard" and "blank the keyboard").
-        if (macros_.sets.count(p.value)) { macro_ = p.value; useMacroLocked(p.value); r.applied.push_back(p.target + ".macro"); changed = true; }
-        else r.unhandled.push_back(p.raw);
+        if (macros_.sets.count(p.value)) {
+            macro_ = p.value;
+            useMacroLocked(p.value);
+            r.applied.push_back(p.target + ".macro");
+            changed = true;
+        } else
+            r.unhandled.push_back(p.raw);
     } else if (p.key == "focus") {
-        if (setFocusLocked(p.target, winsetBool(p.value))) { r.applied.push_back(p.target + ".focus"); changed = true; }
-        else r.unhandled.push_back(p.raw);
+        if (setFocusLocked(p.target, winsetBool(p.value))) {
+            r.applied.push_back(p.target + ".focus");
+            changed = true;
+        } else
+            r.unhandled.push_back(p.raw);
     } else if (p.key == "parent") {
-        if (applyParentLocked(p)) { r.applied.push_back(p.target + ".parent"); changed = true; }
-        else r.unhandled.push_back(p.raw);
+        if (applyParentLocked(p)) {
+            r.applied.push_back(p.target + ".parent");
+            changed = true;
+        } else
+            r.unhandled.push_back(p.raw);
     } else if (p.key == "type" && runtimeLocked(p.target)) {
         // The type of a control `parent=` just created. Stock answers it upper-cased (type=label answers "LABEL").
-        for (RuntimeCtl& rc : runtime_) if (ieq(rc.name, runtimeLocked(p.target)->name)) rc.type = upperAscii(p.value);
+        for (RuntimeCtl& rc : runtime_)
+            if (ieq(rc.name, runtimeLocked(p.target)->name)) rc.type = upperAscii(p.value);
         r.applied.push_back(p.target + ".type");
         changed = true;
     } else if (p.key == "splitter") {
@@ -385,7 +466,10 @@ void LiveSkin::applyPairLocked(const WinsetPair& p, WinsetResult& r) {
         char* end = nullptr;
         double pct = std::strtod(p.value.c_str(), &end);
         // Refused here, though stock DreamSeeker 516 takes a non-number as 0.
-        if (!c || c->type != "CHILD" || p.value.empty() || *end) { r.unhandled.push_back(p.raw); return; }
+        if (!c || c->type != "CHILD" || p.value.empty() || *end) {
+            r.unhandled.push_back(p.raw);
+            return;
+        }
         std::string path = c->window + "." + c->name;
         setSplitPctLocked(path, pct);
         r.applied.push_back(path);
@@ -446,8 +530,10 @@ WinsetResult LiveSkin::winsetLocked(const std::string& control, const std::strin
 // as booleans (`true` = `TRUE` = `1`), anything else case-insensitively.
 bool LiveSkin::conditionLocked(const WinsetPair& c) const {
     std::string have;
-    if (c.key == "macro") have = macro_;   // the ACTIVE set, not the file's
-    else if (!wingetLocked(c.target, c.key, have) && c.key == "is-checked") have = "false";
+    if (c.key == "macro")
+        have = macro_;  // the ACTIVE set, not the file's
+    else if (!wingetLocked(c.target, c.key, have) && c.key == "is-checked")
+        have = "false";
     auto isBoolWord = [](const std::string& v) {
         std::string l = lowerAscii(trimSpace(v));
         return l == "true" || l == "false" || l == "on" || l == "off" || l == "1" || l == "0";
@@ -457,11 +543,11 @@ bool LiveSkin::conditionLocked(const WinsetPair& c) const {
 }
 
 WinsetResult LiveSkin::clientWinset(const std::string& body) {
-    if (!hasConditional(body)) return winset("", body);   // the plain form takes the ordinary winset path
+    if (!hasConditional(body)) return winset("", body);  // the plain form takes the ordinary winset path
     WinsetResult r;
     {
         std::lock_guard<std::mutex> g(mu_);
-        if (!file_) return r;   // a button or macro cannot fire before there is a skin
+        if (!file_) return r;  // a button or macro cannot fire before there is a skin
         r = clientWinsetLocked(body);
         if (r.applied.empty()) return r;
     }
@@ -485,6 +571,10 @@ WinsetResult LiveSkin::clientWinsetLocked(const std::string& body) {
 // ---------------------------------------------------------------------------------------------------------------
 
 bool LiveSkin::wingetLocked(const std::string& id, const std::string& param, std::string& out) const {
+    if (!id.empty() && id[0] == ':') {
+        std::string sel = typeSelectorLocked(id);
+        return !sel.empty() && wingetLocked(sel, param, out);
+    }
     const Control* c = tree_.byName(id);
     if (!c) {
         if (const RuntimeCtl* rc = runtimeLocked(id)) return runtimeWingetLocked(*rc, param, out);
@@ -494,32 +584,54 @@ bool LiveSkin::wingetLocked(const std::string& id, const std::string& param, std
             bool isMain = w && file_ && findMainWindow(*file_) == w;
             if (isMain || (!w && knownPopupLocked(id))) {
                 auto sp = screenPos_.find(isMain ? std::string() : lowerAscii(id));
-                if (sp != screenPos_.end()) { out = std::to_string(sp->second.first) + "," + std::to_string(sp->second.second); return true; }
-                if (isMain) return false;   // never shown yet: no plausible guess
+                if (sp != screenPos_.end()) {
+                    out = std::to_string(sp->second.first) + "," + std::to_string(sp->second.second);
+                    return true;
+                }
+                if (isMain) return false;  // never shown yet: no plausible guess
             }
-            if (param == "outer-pos") return wingetLocked(id, "pos", out);   // outer-pos equals pos
+            if (param == "outer-pos") return wingetLocked(id, "pos", out);  // outer-pos equals pos
         }
         // A target with no placed control may still be one the world configured (a browse popup, a runtime window).
         if (props_.get(id, param, out)) return true;
         // (E1) a control the skin declares but the layout does not place.
         if (const Elem* e = declaresLocked(id)) {
-            if (param == "type") { out = e->type(); return true; }
-            if (param == "id") { out = e->name; return true; }
-            std::string win;   // find its window for the overlay's qualified spelling
+            if (param == "type") {
+                out = e->type();
+                return true;
+            }
+            if (param == "id") {
+                out = e->name;
+                return true;
+            }
+            std::string win;  // find its window for the overlay's qualified spelling
             for (const Block& b : file_->blocks)
-                for (const Elem* x : b.controls()) if (x == e) win = b.name;
+                for (const Elem* x : b.controls())
+                    if (x == e) win = b.name;
             if (props_.controlProp(win, e->name, param, out)) return true;
-            if (param == "is-visible") { out = boolParam(e->boolv("is-visible", true)); return true; }
-            if (param == "is-disabled") { out = boolParam(e->boolv("is-disabled", false)); return true; }
+            if (param == "is-visible") {
+                out = boolParam(e->boolv("is-visible", true));
+                return true;
+            }
+            if (param == "is-disabled") {
+                out = boolParam(e->boolv("is-disabled", false));
+                return true;
+            }
             // pos and size come from the file only when no box would change them (boxFreeGeometry); otherwise the
             // answer is refused rather than guessed.
             if ((param == "pos" || param == "size") && !boxFreeGeometry(e, param)) return false;
-            if (const std::string* v = e->get(param)) { out = *v; return true; }
+            if (const std::string* v = e->get(param)) {
+                out = *v;
+                return true;
+            }
             return false;
         }
         // A menu item: what a click or a winset wrote, else the file's is-checked / is-disabled.
         if (std::string mn = menuElemLocked(id); !mn.empty()) {
-            if (param == "id") { out = mn; return true; }
+            if (param == "id") {
+                out = mn;
+                return true;
+            }
             if (props_.get(mn, param, out)) return true;
             Menu m = menuFromFile(*file_);
             for (const MenuCat& c : m.cats)
@@ -532,7 +644,10 @@ bool LiveSkin::wingetLocked(const std::string& id, const std::string& param, std
         }
         size_t mi;
         if (const MacroSet* ms = macroElemLocked(id, mi)) {
-            if (param == "type") { out = "MACRO"; return true; }
+            if (param == "type") {
+                out = "MACRO";
+                return true;
+            }
             return macroParam(ms->entries[mi], param, out);
         }
         // (E2) a skin window.
@@ -540,17 +655,48 @@ bool LiveSkin::wingetLocked(const std::string& id, const std::string& param, std
             bool isMain = file_ && findMainWindow(*file_) == w;
             const Elem* m = w->main();
             if (props_.get(w->name, param, out)) return true;
-            if (param == "type") { out = "MAIN"; return true; }
-            if (param == "id") { out = w->name; return true; }
-            if (param == "dpi") { out = envLocked("dpi"); return true; }   // every window answers it
-            if (isMain && (param == "size" || param == "inner-size")) { out = dims(tree_.client.dx(), tree_.client.dy()); return true; }
-            if (isMain && param == "macro") { out = macro_; return true; }
-            if (isMain && param == "is-visible") { out = "true"; return true; }
+            if (param == "type") {
+                out = "MAIN";
+                return true;
+            }
+            if (param == "id") {
+                out = w->name;
+                return true;
+            }
+            if (param == "dpi") {
+                out = envLocked("dpi");
+                return true;
+            }  // every window answers it
+            if (isMain && (param == "size" || param == "inner-size")) {
+                out = dims(tree_.client.dx(), tree_.client.dy());
+                return true;
+            }
+            if (isMain && param == "macro") {
+                out = macro_;
+                return true;
+            }
+            if (isMain && param == "is-visible") {
+                out = "true";
+                return true;
+            }
+            if (const Floating* fl = tree_.floating(w->name)) {
+                if (param == "is-visible") {
+                    out = boolParam(fl->visible);
+                    return true;
+                }
+                if (param == "size" || param == "inner-size") {
+                    out = dims(fl->box.dx(), fl->box.dy());
+                    return true;
+                }
+            }
             // pos: a pane's is 0,0. Another window's is its .dmf pos while it is unshown. The main window's is its place on
             // the SCREEN, a GUI fact this object does not hold, so it stays refused.
             if (param == "pos") {
                 if (isMain) return false;
-                if (m && m->boolv("is-pane", false)) { out = "0,0"; return true; }
+                if (m && m->boolv("is-pane", false)) {
+                    out = "0,0";
+                    return true;
+                }
             }
             // A pane's size is the box it is hosted in; an unshown pane's is its .dmf size.
             if (param == "size" && m && m->boolv("is-pane", false))
@@ -559,14 +705,24 @@ bool LiveSkin::wingetLocked(const std::string& id, const std::string& param, std
                     out = dims(hc.box.dx(), hc.box.dy());
                     return true;
                 }
-            if (m) if (const std::string* v = m->get(param)) { out = *v; return true; }
+            if (m)
+                if (const std::string* v = m->get(param)) {
+                    out = *v;
+                    return true;
+                }
             return false;
         }
         // A browse() popup is a window (see setPopups): visible while the model has it open and the player has not
         // closed it.
         if (knownPopupLocked(id)) {
-            if (param == "type") { out = "MAIN"; return true; }
-            if (param == "dpi") { out = envLocked("dpi"); return true; }
+            if (param == "type") {
+                out = "MAIN";
+                return true;
+            }
+            if (param == "dpi") {
+                out = envLocked("dpi");
+                return true;
+            }
             if (param == "is-visible") {
                 bool open = false;
                 for (const std::string& p : popups_) open = open || ieq(p, id);
@@ -579,25 +735,62 @@ bool LiveSkin::wingetLocked(const std::string& id, const std::string& param, std
         return false;
     }
     // First, what the laid-out tree says: a stored intent never beats the layout.
-    if (param == "size") { out = dims(c->full.dx(), c->full.dy()); return true; }   // not what the pane clips it to
-    if (param == "type") { out = c->type; return true; }
-    if (param == "is-visible") { out = boolParam(c->visible); return true; }
-    if (param == "is-disabled") { out = boolParam(c->disabled); return true; }
-    if (param == "is-default") { out = boolParam(c->isDefault); return true; }
-    if (param == "id") { out = c->name; return true; }   // the bare elem name ("map" for mapwindow.map)
+    if (param == "size") {
+        out = dims(c->full.dx(), c->full.dy());
+        return true;
+    }  // not what the pane clips it to
+    if (param == "type") {
+        out = c->type;
+        return true;
+    }
+    if (param == "is-visible") {
+        out = boolParam(c->visible);
+        return true;
+    }
+    if (param == "is-disabled") {
+        out = boolParam(c->disabled);
+        return true;
+    }
+    if (param == "is-default") {
+        out = boolParam(c->isDefault);
+        return true;
+    }
+    if (param == "id") {
+        out = c->name;
+        return true;
+    }  // the bare elem name ("map" for mapwindow.map)
+    if (param == "view-size" && c->type == "MAP") {
+        auto vs = viewSize_.find(lowerAscii(c->window + "." + c->name));
+        if (vs == viewSize_.end()) return false;
+        out = vs->second;
+        return true;
+    }
     // A CHILD's splitter: what a winset or a drag stored, else the file's value, else stock's default of 50.
     if (param == "splitter" && c->type == "CHILD") {
         auto sp = splitPct_.find(c->window + "." + c->name);
-        if (sp != splitPct_.end()) { out = splitterText(sp->second); return true; }
-        if (c->elem) { out = splitterText(float(c->elem->floatv("splitter", kDefaultSplitter))); return true; }
+        if (sp != splitPct_.end()) {
+            out = splitterText(sp->second);
+            return true;
+        }
+        if (c->elem) {
+            out = splitterText(float(c->elem->floatv("splitter", kDefaultSplitter)));
+            return true;
+        }
     }
     // Second, what the world itself set.
     if (props_.controlProp(c->window, c->name, param, out)) return true;
     // pos is pane-local: the laid-out corner relative to the box its window was laid out in. A stored winset value
     // answers verbatim; an empty (off-pane) rect falls through to the file.
-    if (param == "pos" && !c->rect.empty()) { out = std::to_string(c->full.x0 - c->box.x0) + "," + std::to_string(c->full.y0 - c->box.y0); return true; }
+    if (param == "pos" && !c->rect.empty()) {
+        out = std::to_string(c->full.x0 - c->box.x0) + "," + std::to_string(c->full.y0 - c->box.y0);
+        return true;
+    }
     // (E3) THIRD, what the .dmf states for this control.
-    if (c->elem) if (const std::string* v = c->elem->get(param)) { out = *v; return true; }
+    if (c->elem)
+        if (const std::string* v = c->elem->get(param)) {
+            out = *v;
+            return true;
+        }
     return false;
 }
 
@@ -607,12 +800,39 @@ bool LiveSkin::winget(const std::string& control, const std::string& param, std:
     return wingetLocked(control, param, out);
 }
 
-std::string LiveSkin::wingetParams(const std::string& control, const std::string& params) const {
+std::string LiveSkin::wingetParams(const std::string& control0, const std::string& params) const {
     std::lock_guard<std::mutex> g(mu_);
+    // Several controls ("mainwindow.split;mapwindow") answer `id.k=v;...` with each id as it was asked.
+    std::vector<std::string> ids;
+    for (size_t a = 0; a <= control0.size();) {
+        size_t b = std::min(control0.find(';', a), control0.size());
+        if (std::string t = trimSpace(control0.substr(a, b - a)); !t.empty()) ids.push_back(t);
+        a = b + 1;
+    }
+    if (ids.size() > 1) {
+        if (!file_) return "";
+        std::string out;
+        for (const std::string& id : ids) {
+            const std::string sel = !id.empty() && id[0] == ':' ? typeSelectorLocked(id) : id;
+            for (const std::string& n : wingetParamNames(params)) {
+                std::string v;
+                if (!(controlFocusLocked(sel, n, v) || wingetLocked(sel, n, v) || buttonUncheckedLocked(sel, n, v)))
+                    v.clear();
+                if (!out.empty()) out.push_back(';');
+                out += id + "." + n + "=" + wingetEncode(v);
+            }
+        }
+        return out;
+    }
+    const std::string control = ids.size() == 1 && ids[0][0] == ':' && file_ ? typeSelectorLocked(ids[0]) : control0;
     nameBlockWriteControlLocked(params);
-    std::string out = file_ ? wingetAnswer(params, [&](const std::string& k, std::string& v) {
-        return controlFocusLocked(control, k, v) || wingetLocked(control, k, v) || buttonUncheckedLocked(control, k, v);
-    }) : "";
+    std::string out = file_
+                          ? wingetAnswer(params,
+                                         [&](const std::string& k, std::string& v) {
+                                             return controlFocusLocked(control, k, v) || wingetLocked(control, k, v) ||
+                                                    buttonUncheckedLocked(control, k, v);
+                                         })
+                          : "";
     // A lone property's answer is written into the name block (nameBlockWrite); a multi-property answer is not.
     if (wingetParamNames(params).size() == 1) nameBlockWrite(nameBlock_, out);
     return out;
@@ -633,6 +853,21 @@ std::string LiveSkin::defaultMapIdLocked() const {
     return maps.front();
 }
 
+std::string LiveSkin::typeSelectorLocked(const std::string& id) const {
+    if (!file_ || id.size() < 2 || id[0] != ':') return "";
+    const std::string type = upperAscii(trimSpace(id.substr(1)));
+    if (type == "MAP") return defaultMapIdLocked();
+    std::string first;
+    for (const Block& b : file_->blocks)
+        if (b.kind == "window")
+            for (const Elem* e : b.controls()) {
+                if (e->type() != type) continue;
+                if (e->boolv("is-default", false)) return b.name + "." + e->name;
+                if (first.empty()) first = b.name + "." + e->name;
+            }
+    return first;
+}
+
 std::string LiveSkin::defaultMapId() const {
     std::lock_guard<std::mutex> g(mu_);
     return defaultMapIdLocked();
@@ -648,7 +883,8 @@ std::vector<std::string> LiveSkin::secondaryMaps() const {
                 for (const Elem* e : b.controls())
                     if (e->type() == "MAP" && b.name + "." + e->name != def) out.push_back(e->name);
     }
-    for (const RuntimeCtl& r : runtime_) if (r.type == "MAP") out.push_back(r.name);
+    for (const RuntimeCtl& r : runtime_)
+        if (r.type == "MAP") out.push_back(r.name);
     return out;
 }
 
@@ -668,7 +904,7 @@ std::string LiveSkin::defaultMapStyle() const {
 // popup, which is a window: "MAIN" (see setPopups).
 std::string LiveSkin::wingetType(const std::string& control) const {
     std::lock_guard<std::mutex> g(mu_);
-    nameBlockClobber(nameBlock_);   // winexists() changes the global-winget name block
+    nameBlockClobber(nameBlock_);  // winexists() changes the global-winget name block
     return typeLocked(control);
 }
 
@@ -680,11 +916,15 @@ bool LiveSkin::printsOutput(const std::string& control) const {
 }
 
 std::string LiveSkin::typeLocked(const std::string& control) const {
+    if (file_ && !control.empty() && control[0] == ':') {
+        std::string sel = typeSelectorLocked(control);
+        return sel.empty() ? "" : typeLocked(sel);
+    }
     if (file_) {
         if (const Control* c = tree_.byName(control)) return c->type;
         if (const Elem* e = declaresLocked(control)) return e->type();
         if (windowLocked(control)) return "MAIN";
-        if (const RuntimeCtl* rc = runtimeLocked(control)) return rc->type;   // winexists("rtlab") -> "LABEL"
+        if (const RuntimeCtl* rc = runtimeLocked(control)) return rc->type;  // winexists("rtlab") -> "LABEL"
         size_t mi;
         if (macroElemLocked(control, mi) || builtMacroSetLocked(control)) return "MACRO";
     }
@@ -714,11 +954,14 @@ bool LiveSkin::applyParentLocked(const WinsetPair& p) {
         }
         std::string parent = parentWindowLocked(p.value);
         if (parent.empty()) return false;
-        for (RuntimeCtl& r : runtime_) if (r.name == name) r.parent = parent;
+        for (RuntimeCtl& r : runtime_)
+            if (r.name == name) r.parent = parent;
         return true;
     }
     if (destroy && destroyCloneLocked(p.target)) return true;
-    if (destroy || tree_.byName(p.target) || declaresLocked(p.target) || windowLocked(p.target) || knownPopupLocked(p.target)) return false;
+    if (destroy || tree_.byName(p.target) || declaresLocked(p.target) || windowLocked(p.target) ||
+        knownPopupLocked(p.target))
+        return false;
     std::string parent = parentWindowLocked(p.value);
     if (parent.empty()) return false;
     std::string name = p.target;
@@ -738,16 +981,35 @@ std::string LiveSkin::parentWindowLocked(const std::string& v) const {
 }
 
 bool LiveSkin::runtimeWingetLocked(const RuntimeCtl& r, const std::string& param, std::string& out) const {
-    if (param == "id") { out = r.name; return true; }
-    if (param == "type") { out = r.type; return true; }
-    if (param == "parent") { out = r.parent; return true; }
-    if (param == "runtime") { out = "true"; return true; }
-    if (props_.get(r.name, param, out)) {
-        if (param == "is-visible" || param == "is-disabled") out = boolParam(winsetBool(out));   // is-visible=0 answers "false"
+    if (param == "id") {
+        out = r.name;
         return true;
     }
-    if (param == "is-visible") { out = "true"; return true; }   // created without is-visible
-    if (param == "is-disabled") { out = "false"; return true; }
+    if (param == "type") {
+        out = r.type;
+        return true;
+    }
+    if (param == "parent") {
+        out = r.parent;
+        return true;
+    }
+    if (param == "runtime") {
+        out = "true";
+        return true;
+    }
+    if (props_.get(r.name, param, out)) {
+        if (param == "is-visible" || param == "is-disabled")
+            out = boolParam(winsetBool(out));  // is-visible=0 answers "false"
+        return true;
+    }
+    if (param == "is-visible") {
+        out = "true";
+        return true;
+    }  // created without is-visible
+    if (param == "is-disabled") {
+        out = "false";
+        return true;
+    }
     return false;
 }
 
@@ -761,7 +1023,8 @@ void LiveSkin::setPaneShown(const std::string& window) {
         std::lock_guard<std::mutex> g(mu_);
         const Block* b = file_ ? windowLocked(window) : nullptr;
         if (!b || !shownPanes_.insert(lowerAscii(b->name)).second) return;
-        for (const Control& c : tree_.controls) if (c.window == b->name) return;   // already placed: its on-show is not run here
+        for (const Control& c : tree_.controls)
+            if (c.window == b->name) return;  // already placed: its on-show is not run here
         WinsetResult r;
         for (const Elem& e : b->elems) {
             const std::string* os = e.get("on-show");
@@ -795,7 +1058,13 @@ bool LiveSkin::buttonUncheckedLocked(const std::string& id, const std::string& p
 
 void LiveSkin::setInputText(const std::string& id, const std::string& text) {
     std::lock_guard<std::mutex> g(mu_);
-    if (const Control* c = tree_.byName(id); c && c->type == "INPUT") props_.set(c->window + "." + c->name, "text", text);
+    if (const Control* c = tree_.byName(id); c && c->type == "INPUT")
+        props_.set(c->window + "." + c->name, "text", text);
+}
+
+void LiveSkin::setViewSize(const std::string& id, int w, int h) {
+    std::lock_guard<std::mutex> g(mu_);
+    viewSize_[lowerAscii(id)] = dims(w, h);
 }
 
 void LiveSkin::setGuiFocus(const std::string& id) {
@@ -815,13 +1084,17 @@ const MacroSet* LiveSkin::builtMacroSetLocked(const std::string& name) const {
 // `id` or `set.id`, in a built set.
 const MacroSet* LiveSkin::macroElemLocked(const std::string& name, size_t& index) const {
     size_t dot = name.find('.');
-    std::string set = dot == std::string::npos ? "" : name.substr(0, dot), id = dot == std::string::npos ? name : name.substr(dot + 1);
+    std::string set = dot == std::string::npos ? "" : name.substr(0, dot),
+                id = dot == std::string::npos ? name : name.substr(dot + 1);
     if (id.empty()) return nullptr;
     for (const std::string& u : usedMacros_) {
         const MacroSet* ms = set.empty() || ieq(set, u) ? builtMacroSetLocked(u) : nullptr;
         if (!ms) continue;
         for (size_t i = 0; i < ms->entries.size(); i++)
-            if (ieq(ms->entries[i].id, id)) { index = i; return ms; }
+            if (ieq(ms->entries[i].id, id)) {
+                index = i;
+                return ms;
+            }
     }
     return nullptr;
 }
@@ -830,8 +1103,10 @@ bool LiveSkin::applyMacroPairLocked(const WinsetPair& p) {
     size_t i;
     MacroSet& set = const_cast<MacroSet&>(*macroElemLocked(p.target, i));
     MacroEntry& e = set.entries[i];
-    if (p.key == "command") e.command = p.value;
-    else if (p.key == "is-disabled") e.disabled = winsetBool(p.value);
+    if (p.key == "command")
+        e.command = p.value;
+    else if (p.key == "is-disabled")
+        e.disabled = winsetBool(p.value);
     else if (p.key == "name") {
         MacroKey k;
         bool rep;
@@ -855,7 +1130,8 @@ bool LiveSkin::applyMacroPairLocked(const WinsetPair& p) {
 }
 
 // A winset's `parent=<macro set>` for a name nothing holds yet, with that name's name / command / is-disabled pairs.
-bool LiveSkin::createMacroLocked(const std::vector<WinsetPair>& pairs, size_t parent, std::vector<bool>& consumed, WinsetResult& r) {
+bool LiveSkin::createMacroLocked(const std::vector<WinsetPair>& pairs, size_t parent, std::vector<bool>& consumed,
+                                 WinsetResult& r) {
     const WinsetPair& p = pairs[parent];
     if (p.target.find_first_of("*?") != std::string::npos || resolveLocked(p.target) != Kind::Unknown) return false;
     MacroSet* set = const_cast<MacroSet*>(builtMacroSetLocked(trimSpace(p.value)));
@@ -900,8 +1176,11 @@ bool LiveSkin::createMacroLocked(const std::vector<WinsetPair>& pairs, size_t pa
 void LiveSkin::useMacroLocked(const std::string& set) {
     if (!file_) return;
     const Block* b = file_->macro(set);
-    if (!b) for (const Block& d : file_->blocks) if (d.kind == "macro" && ieq(d.name, set)) b = &d;
-    if (b && std::find(usedMacros_.begin(), usedMacros_.end(), b->name) == usedMacros_.end()) usedMacros_.push_back(b->name);
+    if (!b)
+        for (const Block& d : file_->blocks)
+            if (d.kind == "macro" && ieq(d.name, set)) b = &d;
+    if (b && std::find(usedMacros_.begin(), usedMacros_.end(), b->name) == usedMacros_.end())
+        usedMacros_.push_back(b->name);
 }
 
 void LiveSkin::setClientEnv(const std::string& name, std::string value) {
@@ -920,7 +1199,8 @@ std::string LiveSkin::envLocked(const std::string& name) const {
 std::string LiveSkin::windowListLocked(bool panes) const {
     std::vector<std::string> names;
     auto add = [&](const std::string& n) {
-        for (const std::string& x : names) if (ieq(x, n)) return;
+        for (const std::string& x : names)
+            if (ieq(x, n)) return;
         names.push_back(n);
     };
     if (file_)
@@ -944,44 +1224,56 @@ void LiveSkin::nameBlockWriteControlLocked(const std::string& params) const {
 }
 
 bool LiveSkin::globalLocked(const std::string& name, std::string& out) const {
-    nameBlockWrite(nameBlock_, name);   // each name is a fresh heap string
+    nameBlockWrite(nameBlock_, name);  // each name is a fresh heap string
     const GlobalParam* gp = globalParam(name);
     Global what;
-    if (gp && (name == "url" || name == "focus" || name == "dpi")) what = gp->what;   // tested before the lists
-    else if (std::optional<Global> list = stockListTest(name, nameBlock_)) what = *list;
-    else if (gp) what = gp->what;
-    else return false;
+    if (gp && (name == "url" || name == "focus" || name == "dpi"))
+        what = gp->what;  // tested before the lists
+    else if (std::optional<Global> list = stockListTest(name, nameBlock_))
+        what = *list;
+    else if (gp)
+        what = gp->what;
+    else
+        return false;
     switch (what) {
-    case Global::Focus: {
-        out.clear();
-        if (guiFocusSet_ && !guiFocus_.empty()) { out = guiFocus_; return true; }   // where the keyboard really is (setGuiFocus)
-        const Control* c = guiFocusSet_ || focus_.empty() ? nullptr : tree_.byName(focus_);
-        if (c && c->visible) out = c->window + "." + c->name;
-        else if (const Elem* e = c || guiFocusSet_ ? nullptr : declaresLocked(focus_)) {   // an unplaced control (setFocusLocked)
-            for (const Block& b : file_->blocks)
-                if (b.kind == "window")
-                    for (const Elem* x : b.controls()) if (x == e) out = b.name + "." + e->name;
+        case Global::Focus: {
+            out.clear();
+            if (guiFocusSet_ && !guiFocus_.empty()) {
+                out = guiFocus_;
+                return true;
+            }  // where the keyboard really is (setGuiFocus)
+            const Control* c = guiFocusSet_ || focus_.empty() ? nullptr : tree_.byName(focus_);
+            if (c && c->visible)
+                out = c->window + "." + c->name;
+            else if (const Elem* e = c || guiFocusSet_
+                                         ? nullptr
+                                         : declaresLocked(focus_)) {  // an unplaced control (setFocusLocked)
+                for (const Block& b : file_->blocks)
+                    if (b.kind == "window")
+                        for (const Elem* x : b.controls())
+                            if (x == e) out = b.name + "." + e->name;
+            }
+            if (out.empty())
+                if (const Block* mw = file_ ? findMainWindow(*file_) : nullptr) out = mw->name;
+            return true;
         }
-        if (out.empty())
-            if (const Block* mw = file_ ? findMainWindow(*file_) : nullptr) out = mw->name;
-        return true;
-    }
-    case Global::Windows: out = windowListLocked(false); return true;
-    case Global::Panes: out = windowListLocked(true); return true;
-    case Global::Menus:
-    case Global::Macros: {
-        out.clear();
-        for (const std::string& n : what == Global::Menus ? usedMenus_ : usedMacros_) out += (out.empty() ? "" : ";") + n;
-        return true;
-    }
-    case Global::Env: out = envLocked(name); return true;
-    case Global::BrowserOptions:
-        // Stock reports only devtools (bit 1) and find (bit 2), in that order. byondstorage, zoom and refresh are accepted by
-        // the winset but never answered.
-        out.clear();
-        if (browserOptions_ & 1) out = "devtools";
-        if (browserOptions_ & 2) out += out.empty() ? "find" : ",find";
-        return true;
+        case Global::Windows: out = windowListLocked(false); return true;
+        case Global::Panes: out = windowListLocked(true); return true;
+        case Global::Menus:
+        case Global::Macros: {
+            out.clear();
+            for (const std::string& n : what == Global::Menus ? usedMenus_ : usedMacros_)
+                out += (out.empty() ? "" : ";") + n;
+            return true;
+        }
+        case Global::Env: out = envLocked(name); return true;
+        case Global::BrowserOptions:
+            // Stock reports only devtools (bit 1) and find (bit 2), in that order. byondstorage, zoom and refresh are accepted by
+            // the winset but never answered.
+            out.clear();
+            if (browserOptions_ & 1) out = "devtools";
+            if (browserOptions_ & 2) out += out.empty() ? "find" : ",find";
+            return true;
     }
     return false;
 }
@@ -989,9 +1281,8 @@ bool LiveSkin::globalLocked(const std::string& name, std::string& out) const {
 std::string LiveSkin::wingetGlobal(const std::string& params, const ParamLookup& extra) const {
     std::lock_guard<std::mutex> g(mu_);
     std::vector<std::string> names = wingetParamNames(params);
-    std::string out = wingetAnswer(params, [&](const std::string& n, std::string& v) {
-        return globalLocked(n, v) || (extra && extra(n, v));
-    });
+    std::string out = wingetAnswer(
+        params, [&](const std::string& n, std::string& v) { return globalLocked(n, v) || (extra && extra(n, v)); });
     // A lone name's answer is written into the name block, except `url`'s; a lone name of 16 or more letters clobbers it.
     if (names.size() == 1 && names[0] != "url") nameBlockWrite(nameBlock_, out);
     if (names.size() == 1 && names[0].size() >= 16) nameBlockClobber(nameBlock_);
@@ -1000,11 +1291,14 @@ std::string LiveSkin::wingetGlobal(const std::string& params, const ParamLookup&
 
 std::string LiveSkin::wingetWildcard(const std::string& control, const std::string& params) const {
     std::lock_guard<std::mutex> g(mu_);
-    nameBlockWriteControlLocked(params);   // a wildcard's answer is not written to the name block
+    nameBlockWriteControlLocked(params);  // a wildcard's answer is not written to the name block
     std::vector<std::string> names = wingetParamNames(params);
     if (names.empty()) return "";
     // One enumerated element: its answer-key prefix and its lookup (both under mu_).
-    struct Item { std::string key; std::function<bool(const std::string&, std::string&)> get; };
+    struct Item {
+        std::string key;
+        std::function<bool(const std::string&, std::string&)> get;
+    };
     std::vector<Item> items;
     std::string base;
     bool wild = control.size() > 2 && control.compare(control.size() - 2, 2, ".*") == 0;
@@ -1017,7 +1311,8 @@ std::string LiveSkin::wingetWildcard(const std::string& control, const std::stri
             for (const Elem* e : w->controls()) {
                 if (wn != base || e->name.empty()) continue;
                 std::string path = wn + "." + e->name;
-                items.push_back({path, [this, path](const std::string& k, std::string& v) { return wingetLocked(path, k, v); }});
+                items.push_back(
+                    {path, [this, path](const std::string& k, std::string& v) { return wingetLocked(path, k, v); }});
             }
             // Then the runtime controls parented to it, in creation order. A wildcard does not list `runtime`, though a
             // direct winget answers runtime=true.
@@ -1025,41 +1320,56 @@ std::string LiveSkin::wingetWildcard(const std::string& control, const std::stri
                 if (wn != base || !ieq(rc.parent, wn)) continue;
                 std::string nm = rc.name;
                 items.push_back({wn + "." + nm, [this, nm](const std::string& k, std::string& v) {
-                    const RuntimeCtl* r = runtimeLocked(nm);
-                    return k != "runtime" && r && runtimeWingetLocked(*r, k, v);
-                }});
+                                     const RuntimeCtl* r = runtimeLocked(nm);
+                                     return k != "runtime" && r && runtimeWingetLocked(*r, k, v);
+                                 }});
             }
         } else if (knownPopupLocked(base) && !declaresLocked(base)) {
             std::string pn = base;
-            for (const std::string& p : knownPopups_) if (ieq(p, base)) pn = p;
+            for (const std::string& p : knownPopups_)
+                if (ieq(p, base)) pn = p;
             items.push_back({pn, [this, pn](const std::string& k, std::string& v) {
-                if (k == "id") { v = pn; return true; }
-                return wingetLocked(pn, k, v);
-            }});
+                                 if (k == "id") {
+                                     v = pn;
+                                     return true;
+                                 }
+                                 return wingetLocked(pn, k, v);
+                             }});
             // A popup holds one control, `browser`.
             items.push_back({pn + ".browser", [](const std::string& k, std::string& v) {
-                if (k == "id") { v = "browser"; return true; }
-                if (k == "type") { v = "BROWSER"; return true; }
-                if (k == "is-visible") { v = "true"; return true; }
-                return false;
-            }});
+                                 if (k == "id") {
+                                     v = "browser";
+                                     return true;
+                                 }
+                                 if (k == "type") {
+                                     v = "BROWSER";
+                                     return true;
+                                 }
+                                 if (k == "is-visible") {
+                                     v = "true";
+                                     return true;
+                                 }
+                                 return false;
+                             }});
         } else {
             for (const Block& b : file_->blocks) {
                 if ((b.kind != "menu" && b.kind != "macro") || !ieq(b.name, base)) continue;
                 const std::vector<std::string>& used = b.kind == "menu" ? usedMenus_ : usedMacros_;
                 if (std::find(used.begin(), used.end(), b.name) == used.end()) continue;
                 bool menu = b.kind == "menu";
-                items.clear();   // a re-declared datum: the last one wins (File::macro)
+                items.clear();  // a re-declared datum: the last one wins (File::macro)
                 if (!menu) {
                     const MacroSet& ms = macros_.sets.at(b.name);
                     std::vector<size_t> order(ms.entries.size());
                     for (size_t i = 0; i < order.size(); i++) order[i] = i;
-                    std::stable_sort(order.begin(), order.end(), [&ms](size_t x, size_t y) { return listedBefore(ms.entries[x], ms.entries[y]); });
+                    std::stable_sort(order.begin(), order.end(),
+                                     [&ms](size_t x, size_t y) { return listedBefore(ms.entries[x], ms.entries[y]); });
                     for (size_t i : order) {
-                        if (ms.entries[i].id.empty()) continue;   // an unnamed macro is not enumerated
-                        items.push_back({b.name + "." + ms.entries[i].id, [&ms, i](const std::string& k, std::string& v) {
-                            return macroParam(ms.entries[i], k, v);
-                        }});
+                        if (ms.entries[i].id.empty()) continue;  // an unnamed macro is not enumerated
+                        items.push_back(
+                            {b.name + "." + ms.entries[i].id, [&ms, i](const std::string& k, std::string& v) {
+                                 return macroParam(ms.entries[i], k, v);
+                             }});
                     }
                     continue;
                 }
@@ -1067,29 +1377,46 @@ std::string LiveSkin::wingetWildcard(const std::string& control, const std::stri
                     // The menu itself, with the defaults stock answered for it (menu.is-checked=false, menu.command=, ...).
                     std::string mn = b.name;
                     items.push_back({mn, [mn](const std::string& k, std::string& v) {
-                        if (k == "id") { v = mn; return true; }
-                        if (k == "is-checked" || k == "can-check" || k == "is-disabled") { v = "false"; return true; }
-                        if (k == "name" || k == "command" || k == "category" || k == "group") { v.clear(); return true; }
-                        return false;
-                    }});
+                                         if (k == "id") {
+                                             v = mn;
+                                             return true;
+                                         }
+                                         if (k == "is-checked" || k == "can-check" || k == "is-disabled") {
+                                             v = "false";
+                                             return true;
+                                         }
+                                         if (k == "name" || k == "command" || k == "category" || k == "group") {
+                                             v.clear();
+                                             return true;
+                                         }
+                                         return false;
+                                     }});
                 }
                 for (const Elem& e : b.elems) {
-                    if (e.name.empty()) continue;   // an unnamed menu item or macro is not enumerated
+                    if (e.name.empty()) continue;  // an unnamed menu item or macro is not enumerated
                     const Elem* ep = &e;
                     items.push_back({b.name + "." + e.name, [this, ep, menu](const std::string& k, std::string& v) {
-                        if (k == "id") { v = ep->name; return true; }
-                        if (menu && props_.get(ep->name, k, v)) return true;   // a click / winset on the item
-                        if ((menu && k == "is-checked") || k == "is-disabled") { v = boolParam(ep->boolv(k, false)); return true; }
-                        const std::string* r = ep->get(k);
-                        if (!r) return false;
-                        v = *r;
-                        return true;
-                    }});
+                                         if (k == "id") {
+                                             v = ep->name;
+                                             return true;
+                                         }
+                                         if (menu && props_.get(ep->name, k, v))
+                                             return true;  // a click / winset on the item
+                                         if ((menu && k == "is-checked") || k == "is-disabled") {
+                                             v = boolParam(ep->boolv(k, false));
+                                             return true;
+                                         }
+                                         const std::string* r = ep->get(k);
+                                         if (!r) return false;
+                                         v = *r;
+                                         return true;
+                                     }});
                 }
             }
         }
     }
-    if (items.empty()) return wingetAnswer(params, [](const std::string&, std::string&) { return false; });   // an unknown control
+    if (items.empty())
+        return wingetAnswer(params, [](const std::string&, std::string&) { return false; });  // an unknown control
     std::string out;
     for (const Item& it : items)
         for (const std::string& n : names) {
@@ -1102,7 +1429,8 @@ std::string LiveSkin::wingetWildcard(const std::string& control, const std::stri
 }
 
 bool LiveSkin::knownPopupLocked(const std::string& name) const {
-    for (const std::string& p : knownPopups_) if (ieq(p, name)) return true;
+    for (const std::string& p : knownPopups_)
+        if (ieq(p, name)) return true;
     return false;
 }
 
@@ -1140,16 +1468,19 @@ std::string LiveSkin::load(const std::string& dmf) {
             std::string mn = m->str("menu", ""), mc = m->str("macro", "");
             for (const Block& d : file_->blocks)
                 if (d.kind == "menu" && !mn.empty() && ieq(d.name, mn) &&
-                    std::find(usedMenus_.begin(), usedMenus_.end(), d.name) == usedMenus_.end()) usedMenus_.push_back(d.name);
+                    std::find(usedMenus_.begin(), usedMenus_.end(), d.name) == usedMenus_.end())
+                    usedMenus_.push_back(d.name);
             if (!mc.empty()) useMacroLocked(mc);
         }
-        if (!macro_.empty()) useMacroLocked(macro_);   // the set this client made active (macro.h: the sole set when none is named)
+        if (!macro_.empty())
+            useMacroLocked(macro_);  // the set this client made active (macro.h: the sole set when none is named)
         relayoutLocked();
         // Run the on-show of the window that fills each slot the skin states. An empty side waits for its pane to be shown
         // (setPaneShown).
         shownPanes_.clear();
         std::vector<std::string> occupants;
-        for (const Slot& s : tree_.slotList) if (!s.chosen.empty()) occupants.push_back(s.chosen);
+        for (const Slot& s : tree_.slotList)
+            if (!s.chosen.empty()) occupants.push_back(s.chosen);
         for (const std::string& wn : occupants) {
             const Block* b = file_->window(wn);
             if (!b) continue;
@@ -1169,9 +1500,18 @@ std::string LiveSkin::load(const std::string& dmf) {
     return "";
 }
 
-bool LiveSkin::loaded() const { std::lock_guard<std::mutex> g(mu_); return bool(file_); }
-bool LiveSkin::loadedFrom(const std::string& dmf) const { std::lock_guard<std::mutex> g(mu_); return file_ && text_ == dmf; }
-bool LiveSkin::ready() const { std::lock_guard<std::mutex> g(mu_); return file_ && clientSet_; }
+bool LiveSkin::loaded() const {
+    std::lock_guard<std::mutex> g(mu_);
+    return bool(file_);
+}
+bool LiveSkin::loadedFrom(const std::string& dmf) const {
+    std::lock_guard<std::mutex> g(mu_);
+    return file_ && text_ == dmf;
+}
+bool LiveSkin::ready() const {
+    std::lock_guard<std::mutex> g(mu_);
+    return file_ && clientSet_;
+}
 
 void LiveSkin::setClient(int w, int h) {
     {
@@ -1212,7 +1552,8 @@ void LiveSkin::uncheckMenuSiblingsLocked(const std::string& name) {
     if (group.empty()) return;
     for (const MenuCat& c : m.cats)
         for (const MenuItem& it : c.items)
-            if (!it.name.empty() && it.group == group && !ieq(it.name, name)) props_.set(it.name, "is-checked", "false");
+            if (!it.name.empty() && it.group == group && !ieq(it.name, name))
+                props_.set(it.name, "is-checked", "false");
 }
 
 void LiveSkin::setPopups(std::set<std::string> names) {
@@ -1224,12 +1565,15 @@ void LiveSkin::setPopups(std::set<std::string> names) {
 void LiveSkin::setPopupShown(const std::string& name, bool shown) {
     std::lock_guard<std::mutex> g(mu_);
     if (cloneLocked(name)) props_.set(name, "is-visible", shown ? "true" : "false");
-    if (shown) hiddenPopups_.erase(name);
-    else hiddenPopups_.insert(name);
+    if (shown)
+        hiddenPopups_.erase(name);
+    else
+        hiddenPopups_.insert(name);
 }
 
 LiveSkin::Clone* LiveSkin::cloneLocked(const std::string& name) {
-    for (Clone& c : clones_) if (ieq(c.name, name)) return &c;
+    for (Clone& c : clones_)
+        if (ieq(c.name, name)) return &c;
     return nullptr;
 }
 
@@ -1238,11 +1582,13 @@ bool LiveSkin::destroyCloneLocked(const std::string& name) {
     if (!c) return false;
     std::string n = c->name;
     clones_.erase(clones_.begin() + (c - clones_.data()));
-    for (auto it = knownPopups_.begin(); it != knownPopups_.end();) it = ieq(*it, n) ? knownPopups_.erase(it) : std::next(it);
+    for (auto it = knownPopups_.begin(); it != knownPopups_.end();)
+        it = ieq(*it, n) ? knownPopups_.erase(it) : std::next(it);
     hiddenPopups_.erase(n);
     props_.eraseTarget(n);
     screenPos_.erase(lowerAscii(n));
-    for (auto it = runtime_.begin(); it != runtime_.end();) it = ieq(it->parent, n) ? runtime_.erase(it) : std::next(it);
+    for (auto it = runtime_.begin(); it != runtime_.end();)
+        it = ieq(it->parent, n) ? runtime_.erase(it) : std::next(it);
     return true;
 }
 
@@ -1306,7 +1652,10 @@ std::vector<LiveSkin::CloneAction> LiveSkin::cloneActions(std::map<std::string, 
         }
     }
     for (auto it = open.begin(); it != open.end();) {
-        if (alive.count(it->first)) { ++it; continue; }
+        if (alive.count(it->first)) {
+            ++it;
+            continue;
+        }
         out.push_back({false, it->first, "", ""});
         it = open.erase(it);
     }
@@ -1342,20 +1691,36 @@ SkinSnapshot LiveSkin::snapshot() const {
     s.focus = focus_;
     s.focusSeq = focusSeq_;
     s.menu = menuLocked();
-    if (file_) if (const Block* mw = findMainWindow(*file_)) s.mainWindow = mw->name;
+    if (file_)
+        if (const Block* mw = findMainWindow(*file_)) s.mainWindow = mw->name;
     for (const RuntimeCtl& r : runtime_) s.runtime.push_back({r.name, r.parent, r.type});
     return s;
+}
+
+bool LiveSkin::runtimeControl(const std::string& name, SkinSnapshot::RuntimeControl& out) const {
+    std::lock_guard<std::mutex> g(mu_);
+    const RuntimeCtl* r = runtimeLocked(name);
+    if (!r) return false;
+    out = {r->name, r->parent, r->type};
+    return true;
 }
 
 std::vector<std::string> LiveSkin::runtimeMaps() const {
     std::lock_guard<std::mutex> g(mu_);
     std::vector<std::string> out;
-    for (const RuntimeCtl& r : runtime_) if (r.type == "MAP") out.push_back(r.name);
+    for (const RuntimeCtl& r : runtime_)
+        if (r.type == "MAP") out.push_back(r.name);
     return out;
 }
 
-uint64_t LiveSkin::generation() const { std::lock_guard<std::mutex> g(mu_); return gen_; }
-unsigned LiveSkin::browserOptions() const { std::lock_guard<std::mutex> g(mu_); return browserOptions_; }
+uint64_t LiveSkin::generation() const {
+    std::lock_guard<std::mutex> g(mu_);
+    return gen_;
+}
+unsigned LiveSkin::browserOptions() const {
+    std::lock_guard<std::mutex> g(mu_);
+    return browserOptions_;
+}
 
 std::string LiveSkin::mainIcon() const {
     std::lock_guard<std::mutex> g(mu_);
@@ -1375,10 +1740,16 @@ std::string LiveSkin::onSizeCommand() const {
 
 void LiveSkin::notify() const {
     std::function<void()> cb;
-    { std::lock_guard<std::mutex> g(const_cast<std::mutex&>(cbMu_)); cb = onChange_; }
+    {
+        std::lock_guard<std::mutex> g(const_cast<std::mutex&>(cbMu_));
+        cb = onChange_;
+    }
     if (cb) cb();
 }
 
-LiveSkin::Stats LiveSkin::stats() const { std::lock_guard<std::mutex> g(mu_); return stats_; }
+LiveSkin::Stats LiveSkin::stats() const {
+    std::lock_guard<std::mutex> g(mu_);
+    return stats_;
+}
 
 }  // namespace fugue::skin

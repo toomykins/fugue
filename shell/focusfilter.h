@@ -35,10 +35,16 @@ class FocusFilter : public QObject {
     Q_OBJECT
 public:
     explicit FocusFilter(QObject* parent = nullptr);
-    void setMacros(const skin::MacroSet& set) { macros_ = set; have_ = true; }
+    void setMacros(const skin::MacroSet& set) {
+        macros_ = set;
+        have_ = true;
+    }
     // The player's own lists (Client > Macros..., skin/usermacros.h): consulted only for keys the skin's set leaves unbound.
-    void setUserMacros(const skin::MacroSet& game, const skin::MacroSet& global) { userGame_ = game; userGlobal_ = global; }
-    static Zone zoneOf(QObject* o);   // walks parents for a "fugueZone" property, MapWidget, BrowserPane or QLineEdit
+    void setUserMacros(const skin::MacroSet& game, const skin::MacroSet& global) {
+        userGame_ = game;
+        userGlobal_ = global;
+    }
+    static Zone zoneOf(QObject* o);  // walks parents for a "fugueZone" property, MapWidget, BrowserPane or QLineEdit
     bool eventFilter(QObject* o, QEvent* e) override;
     uint64_t fired() const { return fired_; }
     // Fires the release of every key this filter routed a press for and has not seen released. Called on application
@@ -49,18 +55,24 @@ public:
     // first auto-repeat instead. Only the newest held key whose hold repeats does.
     void setFrameTiming(qint64 tickNs, qint64 frameNs);
     qint64 nowMs() const { return clock_.elapsed(); }
-    void repeatTick(qint64 nowMs);   // the repeat timer's tick
+    void repeatTick(qint64 nowMs);  // the repeat timer's tick
 signals:
     void macroFired(const QString& anyKey, const QString& command, bool up);
+
 private:
     skin::MacroSet macros_, userGame_, userGlobal_;
     bool have_ = false, inDispatch_ = false;
     uint64_t fired_ = 0;
     // Key to what its routed press saw. A release matches the modifiers its press carried, and is routed in the press's
     // zone even when it lands elsewhere, such as a popup menu or a dialog (see eventFilter).
-    struct Held { Qt::KeyboardModifiers mods; Zone zone; qint64 downMs = 0; bool claimed = false, typed = false, awaitRepeat = false; };
+    struct Held {
+        Qt::KeyboardModifiers mods;
+        Zone zone;
+        qint64 downMs = 0;
+        bool claimed = false, typed = false, awaitRepeat = false;
+    };
     QHash<int, Held> pressMods_;
-    std::vector<int> repeating_;   // held keys whose hold repeats, the newest last
+    std::vector<int> repeating_;  // held keys whose hold repeats, the newest last
     Qt::KeyboardModifiers modsNow_;
     QElapsedTimer clock_;
     QTimer repTimer_;

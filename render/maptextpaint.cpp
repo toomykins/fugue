@@ -14,7 +14,7 @@ namespace {
 std::mutex g_mu;
 GlyphRasterizer g_raster;
 using GlyphKey = std::tuple<std::string, int, bool, bool, bool, char32_t>;
-std::map<GlyphKey, std::shared_ptr<const GlyphMask>> g_glyphs;   // a failed glyph is cached as nullptr
+std::map<GlyphKey, std::shared_ptr<const GlyphMask>> g_glyphs;  // a failed glyph is cached as nullptr
 using BoxKey = std::tuple<std::string, std::string, int, int>;
 std::map<BoxKey, SpritePtr> g_boxes;  // a box is repainted every frame it lives, so paint it once
 constexpr size_t kMaxBoxes = 512;
@@ -61,7 +61,7 @@ SpritePtr paintMaptext(std::string_view markup, std::string_view mapStyle, int b
         auto it = g_boxes.find(bk);
         if (it != g_boxes.end()) return it->second;
     }
-    DsLayout L = dsLayoutMaptext(markup, mapStyle, boxW);   // takes dsmaptext's own lock; g_mu is not held here
+    DsLayout L = dsLayoutMaptext(markup, mapStyle, boxW);  // takes dsmaptext's own lock; g_mu is not held here
     SpritePtr result;
     if (L.ok && !L.lines.empty()) {
         auto sp = std::make_shared<Sprite>();
@@ -87,7 +87,7 @@ SpritePtr paintMaptext(std::string_view markup, std::string_view mapStyle, int b
                     auto m = glyphLocked(f, gl.cp);
                     if (!m) continue;
                     int gx = x0 + gl.x + m->left, gy = baseline - f.ascent + m->top;
-                    const int minX = f.bitmap && f.italic ? 1 : 0;   // bitmap italic never inks the box's first column
+                    const int minX = f.bitmap && f.italic ? 1 : 0;  // bitmap italic never inks the box's first column
                     for (int y = (pass == 0 ? -1 : 0); y < m->h + (pass == 0 ? 1 : 0); y++) {
                         int dy = gy + y;
                         if (dy < 0 || dy >= boxH) continue;
@@ -97,7 +97,7 @@ SpritePtr paintMaptext(std::string_view markup, std::string_view mapStyle, int b
                             int cov = 0;
                             if (pass == 1) {
                                 cov = m->a[size_t(y) * size_t(m->w) + size_t(x)];
-                            } else {   // the coverage grown by one pixel in all eight directions
+                            } else {  // the coverage grown by one pixel in all eight directions
                                 for (int oy = -1; oy <= 1; oy++)
                                     for (int ox = -1; ox <= 1; ox++) {
                                         int sx = x + ox, sy = y + oy;
@@ -106,7 +106,8 @@ SpritePtr paintMaptext(std::string_view markup, std::string_view mapStyle, int b
                                     }
                             }
                             if (cov <= 0) continue;
-                            over(&sp->px[(size_t(dy) * size_t(boxW) + size_t(dx)) * 4], pass == 0 ? p.outlineColor : p.color, cov);
+                            over(&sp->px[(size_t(dy) * size_t(boxW) + size_t(dx)) * 4],
+                                 pass == 0 ? p.outlineColor : p.color, cov);
                             painted = true;
                         }
                     }

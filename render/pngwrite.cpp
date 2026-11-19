@@ -27,7 +27,10 @@ uint32_t crc32(const uint8_t* p, size_t n, uint32_t c = 0xffffffffu) {
 }
 
 void be32(std::vector<uint8_t>& o, uint32_t v) {
-    o.push_back(uint8_t(v >> 24)); o.push_back(uint8_t(v >> 16)); o.push_back(uint8_t(v >> 8)); o.push_back(uint8_t(v));
+    o.push_back(uint8_t(v >> 24));
+    o.push_back(uint8_t(v >> 16));
+    o.push_back(uint8_t(v >> 8));
+    o.push_back(uint8_t(v));
 }
 
 void chunk(std::vector<uint8_t>& o, const char* type, const std::vector<uint8_t>& data) {
@@ -53,7 +56,8 @@ std::vector<uint8_t> encodePng(const RgbaImage& img) {
     raw.reserve(size_t(img.h) * (size_t(img.w) * 4 + 1));
     for (int y = 0; y < img.h; y++) {
         raw.push_back(0);
-        raw.insert(raw.end(), img.px.begin() + size_t(y) * size_t(img.w) * 4, img.px.begin() + (size_t(y) + 1) * size_t(img.w) * 4);
+        raw.insert(raw.end(), img.px.begin() + size_t(y) * size_t(img.w) * 4,
+                   img.px.begin() + (size_t(y) + 1) * size_t(img.w) * 4);
     }
     std::vector<uint8_t> z = {0x78, 0x01};
     size_t pos = 0;
@@ -61,13 +65,18 @@ std::vector<uint8_t> encodePng(const RgbaImage& img) {
         size_t n = std::min<size_t>(65535, raw.size() - pos);
         bool last = pos + n >= raw.size();
         z.push_back(last ? 1 : 0);
-        z.push_back(uint8_t(n)); z.push_back(uint8_t(n >> 8));
-        z.push_back(uint8_t(~n)); z.push_back(uint8_t(~n >> 8));
+        z.push_back(uint8_t(n));
+        z.push_back(uint8_t(n >> 8));
+        z.push_back(uint8_t(~n));
+        z.push_back(uint8_t(~n >> 8));
         z.insert(z.end(), raw.begin() + pos, raw.begin() + pos + n);
         pos += n;
     } while (pos < raw.size());
     uint32_t a = 1, b = 0;
-    for (uint8_t c : raw) { a = (a + c) % 65521; b = (b + a) % 65521; }
+    for (uint8_t c : raw) {
+        a = (a + c) % 65521;
+        b = (b + a) % 65521;
+    }
     be32(z, (b << 16) | a);
     chunk(out, "IDAT", z);
     chunk(out, "IEND", {});

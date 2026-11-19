@@ -16,8 +16,8 @@ struct Mat {
 
 enum class Sampling { Nearest, Bilinear };
 
-Mat matMul(const Mat& m, const Mat& n);   // Apply n first, then m
-bool invertMat(const Mat& m, Mat& out);   // false when singular
+Mat matMul(const Mat& m, const Mat& n);  // Apply n first, then m
+bool invertMat(const Mat& m, Mat& out);  // false when singular
 // dmMatrixToImage: the wire matrix (DM, +y up, six float32 cells) -> the raster (+y down) matrix.
 Mat dmMatrixToImage(const std::array<float, 6>& t);
 // applyTransform: resample `src` (w x h straight-alpha RGBA8) about its centre; the output canvas is the
@@ -26,7 +26,8 @@ SpritePtr applyTransform(const Sprite& src, const Mat& m, Sampling s);
 // warpAboutCentre: resample a whole viewport-sized RGBA8 surface (w x h) IN PLACE through a plane-master
 // transform, keeping its size: the linear part [[a,b],[d,e]] (DM y-up) about the centre, then a shift of (tx,ty)
 // IMAGE px; bilinear at pixel centres, premultiplied. Degenerate matrix -> fully transparent.
-void warpAboutCentre(std::vector<uint8_t>& px, int w, int h, double a, double b, double d, double e, double tx, double ty);
+void warpAboutCentre(std::vector<uint8_t>& px, int w, int h, double a, double b, double d, double e, double tx,
+                     double ty);
 // lerpMatrix: rigid (decomposed) interpolation. false when either linear part is degenerate.
 bool lerpMatrix(const Mat& from, const Mat& to, double t, Mat& out);
 

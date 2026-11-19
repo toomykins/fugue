@@ -29,9 +29,13 @@ QString withPngSuffix(const QString& path) {
 }
 
 bool saveScreenshot(const QImage& frame, const QString& path, QString* err) {
-    auto fail = [&](const QString& why) { if (err) *err = why; return false; };
+    auto fail = [&](const QString& why) {
+        if (err) *err = why;
+        return false;
+    };
     if (frame.isNull()) return fail(QStringLiteral("no map frame to capture"));
-    if (!QDir().mkpath(QFileInfo(path).absolutePath())) return fail(QStringLiteral("cannot create ") + QFileInfo(path).absolutePath());
+    if (!QDir().mkpath(QFileInfo(path).absolutePath()))
+        return fail(QStringLiteral("cannot create ") + QFileInfo(path).absolutePath());
     QImageWriter w(path, "png");
     if (!w.write(frame.convertToFormat(QImage::Format_RGB888))) return fail(w.errorString());
     return true;

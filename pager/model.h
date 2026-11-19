@@ -14,8 +14,8 @@
 namespace fugue::pager {
 
 struct CheckOptions {
-    bool selfIsClient = false;     // the binary also holds the client: a join re-executes `<self> client`
-    std::string selfExe;           // for the self-client entry and the exe-dir candidate
+    bool selfIsClient = false;  // the binary also holds the client: a join re-executes `<self> client`
+    std::string selfExe;        // for the self-client entry and the exe-dir candidate
 };
 
 struct Status {
@@ -46,31 +46,40 @@ std::vector<std::string> windowChecklist(const Status& st);
 std::string windowWording(std::string line);
 
 // The argv PREFIX a join runs: explicit/$FUGUE_CLIENT, else {selfExe,"client"} when selfIsClient, else a `fugue` binary next to selfExe or on $PATH
-bool resolveClientArgv(const std::string& explicitIn, const CheckOptions& opt, std::vector<std::string>* argv, std::string* err);
+bool resolveClientArgv(const std::string& explicitIn, const CheckOptions& opt, std::vector<std::string>* argv,
+                       std::string* err);
 
-struct CacheStats { long long files = 0, bytes = 0, capBytes = net::RscStore::kDefaultCapBytes; };   // the client's cap
-CacheStats scanRscCache(const std::string& dir);   // the cache scan's rule: <2-hex>/<8-hex> files
-std::string rscDir();                              // ~/.fugue/rsc
+struct CacheStats {
+    long long files = 0, bytes = 0, capBytes = net::RscStore::kDefaultCapBytes;
+};  // the client's cap
+CacheStats scanRscCache(const std::string& dir);  // the cache scan's rule: <2-hex>/<8-hex> files
+std::string rscDir();                             // ~/.fugue/rsc
 
 // `fugue-qt pager -list` text, exactly.
 std::string renderList(const account::Config& cfg, const Status& st);
 
 // Display-only row for the Live games tab.
-struct LiveRow { std::string title, detail, id; int players = 0; long long version = 0; };
+struct LiveRow {
+    std::string title, detail, id;
+    int players = 0;
+    long long version = 0;
+};
 std::vector<LiveRow> liveRows(const std::vector<LiveWorld>& worlds);
 
 // ---- warm-up ("Download resources"): the pager runs the client's headless `--prefetch` pass (app/prefetchmode.cpp) and
 // reads its output. Progress lines: "[prefetch] prefetch: D/T resolved, C cached, P outstanding" (net/prefetch.cpp); the
 // last line: "PREFETCH ok=1 offered=N cached=C declared=D stored=S unverified=U bytes=B seconds=X[ error=...]".
 struct WarmProgress {
-    bool summary = false;   // the PREFETCH line: the pass is over
-    bool ok = false;        // summary only
-    uint64_t done = 0, total = 0, cached = 0, outstanding = 0;   // progress lines (total excludes what the cache already held)
-    uint64_t offered = 0, stored = 0, bytes = 0;                 // summary
+    bool summary = false;  // the PREFETCH line: the pass is over
+    bool ok = false;       // summary only
+    uint64_t done = 0, total = 0, cached = 0,
+             outstanding = 0;                     // progress lines (total excludes what the cache already held)
+    uint64_t offered = 0, stored = 0, bytes = 0;  // summary
     std::string error;
 };
-bool parseWarmLine(const std::string& line, WarmProgress& out);   // false = not a warm-up line
-std::string plainWarmProgress(const WarmProgress& p);            // "Downloading resources: 1200 of 9421 files" / the summary sentence
+bool parseWarmLine(const std::string& line, WarmProgress& out);  // false = not a warm-up line
+std::string plainWarmProgress(
+    const WarmProgress& p);  // "Downloading resources: 1200 of 9421 files" / the summary sentence
 // The game tab's note about the resource cache for this server (lastPrefetch).
 std::string plainWarmState(const account::Server& s);
 

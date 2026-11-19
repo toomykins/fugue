@@ -17,7 +17,10 @@
 using namespace fugue;
 
 namespace {
-struct Row { std::string label, atom, loc, params, menu; int x, y; };
+struct Row {
+    std::string label, atom, loc, params, menu;
+    int x, y;
+};
 
 std::string dir() { return std::string(FUGUE_TEST_DATA_DIR) + "/passmouse-world"; }
 
@@ -66,7 +69,8 @@ private slots:
         while (std::getline(f, line)) {
             if (line.rfind("0x", 0) != 0) continue;
             size_t sp = line.find(' ', line.find("len="));
-            sess_.ingest(uint16_t(std::stoul(line.substr(2, 4), nullptr, 16)), sp == std::string::npos ? Bytes{} : unhex(line.substr(sp + 1)));
+            sess_.ingest(uint16_t(std::stoul(line.substr(2, 4), nullptr, 16)),
+                         sp == std::string::npos ? Bytes{} : unhex(line.substr(sp + 1)));
         }
         for (const char* id : {"4946a4f8", "08bcd326"}) {
             std::ifstream rf(dir() + "/res/" + id, std::ios::binary);
@@ -105,8 +109,8 @@ private slots:
             named(r, atom, loc, params);
             if (atom == r.atom && loc == r.loc && params == r.params) continue;
             bad++;
-            qWarning("%s: ours %s loc=%s %s | stock %s loc=%s %s", r.label.c_str(), atom.c_str(), loc.c_str(), params.c_str(), r.atom.c_str(),
-                     r.loc.c_str(), r.params.c_str());
+            qWarning("%s: ours %s loc=%s %s | stock %s loc=%s %s", r.label.c_str(), atom.c_str(), loc.c_str(),
+                     params.c_str(), r.atom.c_str(), r.loc.c_str(), r.params.c_str());
         }
         QCOMPARE(bad, 0);
     }
@@ -118,7 +122,8 @@ private slots:
             if (r.menu == "-") continue;
             graded++;
             std::string ours;
-            for (const render::Hit& h : render::hitStack(*sc_, r.x, sc_->pixH() - 1 - r.y)) ours += (ours.empty() ? "" : "|") + h.name;
+            for (const render::Hit& h : render::hitStack(*sc_, r.x, sc_->pixH() - 1 - r.y))
+                ours += (ours.empty() ? "" : "|") + h.name;
             if (ours == r.menu) continue;
             bad++;
             qWarning("%s: ours %s | stock %s", r.label.c_str(), ours.c_str(), r.menu.c_str());

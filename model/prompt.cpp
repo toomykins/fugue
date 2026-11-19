@@ -1,6 +1,7 @@
 #include "model/prompt.h"
 #include "net/input.h"
 #include "net/textmacro.h"
+#include "proto/messages.h"
 #include <cctype>
 #include <cerrno>
 #include <cmath>
@@ -10,23 +11,23 @@
 
 namespace fugue::model {
 namespace {
-bool cstrAt(ByteSpan b, size_t& p, std::string& out) {
-    for (size_t i = p; i < b.size(); i++)
-        if (b[i] == 0) { out.assign(reinterpret_cast<const char*>(b.data() + p), i - p); p = i + 1; return true; }
-    return false;
+void putCStr(Bytes& b, const std::string& s) {
+    b.insert(b.end(), s.begin(), s.end());
+    b.push_back(0);
 }
-void putCStr(Bytes& b, const std::string& s) { b.insert(b.end(), s.begin(), s.end()); b.push_back(0); }
-void put32(Bytes& b, uint32_t v) { for (int i = 0; i < 4; i++) b.push_back(uint8_t(v >> (8 * i))); }
+void put32(Bytes& b, uint32_t v) {
+    for (int i = 0; i < 4; i++) b.push_back(uint8_t(v >> (8 * i)));
+}
 }  // namespace
 
 std::string Prompt::typeName() const {
     switch (typeMask & ~kInputNull) {
-    case kInputText: return "text";
-    case kInputNum: return "num";
-    case kInputMessage: return "message";
-    case kInputAnything: return "anything";
-    case kInputColor: return "color";
-    case 0: return "anything";
+        case kInputText: return "text";
+        case kInputNum: return "num";
+        case kInputMessage: return "message";
+        case kInputAnything: return "anything";
+        case kInputColor: return "color";
+        case 0: return "anything";
     }
     char buf[32];
     std::snprintf(buf, sizeof buf, "mask 0x%04x", typeMask);
@@ -34,42 +35,37 @@ std::string Prompt::typeName() const {
 }
 
 bool parseAlertRequest(ByteSpan b, Prompt& out) {
-    if (b.size() < 4) return false;
+    proto::Alert m;
+    try {
+        m = proto::decodeAlert(b);
+    } catch (const std::exception&) { return false; }
     Prompt p;
     p.kind = Prompt::Alert;
-    p.id = le32(b.data());
-    size_t pos = 4;
-    if (!cstrAt(b, pos, p.message) || !cstrAt(b, pos, p.title)) return false;
-    p.message = net::plainText(p.message);
-    p.title = net::plainText(p.title);
-    if (b.size() - pos < 2) return false;
-    unsigned count = le16(b.data() + pos);
-    pos += 2;
-    for (unsigned i = 0; i < count; i++) {
-        std::string s;
-        if (!cstrAt(b, pos, s)) return false;
+    p.id = m.id;
+    p.message = net::plainText(m.message);
+    p.title = net::plainText(m.title);
+    for (const std::string& s : m.buttons)
         if (!s.empty()) p.buttons.push_back(net::plainText(s));
-    }
-    if (pos != b.size()) return false;
-    if (p.buttons.empty()) p.buttons.push_back("OK");   // a one-argument alert() shows and returns "OK"
+    if (p.buttons.empty()) p.buttons.push_back("OK");  // a one-argument alert() shows and returns "OK"
     out = std::move(p);
     return true;
 }
 
 bool parseInputRequest(ByteSpan b, Prompt& out) {
+    proto::InputPrompt m;
+    try {
+        m = proto::decodeInputPrompt(b);
+    } catch (const std::exception&) { return false; }
     Prompt p;
     p.kind = Prompt::Input;
-    size_t pos = 0;
-    if (!cstrAt(b, pos, p.title) || !cstrAt(b, pos, p.def) || !cstrAt(b, pos, p.message)) return false;
-    p.title = net::plainText(p.title);
-    p.message = net::plainText(p.message);
-    p.def = inputDefaultText(p.def);
-    if (b.size() - pos != 10) return false;
-    p.typeMask = le32(b.data() + pos);
-    p.filter = b[pos + 4];
-    p.filterKind = b[pos + 5];
-    p.id = le32(b.data() + pos + 6);
-    p.inList = p.filterKind == kInputFilterList && !(p.typeMask & kInputText);   // `as text in L` is a plain text field
+    p.title = net::plainText(m.title);
+    p.message = net::plainText(m.message);
+    p.def = inputDefaultText(m.defaultValue);
+    p.typeMask = m.typeMask;
+    p.filter = m.filter;
+    p.filterKind = m.filterKind;
+    p.id = m.id;
+    p.inList = p.filterKind == kInputFilterList && !(p.typeMask & kInputText);  // `as text in L` is a plain text field
     if ((p.typeMask & ~kInputNull) == kInputNum && !numericDefaultShown(p.def)) p.def.clear();
     out = std::move(p);
     return true;
@@ -78,12 +74,18 @@ bool parseInputRequest(ByteSpan b, Prompt& out) {
 std::string inputDefaultText(const std::string& sent) {
     std::string o;
     for (size_t i = 0; i < sent.size(); i++) {
-        if (sent[i] != '\\') { o += sent[i]; continue; }
+        if (sent[i] != '\\') {
+            o += sent[i];
+            continue;
+        }
         if (++i == sent.size()) break;
         char c = sent[i];
-        if (c == 'n') o += '\n';
-        else if (c == 't') o += '\t';
-        else if (c == '\\' || c == '"' || c == '[') o += c;
+        if (c == 'n')
+            o += '\n';
+        else if (c == 't')
+            o += '\t';
+        else if (c == '\\' || c == '"' || c == '[')
+            o += c;
     }
     return o;
 }
@@ -92,8 +94,10 @@ bool numericDefaultShown(const std::string& def) {
     size_t i = !def.empty() && def[0] == '-';
     bool dot = false;
     for (; i < def.size(); i++) {
-        if (def[i] == '.' && !dot) dot = true;
-        else if (def[i] < '0' || def[i] > '9') return false;
+        if (def[i] == '.' && !dot)
+            dot = true;
+        else if (def[i] < '0' || def[i] > '9')
+            return false;
     }
     return true;
 }
@@ -113,17 +117,12 @@ bool inputChoiceMatches(const std::string& choice, const std::string& def) {
 }
 
 bool parseExpansionReply(ByteSpan b, std::vector<std::string>& out) {
-    if (b.size() < 2) return false;
-    unsigned n = le16(b.data());
-    size_t pos = 2;
-    std::vector<std::string> v;
-    for (unsigned i = 0; i < n; i++) {
-        std::string s;
-        if (!cstrAt(b, pos, s)) return false;
-        v.push_back(net::plainText(net::unescapeVerbText(s)));
-    }
-    if (pos != b.size()) return false;
-    out = std::move(v);
+    proto::ExpansionReply m;
+    try {
+        m = proto::decodeExpansionReply(b);
+    } catch (const std::exception&) { return false; }
+    out.clear();
+    for (const std::string& s : m.choices) out.push_back(net::plainText(net::unescapeVerbText(s)));
     return true;
 }
 
@@ -139,8 +138,10 @@ Bytes encodeInputText(uint32_t id, const std::string& text) {
     std::string t;
     for (size_t i = 0; i < text.size(); i++) {
         if (text[i] == '\r' && i + 1 < text.size() && text[i + 1] == '\n') continue;
-        if (text[i] == '\t') t += "\\t";
-        else t += net::escapeVerbText(text.substr(i, 1));
+        if (text[i] == '\t')
+            t += "\\t";
+        else
+            t += net::escapeVerbText(text.substr(i, 1));
     }
     Bytes b{2};
     putCStr(b, t);
@@ -172,7 +173,8 @@ Bytes encodePendingInputExpansionRequest(uint32_t id) {
 
 std::string inputChoiceText(const std::string& choice) {
     std::string t = net::escapeChoiceText(choice);
-    for (char& c : t) if (c == ' ') c = '-';
+    for (char& c : t)
+        if (c == ' ') c = '-';
     return t + ' ';
 }
 Bytes encodeInputResolveRequest(uint32_t id, const std::string& choice) {
@@ -206,52 +208,65 @@ Bytes encodeInputAnswer(const Prompt& p, const std::string& text) {
 }
 
 const Prompt* PromptBook::find(uint32_t id) const {
-    for (const Prompt& p : pending_) if (p.id == id) return &p;
+    for (const Prompt& p : pending_)
+        if (p.id == id) return &p;
     return nullptr;
 }
 const Prompt* PromptBook::find(uint32_t id, bool alert) const {
-    for (const Prompt& p : pending_) if (p.id == id && (p.kind == Prompt::Alert) == alert) return &p;
+    for (const Prompt& p : pending_)
+        if (p.id == id && (p.kind == Prompt::Alert) == alert) return &p;
     return nullptr;
 }
 
 void PromptBook::retire(uint32_t id, bool alert) {
     for (auto it = pending_.begin(); it != pending_.end(); ++it)
-        if (it->id == id && (it->kind == Prompt::Alert) == alert) { pending_.erase(it); return; }
+        if (it->id == id && (it->kind == Prompt::Alert) == alert) {
+            pending_.erase(it);
+            return;
+        }
 }
 
 bool parsePromptWithdrawal(ByteSpan b, PromptWithdrawal& out) {
-    if (b.size() != 5 || b[4] > 1) return false;
-    out.id = le32(b.data());
-    out.alert = b[4] == 1;
+    proto::PromptWithdraw m;
+    try {
+        m = proto::decodePromptWithdraw(b);
+    } catch (const std::exception&) { return false; }
+    if (m.kind > 1) return false;
+    out.id = m.id;
+    out.alert = m.kind == 1;
     return true;
 }
 
 bool PromptBook::withdraw(const PromptWithdrawal& w) {
     bool was = false;
     for (auto it = pending_.begin(); it != pending_.end();)
-        if (it->id == w.id && (it->kind == Prompt::Alert) == w.alert) { it = pending_.erase(it); was = true; }
-        else ++it;
+        if (it->id == w.id && (it->kind == Prompt::Alert) == w.alert) {
+            it = pending_.erase(it);
+            was = true;
+        } else
+            ++it;
     if (!withdrawn(w.id, w.alert)) withdrawn_.push_back(w);
     if (withdrawn_.size() > kCap) withdrawn_.pop_front();
     return was;
 }
 
 bool PromptBook::withdrawn(uint32_t id, bool alert) const {
-    for (const PromptWithdrawal& w : withdrawn_) if (w.id == id && w.alert == alert) return true;
+    for (const PromptWithdrawal& w : withdrawn_)
+        if (w.id == id && w.alert == alert) return true;
     return false;
 }
 
 const Prompt* PromptBook::onFrame(uint16_t type, ByteSpan body, bool* replaced) {
     if (replaced) *replaced = false;
     Prompt p;
-    if (type == kAlertMsg) {
+    if (type == S2C::Alert) {
         if (!parseAlertRequest(body, p)) return nullptr;
-    } else if (type == kInputMsg) {
+    } else if (type == S2C::Input) {
         if (!parseInputRequest(body, p)) return nullptr;
-    } else if (type == kExpansionReplyMsg) {
+    } else if (type == S2C::ExpansionReply) {
         const Prompt* q = needsChoices();
         return q ? attachChoices(q->id, body) : nullptr;
-    } else if (type == kPromptWithdrawMsg) {
+    } else if (type == S2C::PromptWithdraw) {
         PromptWithdrawal w;
         if (parsePromptWithdrawal(body, w)) withdraw(w);
         return nullptr;
@@ -260,7 +275,10 @@ const Prompt* PromptBook::onFrame(uint16_t type, ByteSpan body, bool* replaced) 
     }
     const bool alert = p.kind == Prompt::Alert;
     for (auto it = withdrawn_.begin(); it != withdrawn_.end(); ++it)
-        if (it->id == p.id && it->alert == alert) { withdrawn_.erase(it); break; }
+        if (it->id == p.id && it->alert == alert) {
+            withdrawn_.erase(it);
+            break;
+        }
     for (auto it = pending_.begin(); it != pending_.end(); ++it)
         if (it->id == p.id && (it->kind == Prompt::Alert) == alert) {
             pending_.erase(it);
@@ -293,24 +311,26 @@ const Prompt* PromptBook::needsChoices() const {
 PromptReply PromptBook::answerAlert(uint32_t id, const std::string& button) {
     if (withdrawn(id, true)) return {};
     retire(id, true);
-    return {kAlertMsg, encodeAlertReply(id, button)};
+    return {C2S::Alert, encodeAlertReply(id, button)};
 }
 PromptReply PromptBook::answerInput(uint32_t id, const std::string& text) {
     if (withdrawn(id, false)) return {};
     Prompt p;
-    if (const Prompt* q = find(id, false)) p = *q;   // not held: answer as plain text rather than dropping it
+    if (const Prompt* q = find(id, false)) p = *q;  // not held: answer as plain text rather than dropping it
     p.id = id;
     retire(id, false);
-    if (p.resolvesThroughServer()) return {kInputResolveMsg, encodeInputResolveRequest(id, text)};
-    return {kInputMsg, encodeInputAnswer(p, text)};
+    if (p.resolvesThroughServer()) return {C2S::InputResolve, encodeInputResolveRequest(id, text)};
+    return {C2S::Input, encodeInputAnswer(p, text)};
 }
-PromptReply PromptBook::resolvedInput(uint32_t id, uint8_t kind, uint32_t value) { return {kInputMsg, encodeInputValue(id, kind, value)}; }
+PromptReply PromptBook::resolvedInput(uint32_t id, uint8_t kind, uint32_t value) {
+    return {C2S::Input, encodeInputValue(id, kind, value)};
+}
 PromptReply PromptBook::cancel(uint32_t id) {
     // Stock DreamSeeker cannot dismiss an alert() or a non-null input() (Prompt::cancellable), so nothing is sent for one.
     if (withdrawn(id, false)) return {};
     if (const Prompt* q = find(id); q && !q->cancellable()) return {};
     retire(id, false);
-    return {kInputMsg, encodeInputNull(id)};
+    return {C2S::Input, encodeInputNull(id)};
 }
 
 }  // namespace fugue::model

@@ -26,7 +26,10 @@ std::string slurp(const std::string& p) {
 constexpr int64_t kT0 = 1'000'000'000'000'000'000;
 constexpr int64_t kDs = 100'000'000;
 constexpr uint32_t kRes = 0xa8be0202;
-struct Rgb { uint8_t r, g, b; bool operator==(const Rgb& o) const { return r == o.r && g == o.g && b == o.b; } };
+struct Rgb {
+    uint8_t r, g, b;
+    bool operator==(const Rgb& o) const { return r == o.r && g == o.g && b == o.b; }
+};
 constexpr Rgb kFloor{40, 40, 40}, kMob{0, 0, 200}, kGrey{128, 128, 128}, kRed{255, 0, 0}, kYellow{255, 255, 0},
     kWhite{255, 255, 255}, kBlue{0, 128, 255};
 QString str(Rgb c) { return QString("%1,%2,%3").arg(c.r).arg(c.g).arg(c.b); }
@@ -43,7 +46,10 @@ class Aistatic : public QObject {
         render::DrawList dl;
         render::SceneStats st;
         std::string err;
-        if (!render::assembleMapControl(s_, res_, clockNs, dl, st, &err)) { qWarning("assemble: %s", err.c_str()); return {}; }
+        if (!render::assembleMapControl(s_, res_, clockNs, dl, st, &err)) {
+            qWarning("assemble: %s", err.c_str());
+            return {};
+        }
         render::RgbaImage f = render::execute(dl);
         int px = (x - 5) * 32 + ix, py = (11 - y) * 32 + iy;
         if (px < 0 || py < 0 || px >= f.w || py >= f.h) return {};
@@ -61,7 +67,8 @@ private slots:
         while (std::getline(f, line)) {
             QVERIFY(line.rfind("0x", 0) == 0);
             size_t sp = line.find(' ', line.find("len="));
-            frames_.push_back({uint16_t(std::stoul(line.substr(2, 4), nullptr, 16)), sp == std::string::npos ? Bytes{} : unhex(line.substr(sp + 1))});
+            frames_.push_back({uint16_t(std::stoul(line.substr(2, 4), nullptr, 16)),
+                               sp == std::string::npos ? Bytes{} : unhex(line.substr(sp + 1))});
         }
         QCOMPARE(int(frames_.size()), 137);
         std::string b = slurp(dir + "/res/a8be0202");
@@ -79,7 +86,8 @@ private slots:
         for (int x = 5; x <= 7; x++)
             for (int y = 5; y <= 11; y++) {
                 Rgb q = at(t, x, y, 4, 4), r = at(t, x, y, 24, 24);
-                QVERIFY2((q == kRed || q == kYellow) && r == kGrey, qPrintable(QString("(%1,%2): %3 / %4").arg(x).arg(y).arg(str(q), str(r))));
+                QVERIFY2((q == kRed || q == kYellow) && r == kGrey,
+                         qPrintable(QString("(%1,%2): %3 / %4").arg(x).arg(y).arg(str(q), str(r))));
             }
         QVERIFY(at(t, 9, 6, 4, 4) == kFloor);
     }

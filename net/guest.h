@@ -1,4 +1,4 @@
-// Guest login credential (the 47-byte 0x1a body) and the per-install machine identity behind it.
+// Guest login credential (the 47-byte C2S::Login body) and the per-install machine identity behind it.
 //
 // The 16 scaffold bytes are the public Guest key block's prefix; the server refuses a login without them.
 #pragma once

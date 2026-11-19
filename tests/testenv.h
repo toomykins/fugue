@@ -14,7 +14,8 @@ inline QProcessEnvironment isolatedEnv(const QString& home) {
     e.insert("XDG_DATA_HOME", home + "/.local/share");
     e.insert("XDG_STATE_HOME", home + "/.local/state");
     e.insert("FUGUE_AUDIO", "none");
-    for (const char* v : {"FUGUE_RESYNC_SWEEP", "FUGUE_RESYNC_GC", "FUGUE_PAGER_CONFIG", "FUGUE_IDENTITY", "FUGUE_KEYTXT", "FUGUE_BYOND_SID"})
+    for (const char* v : {"FUGUE_RESYNC_SWEEP", "FUGUE_RESYNC_GC", "FUGUE_PAGER_CONFIG", "FUGUE_IDENTITY",
+                          "FUGUE_KEYTXT", "FUGUE_BYOND_SID"})
         e.remove(v);
     return e;
 }

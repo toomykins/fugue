@@ -1,0 +1,33 @@
+# Stock DreamSeeker 516 (wine, scripts/dreamseeker-pixel-oracle.sh --keep) x stock DreamDaemon 516.1684, world.dme here.
+# Driven with xdotool on a private Xvfb (right button down/up, F3/F4 pressed while it is held), read from the world's log
+# (the lines below, verbatim apart from the "the " article) and from root-window screenshots for the menu. The map is 224x224
+# at 32 px a tile; pixels are 0-based from the viewport's bottom-left. Targets: NB t_B (40,151) a turf with no verb; NR
+# (40,87) rock_B over t_B, rock has a verb (poke), the turf none; SB (8,151) vg static over a bare turf; SR (8,87) static
+# over rock_A.
+# part A: the flag (show_popup_menus) at the press and at the release of one right click (hold 0.3-0.5 s) at NR. A flag
+# change is made while the button is held. sent: what the world logged. menu: whether a verb menu was on screen after the
+# release (never while the button was down).
+# label	target	flag_at_press	flag_at_release	sent	menu
+on_on	NR	on	on	-	rock_B
+off_off	NR	off	off	DOWN UP CLICK	-
+off_on	NR	off	on	DOWN UP CLICK	-
+on_off	NR	on	off	UP CLICK	-
+# part B: the rows a menu lists (flag on at both). Only atoms with a verb are listed; with none there is no menu.
+# label	target	menu
+bare_turf	NB	-
+bare_static	SB	-
+verbed_under_turf	NR	rock_B
+verbed_under_static	SR	rock_A
+# part C: the verb menu closing. The pointer moved over the map while it was open and sent nothing; on closing (Escape, or a
+# press elsewhere) stock reported the atom under the pointer at once, as a hover (EXIT of the stale atom, ENTER of the new
+# one; params carry right=1 and no button=right when the right button was held at that moment). With vg's rule on, a right
+# click on static after that sent DOWN UP CLICK and opened no menu.
+# label	event	log
+close_escape	menu opened at NR, pointer moved to SB (10,150), Escape	EXIT the t_B icon-x=9;icon-y=24;screen-loc=2:9,3:24 flag=1 | ENTER the obscured icon-x=11;icon-y=23;vis-x=11;vis-y=151;screen-loc=1:11,5:23 flag=1
+close_by_right_press	menu opened at NR, pointer moved to SB (8,151), right press and release there	EXIT the t_B icon-x=9;icon-y=24;screen-loc=2:9,3:24 flag=1 | ENTER the obscured icon-x=9;icon-y=24;vis-x=9;vis-y=152;right=1;screen-loc=1:9,5:24 flag=1 | UP the obscured icon-x=9;icon-y=24;vis-x=9;vis-y=152;right=1;button=right;screen-loc=1:9,5:24 flag=0 | CLICK the obscured loc= icon-x=9;icon-y=24;vis-x=9;vis-y=152;right=1;button=right;screen-loc=1:9,5:24
+close_by_right_press_elsewhere	menu opened at NR, pointer moved to a verbed atom (170,87), right press and release there (flag on)	EXIT the t_B icon-x=9;icon-y=24;screen-loc=2:9,3:24 flag=1 | ENTER the t_E icon-x=11;icon-y=24;right=1;screen-loc=6:11,3:24 flag=1 | (a new menu, rock_E, opened at the release)
+rightclick_static_after_close	vg rule on; menu opened at NR, pointer moved to SB, Escape, then a right click at (11,150)	DOWN the obscured icon-x=12;icon-y=23;vis-x=12;vis-y=151;right=1;button=right;screen-loc=1:12,5:23 flag=0 | UP ... flag=0 | CLICK the obscured loc= icon-x=12;icon-y=23;vis-x=12;vis-y=151;right=1;button=right;screen-loc=1:12,5:23
+# part D: two sequences for a client to repeat (vg rule on, F2), each ending on SR; what stock did:
+# label	sequence	stock
+menu_closed_onto_static	open the menu at NR, move to SR (8,87), Escape, right press and release at SR	no menu; DOWN UP CLICK on the obscured source (flag=0 at DOWN)
+slow_link	F5 on; pointer moved from NR onto SR, right press 0.05 s later, release 0.6 s after the press	no menu; UP CLICK on the obscured source and no DOWN (flag=1 at the press, 0 at the release)

@@ -8,7 +8,9 @@
 #include "app/rendermetrics.h"
 
 class RenderThread;
-namespace fugue::shell { class SkinWindow; }
+namespace fugue::shell {
+class SkinWindow;
+}
 
 class RenderMonitor : public QObject {
 public:
@@ -16,6 +18,7 @@ public:
     void refresh();
     bool active() const { return timer_.isActive(); }
     bool probing() const { return probe_.isActive(); }
+
 private:
     void setEnabled(bool enabled);
     QString formatMap(const std::string& id, const fugue::app::MapMetrics& map, double rate) const;

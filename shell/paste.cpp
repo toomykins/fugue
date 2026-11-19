@@ -25,27 +25,28 @@ public:
         QWidget* ed = editorOf(target_);
         if (!ed) return false;
         switch (e->type()) {
-        case QEvent::KeyPress: {
-            auto* k = static_cast<QKeyEvent*>(e);
-            if (!isPasteChord(k)) return false;
-            if (ed->isEnabled()) pasteInto(ed, QClipboard::Clipboard);
-            return true;   // consumed even when the clipboard is empty, so Qt does not paste again and no macro sees it
-        }
-        case QEvent::MouseButtonPress:
-        case QEvent::MouseButtonRelease: {
-            auto* m = static_cast<QMouseEvent*>(e);
-            if (m->button() != Qt::MiddleButton) return false;
-            if (e->type() == QEvent::MouseButtonRelease && ed->isEnabled()) {
-                // the event may arrive on the viewport: map to the editor's coordinates
-                QPoint p = m->position().toPoint();
-                if (auto* w = qobject_cast<QWidget*>(o); w && w != ed) p = ed->mapFromGlobal(w->mapToGlobal(p));
-                pasteInto(ed, QClipboard::Selection, &p);
+            case QEvent::KeyPress: {
+                auto* k = static_cast<QKeyEvent*>(e);
+                if (!isPasteChord(k)) return false;
+                if (ed->isEnabled()) pasteInto(ed, QClipboard::Clipboard);
+                return true;  // consumed even when the clipboard is empty, so Qt does not paste again and no macro sees it
             }
-            return true;
-        }
-        default: return false;
+            case QEvent::MouseButtonPress:
+            case QEvent::MouseButtonRelease: {
+                auto* m = static_cast<QMouseEvent*>(e);
+                if (m->button() != Qt::MiddleButton) return false;
+                if (e->type() == QEvent::MouseButtonRelease && ed->isEnabled()) {
+                    // the event may arrive on the viewport: map to the editor's coordinates
+                    QPoint p = m->position().toPoint();
+                    if (auto* w = qobject_cast<QWidget*>(o); w && w != ed) p = ed->mapFromGlobal(w->mapToGlobal(p));
+                    pasteInto(ed, QClipboard::Selection, &p);
+                }
+                return true;
+            }
+            default: return false;
         }
     }
+
 private:
     QWidget* target_;
 };
@@ -55,7 +56,8 @@ bool isPasteChord(const QKeyEvent* e) {
     if (e->type() != QEvent::KeyPress) return false;
     if (e->matches(QKeySequence::Paste)) return true;
     const auto mods = e->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier | Qt::MetaModifier);
-    if (e->key() == Qt::Key_V && (mods == Qt::ControlModifier || mods == (Qt::ControlModifier | Qt::ShiftModifier))) return true;
+    if (e->key() == Qt::Key_V && (mods == Qt::ControlModifier || mods == (Qt::ControlModifier | Qt::ShiftModifier)))
+        return true;
     if (e->key() == Qt::Key_Insert && mods == Qt::ShiftModifier) return true;
     return false;
 }
@@ -70,7 +72,7 @@ QString singleLine(QString t) {
 bool pasteInto(QWidget* w, QClipboard::Mode mode, const QPoint* at) {
     if (!w) return false;
     QClipboard* cb = QGuiApplication::clipboard();
-    if (mode == QClipboard::Selection && !cb->supportsSelection()) return false;   // no primary selection here
+    if (mode == QClipboard::Selection && !cb->supportsSelection()) return false;  // no primary selection here
     QString text = cb->text(mode);
     if (text.isEmpty()) return false;
     if (auto* c = qobject_cast<QComboBox*>(w)) w = c->isEditable() ? c->lineEdit() : nullptr;
@@ -94,7 +96,10 @@ bool pasteInto(QWidget* w, QClipboard::Mode mode, const QPoint* at) {
         return true;
     }
     if (auto* sb = qobject_cast<QAbstractSpinBox*>(w)) {
-        if (QLineEdit* le = sb->findChild<QLineEdit*>()) { le->insert(singleLine(text)); return true; }
+        if (QLineEdit* le = sb->findChild<QLineEdit*>()) {
+            le->insert(singleLine(text));
+            return true;
+        }
     }
     return false;
 }
@@ -104,8 +109,12 @@ QWidget* wirePasteWidget(QWidget* w) {
     auto* f = new PasteFilter(w);
     w->installEventFilter(f);
     if (auto* a = qobject_cast<QAbstractScrollArea*>(w)) a->viewport()->installEventFilter(f);
-    if (auto* c = qobject_cast<QComboBox*>(w)) { if (c->lineEdit()) c->lineEdit()->installEventFilter(f); }
-    if (auto* s = qobject_cast<QAbstractSpinBox*>(w)) { if (auto* le = s->findChild<QLineEdit*>()) le->installEventFilter(f); }
+    if (auto* c = qobject_cast<QComboBox*>(w)) {
+        if (c->lineEdit()) c->lineEdit()->installEventFilter(f);
+    }
+    if (auto* s = qobject_cast<QAbstractSpinBox*>(w)) {
+        if (auto* le = s->findChild<QLineEdit*>()) le->installEventFilter(f);
+    }
     w->setProperty(kWired, true);
     return w;
 }

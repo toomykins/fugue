@@ -11,7 +11,7 @@ namespace fugue::render {
 
 struct RgbaImage {
     int w = 0, h = 0;
-    std::vector<uint8_t> px;   // w*h*4, row-major, top row first, straight (non-premultiplied) alpha
+    std::vector<uint8_t> px;  // w*h*4, row-major, top row first, straight (non-premultiplied) alpha
 };
 
 enum class PngStatus { Ok, Malformed, Unsupported };

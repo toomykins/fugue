@@ -32,13 +32,19 @@ QJsonObject readStdin() {
     auto d = QJsonDocument::fromJson(f.readAll());
     return d.object();
 }
-Bytes hx(const QJsonValue& v) { auto b = hexDecode(v.toString().toStdString()); return b ? *b : Bytes(); }
+Bytes hx(const QJsonValue& v) {
+    auto b = hexDecode(v.toString().toStdString());
+    return b ? *b : Bytes();
+}
 uint32_t u32(const QJsonValue& v) { return uint32_t(v.toDouble()); }
 std::string S(const QJsonValue& v) { return v.toString().toStdString(); }
 QJsonObject tsJson(const Timestamp& t) { return QJsonObject{{"sec", double(t.sec)}, {"nsec", t.nsec}}; }
 Timestamp tsFrom(const QJsonValue& v) {
     Timestamp t;
-    if (v.isObject()) { t.sec = int64_t(v.toObject().value("sec").toDouble()); t.nsec = int32_t(v.toObject().value("nsec").toInt()); }
+    if (v.isObject()) {
+        t.sec = int64_t(v.toObject().value("sec").toDouble());
+        t.nsec = int32_t(v.toObject().value("nsec").toInt());
+    }
     return t;
 }
 QJsonObject configView(const Config& c, bool withExtra) {
@@ -46,7 +52,12 @@ QJsonObject configView(const Config& c, bool withExtra) {
     for (const auto& s : c.servers) {
         QJsonArray fl;
         for (const auto& f : s.flags) fl.append(Q(f));
-        QJsonObject o{{"name", Q(s.name)}, {"addr", Q(s.addr)}, {"hub", s.hub}, {"flags", fl}, {"last_played", tsJson(s.lastPlayed)}, {"last_prefetch", tsJson(s.lastPrefetch)}};
+        QJsonObject o{{"name", Q(s.name)},
+                      {"addr", Q(s.addr)},
+                      {"hub", s.hub},
+                      {"flags", fl},
+                      {"last_played", tsJson(s.lastPlayed)},
+                      {"last_prefetch", tsJson(s.lastPrefetch)}};
         if (withExtra && !s.extra.isEmpty()) o["extra"] = s.extra;
         sv.append(o);
     }
@@ -63,7 +74,8 @@ int main(int argc, char** argv) {
     const std::string& cmd = a[0];
     std::string err;
     bool withExtra = false;
-    for (auto& x : a) if (x == "--with-extra") withExtra = true;
+    for (auto& x : a)
+        if (x == "--with-extra") withExtra = true;
 
     // ---------------- pager files ----------------
     if (cmd == "config-view") {
@@ -71,42 +83,63 @@ int main(int argc, char** argv) {
         if (!c) return fail(err);
         return out(configView(*c, withExtra));
     }
-    if (cmd == "config-write") {   // stdin: the view shape
+    if (cmd == "config-write") {  // stdin: the view shape
         QJsonObject in = readStdin();
         Config c;
-        c.account = S(in["account"]); c.keytxt = S(in["keytxt"]); c.client = S(in["client"]);
+        c.account = S(in["account"]);
+        c.keytxt = S(in["keytxt"]);
+        c.client = S(in["client"]);
         for (auto v : in["servers"].toArray()) {
             QJsonObject o = v.toObject();
             Server s;
-            s.name = S(o["name"]); s.addr = S(o["addr"]); s.hub = o["hub"].toBool();
+            s.name = S(o["name"]);
+            s.addr = S(o["addr"]);
+            s.hub = o["hub"].toBool();
             for (auto f : o["flags"].toArray()) s.flags.push_back(S(f));
-            s.lastPlayed = tsFrom(o["last_played"]); s.lastPrefetch = tsFrom(o["last_prefetch"]);
+            s.lastPlayed = tsFrom(o["last_played"]);
+            s.lastPrefetch = tsFrom(o["last_prefetch"]);
             c.servers.push_back(std::move(s));
         }
         if (!saveConfig(c, &err)) return fail(err);
         return out({{"ok", true}});
     }
-    if (cmd == "config-edit" && a.size() >= 2) {   // load, mutate, save
+    if (cmd == "config-edit" && a.size() >= 2) {  // load, mutate, save
         auto c = loadConfig(&err);
         if (!c) return fail(err);
         const std::string& op = a[1];
-        if (op == "remember" && a.size() >= 3) { Server s; s.addr = a[2]; if (a.size() >= 4 && a[3] != "--with-extra") s.name = a[3]; c->remember(s); }
-        else if (op == "mark-prefetched" && a.size() >= 3) { Server s; s.addr = a[2]; c->markPrefetched(s); }
-        else if (op == "remove" && a.size() >= 3) c->remove(a[2]);
-        else if (op == "clear-prefetched") c->clearPrefetched();
-        else if (op == "set-account" && a.size() >= 3) c->account = a[2];
-        else if (op == "noop") {}
-        else return fail("config-edit: unknown op");
+        if (op == "remember" && a.size() >= 3) {
+            Server s;
+            s.addr = a[2];
+            if (a.size() >= 4 && a[3] != "--with-extra") s.name = a[3];
+            c->remember(s);
+        } else if (op == "mark-prefetched" && a.size() >= 3) {
+            Server s;
+            s.addr = a[2];
+            c->markPrefetched(s);
+        } else if (op == "remove" && a.size() >= 3)
+            c->remove(a[2]);
+        else if (op == "clear-prefetched")
+            c->clearPrefetched();
+        else if (op == "set-account" && a.size() >= 3)
+            c->account = a[2];
+        else if (op == "noop") {
+        } else
+            return fail("config-edit: unknown op");
         if (!saveConfig(*c, &err)) return fail(err);
         return out({{"ok", true}});
     }
-    if (cmd == "config-path") { auto p = configPath(&err); return p.empty() ? fail(err) : out({{"path", Q(p)}}); }
+    if (cmd == "config-path") {
+        auto p = configPath(&err);
+        return p.empty() ? fail(err) : out({{"path", Q(p)}});
+    }
     if (cmd == "identity-view" && a.size() >= 2) {
         auto acc = loadAccount(a[1], &err);
         if (!acc) return fail(err);
-        return out({{"identity_hex", Q(hexEncode(acc->identity))}, {"install_id", double(acc->installId)}, {"inner_key", double(acc->innerKey)}});
+        return out({{"identity_hex", Q(hexEncode(acc->identity))},
+                    {"install_id", double(acc->installId)},
+                    {"inner_key", double(acc->innerKey)}});
     }
-    if (cmd == "identity-write" && a.size() >= 2) {   // stdin {identity_hex, install_id, inner_key}
+    if (cmd == "identity-write" && a.size() >= 2) {  // stdin {identity_hex, install_id, inner_key}
         QJsonObject in = readStdin();
         Account acc{hx(in["identity_hex"]), u32(in["install_id"]), u32(in["inner_key"])};
         if (!saveAccount(a[1], acc, &err)) return fail(err);
@@ -114,11 +147,20 @@ int main(int argc, char** argv) {
         return out({{"path", Q(p)}});
     }
     if (cmd == "identity-path" && a.size() >= 2) return out({{"path", Q(identityPath(a[1]))}});
-    if (cmd == "sid") { auto s = pagerSid(&err); return s ? out({{"sid", Q(*s)}}) : fail(err); }
-    if (cmd == "install-sid") { auto s = installSid(&err); return s ? out({{"sid", Q(*s)}}) : fail(err); }
+    if (cmd == "sid") {
+        auto s = pagerSid(&err);
+        return s ? out({{"sid", Q(*s)}}) : fail(err);
+    }
+    if (cmd == "install-sid") {
+        auto s = installSid(&err);
+        return s ? out({{"sid", Q(*s)}}) : fail(err);
+    }
     if (cmd == "keytxt-resolve") {
         std::string ex, ac;
-        for (size_t i = 1; i + 1 < a.size(); i++) { if (a[i] == "--explicit") ex = a[i + 1]; if (a[i] == "--account") ac = a[i + 1]; }
+        for (size_t i = 1; i + 1 < a.size(); i++) {
+            if (a[i] == "--explicit") ex = a[i + 1];
+            if (a[i] == "--account") ac = a[i + 1];
+        }
         auto p = resolveKeyTxt(ex, ac, &err);
         return p ? out({{"path", Q(*p)}}) : fail(err);
     }
@@ -127,7 +169,7 @@ int main(int argc, char** argv) {
         for (auto& c : keyTxtCandidates(a.size() >= 2 && a[1] != "--with-extra" ? a[1] : "")) arr.append(Q(c));
         return out({{"candidates", arr}});
     }
-    if (cmd == "keynames" && a.size() >= 2) {   // names only
+    if (cmd == "keynames" && a.size() >= 2) {  // names only
         QFile f(Q(a[1]));
         if (!f.open(QIODevice::ReadOnly)) return fail("cannot open " + a[1]);
         QJsonArray arr;
@@ -140,29 +182,41 @@ int main(int argc, char** argv) {
     }
 
     // ---------------- key.txt blocks ----------------
-    if (cmd == "pword-levels") {   // stdin {password_hex}
+    if (cmd == "pword-levels") {  // stdin {password_hex}
         Bytes pw = hx(readStdin()["password_hex"]);
-        return out({{"level1", Q(pwordCrypt(pw))}, {"level2", Q(pwordCryptLevel2(pw))}, {"credential", Q(downloadKeyCredential(pw))}});
+        return out({{"level1", Q(pwordCrypt(pw))},
+                    {"level2", Q(pwordCryptLevel2(pw))},
+                    {"credential", Q(downloadKeyCredential(pw))}});
     }
-    if (cmd == "decode-block") {   // stdin {keytxt|line1, account, password_hex}
+    if (cmd == "decode-block") {  // stdin {keytxt|line1, account, password_hex}
         QJsonObject in = readStdin();
         std::string account = S(in["account"]);
         std::string line1;
-        if (in.contains("line1")) line1 = S(in["line1"]);
-        else { auto l = keyBlockLine1(S(in["keytxt"]), account, &err); if (!l) return fail(err); line1 = *l; }
+        if (in.contains("line1"))
+            line1 = S(in["line1"]);
+        else {
+            auto l = keyBlockLine1(S(in["keytxt"]), account, &err);
+            if (!l) return fail(err);
+            line1 = *l;
+        }
         auto f = decodeKeyBlock(line1, account, pwordCryptLevel2(hx(in["password_hex"])), &err);
         if (!f) return fail(err);
-        return out({{"identity_hex", Q(hexEncode(f->identity))}, {"install_id", double(f->installId)}, {"inner_key", double(f->innerKey)}, {"tail_hex", Q(hexEncode(f->tail))}});
+        return out({{"identity_hex", Q(hexEncode(f->identity))},
+                    {"install_id", double(f->installId)},
+                    {"inner_key", double(f->innerKey)},
+                    {"have_hub_ids", f->haveHubIds}});
     }
-    if (cmd == "encode-block") {   // stdin {identity_hex, install_id, inner_key, tail3_hex, password_hex, seed?}
+    if (cmd == "encode-block") {  // stdin {identity_hex, install_id, inner_key, tail3_hex, password_hex, seed?}
         QJsonObject in = readStdin();
-        Bytes blob = buildKeyBlob(hx(in["identity_hex"]), u32(in["install_id"]), u32(in["inner_key"]), hx(in["tail3_hex"]));
+        Bytes blob =
+            buildKeyBlob(hx(in["identity_hex"]), u32(in["install_id"]), u32(in["inner_key"]), hx(in["tail3_hex"]));
         std::string seed = in.contains("seed") ? S(in["seed"]) : "xq";
         return out({{"line1", Q(encodeKeyLine1(blob, pwordCryptLevel2(hx(in["password_hex"])), seed))}});
     }
     if (cmd == "download-key-request") {
         QJsonObject in = readStdin();
-        Bytes b = buildDownloadKeyRequest(S(in["username"]), S(in["domain"]), S(in["cred1"]), S(in["crypt"]), S(in["install_id"]), u32(in["nonce"]));
+        Bytes b = buildDownloadKeyRequest(S(in["username"]), S(in["domain"]), S(in["cred1"]), S(in["crypt"]),
+                                          S(in["install_id"]), u32(in["nonce"]));
         return out({{"body_hex", Q(hexEncode(b))}});
     }
     if (cmd == "download-key-reply") {
@@ -172,11 +226,16 @@ int main(int argc, char** argv) {
     }
 
     // ---------------- login record ----------------
-    if (cmd == "login-record") {   // stdin {identity_hex, cauth_key, install_block_hex, marker, watermark_key?}
+    if (cmd == "login-record") {  // stdin {identity_hex, cauth_key, install_block_hex, marker, watermark_key?}
         QJsonObject in = readStdin();
         Bytes ib = hx(in["install_block_hex"]);
-        if (in.contains("watermark_key")) { auto w = watermarkedInstallBlock(ib, S(in["watermark_key"]), &err); if (!w) return fail(err); ib = *w; }
-        auto r = mintAccountLoginRecord(hx(in["identity_hex"]), u32(in["cauth_key"]), ib, uint8_t(in["marker"].toInt()), &err);
+        if (in.contains("watermark_key")) {
+            auto w = watermarkedInstallBlock(ib, S(in["watermark_key"]), &err);
+            if (!w) return fail(err);
+            ib = *w;
+        }
+        auto r = mintAccountLoginRecord(hx(in["identity_hex"]), u32(in["cauth_key"]), ib, uint8_t(in["marker"].toInt()),
+                                        &err);
         return r ? out({{"record_hex", Q(hexEncode(*r))}, {"install_block_hex", Q(hexEncode(ib))}}) : fail(err);
     }
     if (cmd == "rekey") {
@@ -187,9 +246,11 @@ int main(int argc, char** argv) {
     }
     if (cmd == "challenge-answer") {
         QJsonObject in = readStdin();
-        auto r = mintChallengeAnswer(hx(in["challenge_hex"]), S(in["account_id"]), u32(in["install_id"]), u32(in["inner_key"]), hx(in["pad_hex"]), &err);
+        auto r = mintChallengeAnswer(hx(in["challenge_hex"]), S(in["account_id"]), u32(in["install_id"]),
+                                     u32(in["inner_key"]), hx(in["pad_hex"]), &err);
         if (!r) return fail(err);
-        return out({{"answer_hex", Q(hexEncode(r->answer))}, {"sigma_pad", double(r->sigmaPad)}, {"inner_sum", r->innerSum}});
+        return out(
+            {{"answer_hex", Q(hexEncode(r->answer))}, {"sigma_pad", double(r->sigmaPad)}, {"inner_sum", r->innerSum}});
     }
     if (cmd == "cid-digest") {
         QJsonObject in = readStdin();
@@ -198,7 +259,8 @@ int main(int argc, char** argv) {
     }
     if (cmd == "cert-str") {
         QJsonObject in = readStdin();
-        return out({{"cert_str", Q(certStrFrom(u32(in["r1"]), u32(in["r2"]), u32(in["r3"])))}, {"random_ok", generateCertStr().size() == 26}});
+        return out({{"cert_str", Q(certStrFrom(u32(in["r1"]), u32(in["r2"]), u32(in["r3"])))},
+                    {"random_ok", generateCertStr().size() == 26}});
     }
     return fail("unknown command: " + cmd);
 }

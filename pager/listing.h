@@ -12,12 +12,12 @@ namespace fugue::pager {
 struct LiveWorld {
     std::string url, id;
     long long serverVersion = 0;
-    std::string status;          // HTML written by the world's own code: read as text only, never rendered
+    std::string status;  // HTML written by the world's own code: read as text only, never rendered
     std::vector<std::string> players;
     std::string host;
 
-    std::vector<std::string> lines() const;   // status as plain text, one entry per line, tags dropped, entities decoded
-    std::string title() const;                // first line, else the url
+    std::vector<std::string> lines() const;  // status as plain text, one entry per line, tags dropped, entities decoded
+    std::string title() const;               // first line, else the url
 };
 
 // nullopt + *err when the bytes are not in the hub's text format (no column-0 section line at all).

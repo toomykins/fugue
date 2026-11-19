@@ -11,7 +11,10 @@ DisplaySettings::DisplaySettings(QObject* parent) : QObject(parent) {
     gpu_ = new QAction("&GPU (experimental)", this);
     cpu_->setObjectName("rendererCpu");
     gpu_->setObjectName("rendererGpu");
-    for (auto* action : {cpu_, gpu_}) { action->setCheckable(true); group->addAction(action); }
+    for (auto* action : {cpu_, gpu_}) {
+        action->setCheckable(true);
+        group->addAction(action);
+    }
     cpu_->setChecked(true);
     setGpuAvailable(false);
     connect(cpu_, &QAction::triggered, this, [this] { setUseGpu(false); });
@@ -43,7 +46,7 @@ void DisplaySettings::setGpuAvailable(bool available) {
     gpuAvailable_ = available;
     gpu_->setEnabled(available);
     gpu_->setToolTip(available ? "Experimental GPU renderer; unsupported frames use CPU"
-                             : "GPU support was not built (FUGUE_BUILD_GPU=OFF)");
+                               : "GPU support was not built (FUGUE_BUILD_GPU=OFF)");
     if (!available) setUseGpu(false);
 }
 
@@ -60,4 +63,4 @@ void DisplaySettings::setPerformanceOverlay(bool enabled) { metrics_->setChecked
 bool DisplaySettings::performanceOverlay() const { return metrics_->isChecked(); }
 void DisplaySettings::setPerformanceDetails(bool enabled) { details_->setChecked(enabled); }
 bool DisplaySettings::performanceDetails() const { return details_->isChecked(); }
-} // namespace fugue::shell
+}  // namespace fugue::shell

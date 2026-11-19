@@ -27,10 +27,16 @@ MenuItem itemFrom(const Elem& e) {
     it.checked = e.boolv("is-checked", false);
     it.disabled = e.boolv("is-disabled", false);
     std::string name = e.str("name", "");
-    if (name.empty()) { it.separator = true; return it; }
+    if (name.empty()) {
+        it.separator = true;
+        return it;
+    }
     std::string lbl = name;
     size_t t = lbl.find('\t');
-    if (t != std::string::npos) { it.shortcut = lbl.substr(t + 1); lbl = lbl.substr(0, t); }
+    if (t != std::string::npos) {
+        it.shortcut = lbl.substr(t + 1);
+        lbl = lbl.substr(0, t);
+    }
     splitAccel(lbl, it.label, it.accel);
     return it;
 }
@@ -44,7 +50,7 @@ Menu menuFromFile(const File& f) {
         if (const Elem* me = mw->main()) datum = me->str("menu", "");
     const Block* blk = nullptr;
     for (const Block& b : f.blocks)
-        if (b.kind == "menu" && (datum.empty() ? b.name == "menu" : b.name == datum)) blk = &b;   // last wins
+        if (b.kind == "menu" && (datum.empty() ? b.name == "menu" : b.name == datum)) blk = &b;  // last wins
     if (!blk) return m;
     m.datum = blk->name;
     std::set<std::string> used;
@@ -65,12 +71,12 @@ Menu menuFromFile(const File& f) {
     for (const Elem& e : blk->elems) {
         std::string cat = e.str("category", ""), name = e.str("name", "");
         if (cat.empty()) {
-            if (used.count(name)) {   // a declaration fixes the category's position and its addressable name
+            if (used.count(name)) {  // a declaration fixes the category's position and its addressable name
                 size_t i = catFor(name);
                 m.cats[i].name = e.name;
                 m.cats[i].disabled = e.boolv("is-disabled", false);
             }
-            continue;   // an empty or bare top-level row places nothing
+            continue;  // an empty or bare top-level row places nothing
         }
         m.cats[catFor(cat)].items.push_back(itemFrom(e));
     }

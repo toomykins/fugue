@@ -34,7 +34,11 @@ std::string readAllStdin() {
     f.open(stdin, QIODevice::ReadOnly);
     return f.readAll().toStdString();
 }
-QJsonArray strs(const std::vector<std::string>& v) { QJsonArray a; for (auto& s : v) a.append(Q(s)); return a; }
+QJsonArray strs(const std::vector<std::string>& v) {
+    QJsonArray a;
+    for (auto& s : v) a.append(Q(s));
+    return a;
+}
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -48,12 +52,22 @@ int main(int argc, char** argv) {
         QJsonArray arr;
         if (cmd == "rows") {
             for (auto& r : liveRows(*w))
-                arr.append(QJsonObject{{"title", Q(r.title)}, {"detail", Q(r.detail)}, {"id", Q(r.id)}, {"players", r.players}, {"version", Q(std::to_string(r.version))}});
+                arr.append(QJsonObject{{"title", Q(r.title)},
+                                       {"detail", Q(r.detail)},
+                                       {"id", Q(r.id)},
+                                       {"players", r.players},
+                                       {"version", Q(std::to_string(r.version))}});
             return out({{"rows", arr}});
         }
         for (auto& x : *w)
-            arr.append(QJsonObject{{"url", Q(x.url)}, {"id", Q(x.id)}, {"version", Q(std::to_string(x.serverVersion))}, {"status", Q(x.status)},
-                                   {"players", strs(x.players)}, {"host", Q(x.host)}, {"lines", strs(x.lines())}, {"title", Q(x.title())}});
+            arr.append(QJsonObject{{"url", Q(x.url)},
+                                   {"id", Q(x.id)},
+                                   {"version", Q(std::to_string(x.serverVersion))},
+                                   {"status", Q(x.status)},
+                                   {"players", strs(x.players)},
+                                   {"host", Q(x.host)},
+                                   {"lines", strs(x.lines())},
+                                   {"title", Q(x.title())}});
         return out({{"worlds", arr}});
     }
     if (cmd == "parse-target") {
@@ -69,7 +83,10 @@ int main(int argc, char** argv) {
     if (cmd == "list") {
         std::string e;
         auto cfg = fugue::account::loadConfig(&e);
-        if (!cfg) { std::fprintf(stderr, "config: %s\n", e.c_str()); return 1; }
+        if (!cfg) {
+            std::fprintf(stderr, "config: %s\n", e.c_str());
+            return 1;
+        }
         CheckOptions opt;
         opt.selfExe = QCoreApplication::applicationFilePath().toStdString();
         std::string s = renderList(*cfg, check(*cfg, opt));
@@ -79,12 +96,19 @@ int main(int argc, char** argv) {
     if (cmd == "sign-in") {
         auto o = QJsonDocument::fromJson(QByteArray::fromStdString(readAllStdin())).object();
         std::string hub = o["hub"].toString().toStdString();
-        if (hub.empty()) return out({{"error", "sign-in needs an explicit \"hub\" address (this helper never dials the real hub)"}}, 1);
+        if (hub.empty())
+            return out({{"error", "sign-in needs an explicit \"hub\" address (this helper never dials the real hub)"}},
+                       1);
         std::string pw = QByteArray::fromHex(o["password_hex"].toString().toLatin1()).toStdString();
         auto r = signIn(o["username"].toString().toStdString(), pw, o["keytxt"].toString().toStdString(), hub, 10000);
-        static const char* names[] = {"none", "missing-input", "wrong-password", "unreachable", "no-answer", "refused", "bad-key", "disk"};
+        static const char* names[] = {"none",      "missing-input", "wrong-password", "unreachable",
+                                      "no-answer", "refused",       "bad-key",        "disk"};
         if (!r.ok)
-            return out({{"ok", false}, {"failure", names[int(r.failure)]}, {"message", Q(plainSignInMessage(r.failure))}, {"detail", Q(r.detail)}}, 1);
+            return out({{"ok", false},
+                        {"failure", names[int(r.failure)]},
+                        {"message", Q(plainSignInMessage(r.failure))},
+                        {"detail", Q(r.detail)}},
+                       1);
         return out({{"ok", true}, {"account", Q(r.account)}, {"keytxt", Q(r.keyTxtPath)}});
     }
     return out({{"error", Q("unknown command " + cmd)}}, 1);

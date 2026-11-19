@@ -16,8 +16,11 @@ namespace fugue::audio {
 namespace {
 class ModuleStream : public Stream {
 public:
-    ModuleStream(const Bytes& b, bool loop, std::ostream& log) : m_(b.data(), b.data() + b.size(), log) { m_.set_repeat_count(loop ? -1 : 0); }
+    ModuleStream(const Bytes& b, bool loop, std::ostream& log) : m_(b.data(), b.data() + b.size(), log) {
+        m_.set_repeat_count(loop ? -1 : 0);
+    }
     size_t read(int rate, size_t frames, float* out) override { return m_.read_interleaved_stereo(rate, frames, out); }
+
 private:
     openmpt::module m_;
 };
@@ -28,9 +31,9 @@ bool moduleDecoder() { return true; }
 std::shared_ptr<const Clip> decodeModule(ByteSpan b, const std::string& kind, std::string* err, bool* unsupported) {
     if (unsupported) *unsupported = false;
     auto src = std::make_shared<const Bytes>(b.begin(), b.end());
-    std::ostringstream log;   // libopenmpt's load warnings would otherwise go to std::clog on every play
+    std::ostringstream log;  // libopenmpt's load warnings would otherwise go to std::clog on every play
     try {
-        ModuleStream probe(*src, false, log);   // a file libopenmpt cannot load is refused here, not on every play
+        ModuleStream probe(*src, false, log);  // a file libopenmpt cannot load is refused here, not on every play
     } catch (const std::exception& e) {
         if (err) *err = kind + ": libopenmpt: " + e.what();
         return nullptr;
@@ -41,7 +44,9 @@ std::shared_ptr<const Clip> decodeModule(ByteSpan b, const std::string& kind, st
     c->sourceBytes = src->size();
     c->open = [src](bool loop) -> std::unique_ptr<Stream> {
         std::ostringstream quiet;
-        try { return std::make_unique<ModuleStream>(*src, loop, quiet); } catch (const std::exception&) { return nullptr; }
+        try {
+            return std::make_unique<ModuleStream>(*src, loop, quiet);
+        } catch (const std::exception&) { return nullptr; }
     };
     return c;
 }

@@ -33,6 +33,7 @@
 #include "shell/localorigin.h"
 #include "skin/liveskin.h"
 
+class QLockFile;
 class QWebEngineProfile;
 class QWidget;
 
@@ -43,6 +44,10 @@ class BrowseHost : public QObject {
 public:
     // anchor: the main window; popups are transient for it.
     explicit BrowseHost(QWidget* anchor, QObject* parent = nullptr);
+    // Where pages keep their web storage (IndexedDB, localStorage) between runs, as stock DreamSeeker's browser does.
+    // Set before the first BrowseHost is made. "" (the default), or a directory another running client holds, keeps
+    // storage for this run only. tgui's chat panel shows nothing until it finds its saved chat state.
+    static void setStorageDir(const QString& dir);
     ~BrowseHost() override;
 
     std::shared_ptr<BrowseRscStore> store() const { return store_; }
@@ -55,6 +60,8 @@ public:
     void setDeclaredPredicate(std::function<bool(const QString&)> f) { declared_ = std::move(f); }
     // Does the skin file declare that BROWSER control `is-visible = false`? Such a page runs in a windowless pane.
     void setHiddenPredicate(std::function<bool(const QString&)> f) { hidden_ = std::move(f); }
+    // A hidden skin window (not a control) that holds a BROWSER: its page runs windowless (SkinWindow::hiddenWindowBrowser).
+    void setHiddenWindowPredicate(std::function<bool(const QString&)> f) { hiddenWindow_ = std::move(f); }
     // The chat lines already shown (replayed into the chat page when it first appears).
     void setChatBacklog(std::function<QStringList()> f) { backlog_ = std::move(f); }
     void setHubStorePath(const QString& p);
@@ -63,7 +70,9 @@ public:
     void close(const QString& name);
     void pageCall(const QString& window, const QString& fn, const QStringList& args);
     // The skin created or destroyed the BROWSER control `ctl` (in skin window `win`); the skin owns the pane.
-    void adoptControl(const QString& win, const QString& ctl, BrowserPane* pane);
+    // byWindow: a browse() or output() naming the window `win` itself reaches this control too. Off for a control a
+    // winset created at runtime, which shares its window with the .dmf's own controls (vg's tooltips in mapwindow).
+    void adoptControl(const QString& win, const QString& ctl, BrowserPane* pane, bool byWindow = true);
     // The windowless page already running for that control, handed to the skin as the control's own pane with its page
     // state intact, or nullptr. Use it in place of a new pane, and do not adoptControl() it.
     BrowserPane* takeHidden(const QString& win, const QString& ctl);
@@ -79,11 +88,11 @@ public:
 
     // ---- introspection (winget and the test hooks)
     BrowserPane* paneFor(const QString& window) const;
-    BrowserPane* paneForTarget(const QString& target) const;   // an output() target "[window.]control" -> its page
+    BrowserPane* paneForTarget(const QString& target) const;  // an output() target "[window.]control" -> its page
     QWidget* popupFor(const QString& window) const;
     // winget(null, "focus") for a widget inside a popup: "<popup>.browser"; "" when the widget is not in one.
     QString focusIdFor(QWidget* w) const;
-    bool isHiddenPage(const QString& window) const;   // runs in a windowless pane (an is-visible=false skin control)
+    bool isHiddenPage(const QString& window) const;  // runs in a windowless pane (an is-visible=false skin control)
     QStringList openWindows() const;
     // winget(id, property-list) as the object a page's callback receives.
     QJsonObject wingetObject(const QString& id, const QString& props) const;
@@ -91,10 +100,10 @@ public:
     QString handleCall(BrowserPane* from, const model::ByondUrl& u);
 
 signals:
-    void byondLink(const QUrl& url);               // a Topic for the world
+    void byondLink(const QUrl& url);                // a Topic for the world
     void commandRequested(const QString& command);  // winset command=...
     void chatPageReady();
-    void worldLink(const QString& url);            // a page link to another world (byond://host:port)
+    void worldLink(const QString& url);  // a page link to another world (byond://host:port)
     void popupClosedByPlayer(const QString& name);
     // The world's `on-close` command for a popup the player closed (never one the world closed itself). It is set
     // by winset and runs exactly as if typed; see routeWorldCommand in shell/inputrouter.h.
@@ -102,16 +111,22 @@ signals:
 
 private:
     struct Slot {
-        QString name, file, win;     // win: the skin window of a docked control
+        QString name, file, win;  // win: the skin window of a docked control
         BrowserPane* pane = nullptr;
         QWidget* popup = nullptr;
         model::BrowseParams p;
         bool docked = false, chat = false;
-        bool hidden = false;         // page of an is-visible=false skin control: its own pane, never shown
-        QString worldTitle;          // the popup's `title` as last applied by syncPopupTitles
+        bool hidden = false;  // page of an is-visible=false skin control: its own pane, never shown
+        QString worldTitle;   // the popup's `title` as last applied by syncPopupTitles
     };
-    struct Pending { QString params, html; };
-    struct Ctl { QString win, ctl; BrowserPane* pane; };
+    struct Pending {
+        QString params, html;
+    };
+    struct Ctl {
+        QString win, ctl;
+        BrowserPane* pane;
+        bool byWindow = true;  // adoptControl
+    };
     BrowserPane* makePane(QWidget* parent);
     Slot* slotFor(const QString& window);
     const Slot* slotFor(const QString& window) const;
@@ -128,16 +143,17 @@ private:
 
     QWidget* anchor_;
     QWebEngineProfile* profile_ = nullptr;
+    QLockFile* storageLock_ = nullptr;
     std::shared_ptr<BrowseRscStore> store_ = std::make_shared<BrowseRscStore>();
     LocalOrigin* origin_ = nullptr;
     std::shared_ptr<skin::LiveSkin> live_;
     bool quitting_ = false;
-    std::function<bool(const QString&)> declared_, hidden_;
+    std::function<bool(const QString&)> declared_, hidden_, hiddenWindow_;
     std::function<QStringList()> backlog_;
     QHash<QString, Slot> slots_;
     QList<Ctl> controls_;
-    model::HeadlessAcks navAcks_;               // asset_cache_browser handshakes, answered natively
-    QHash<QString, Pending> pendingDocked_;     // declared by the skin, control not yet created
+    model::HeadlessAcks navAcks_;            // asset_cache_browser handshakes, answered natively
+    QHash<QString, Pending> pendingDocked_;  // declared by the skin, control not yet created
     QHash<int, QPointer<BrowserPane>> panes_;
     BrowserPane* chatPane_ = nullptr;
     int nextPane_ = 1, chatLines_ = 0;

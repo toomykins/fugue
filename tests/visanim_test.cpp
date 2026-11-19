@@ -55,7 +55,10 @@ class VisAnim : public QObject {
         render::DrawList dl;
         render::SceneStats st;
         std::string err;
-        if (!render::assembleMapControl(s, res_, clockNs, dl, st, &err)) { qWarning("assemble: %s", err.c_str()); return {}; }
+        if (!render::assembleMapControl(s, res_, clockNs, dl, st, &err)) {
+            qWarning("assemble: %s", err.c_str());
+            return {};
+        }
         return render::execute(dl);
     }
     // The centre pixel of world tile (x, y) on the 9x9 view whose bottom-left tile is (1,1).
@@ -63,7 +66,9 @@ class VisAnim : public QObject {
         const uint8_t* p = &f.px[(size_t(f.h - y * 32 + 16) * size_t(f.w) + size_t((x - 1) * 32 + 16)) * 4];
         return uint32_t(p[0]) << 16 | uint32_t(p[1]) << 8 | p[2];
     }
-#define PX(got, want) QVERIFY2((got) == (want), qPrintable(QString("got %1 want %2").arg(got, 6, 16, QChar('0')).arg(want, 6, 16, QChar('0'))))
+#define PX(got, want)         \
+    QVERIFY2((got) == (want), \
+             qPrintable(QString("got %1 want %2").arg(got, 6, 16, QChar('0')).arg(want, 6, 16, QChar('0'))))
 
 private slots:
     void initTestCase() {
@@ -75,11 +80,12 @@ private slots:
         while (std::getline(f, line)) {
             QVERIFY(line.rfind("0x", 0) == 0);
             size_t sp = line.find(' ', line.find("len="));
-            frames_.push_back({uint16_t(std::stoul(line.substr(2, 4), nullptr, 16)), sp == std::string::npos ? Bytes{} : unhex(line.substr(sp + 1))});
+            frames_.push_back({uint16_t(std::stoul(line.substr(2, 4), nullptr, 16)),
+                               sp == std::string::npos ? Bytes{} : unhex(line.substr(sp + 1))});
         }
         QCOMPARE(int(frames_.size()), 53);
-        for (size_t l : {31, 41, 44, 50}) QCOMPARE(frames_[l - 2].first, uint16_t(0x0027));   // "PHASE n"
-        for (size_t l : {40, 49, 54}) QCOMPARE(frames_[l - 2].first, uint16_t(0x00d8));
+        for (size_t l : {31, 41, 44, 50}) QCOMPARE(frames_[l - 2].first, uint16_t(S2C::Text));  // "PHASE n"
+        for (size_t l : {40, 49, 54}) QCOMPARE(frames_[l - 2].first, uint16_t(S2C::VisContents));
         std::string b = slurp(dir_ + "/res/3b42c8e8");
         uint32_t id = kRes;
         std::string err;
@@ -140,8 +146,8 @@ private slots:
         model::Session s;
         ingestUpTo(s, 40);
         render::RgbaImage f = map(s, kPhase[1] + 5 * kDs);
-        PX(tile(f, 8, 5), kOrdB);   // OA, then OB
-        PX(tile(f, 8, 6), kOrdA);   // OB, then OA
+        PX(tile(f, 8, 5), kOrdB);  // OA, then OB
+        PX(tile(f, 8, 6), kOrdA);  // OB, then OA
     }
 };
 

@@ -40,10 +40,16 @@ QFont skinMenuFont();
 class SkinButton : public QPushButton {
 public:
     using QPushButton::QPushButton;
-    void setSkinFont(const SkinFont& f) { sf_ = f; setFont(f.font); update(); }
+    void setSkinFont(const SkinFont& f) {
+        sf_ = f;
+        setFont(f.font);
+        update();
+    }
     const SkinFont& skinFont() const { return sf_; }
+
 protected:
     void paintEvent(QPaintEvent*) override;
+
 private:
     SkinFont sf_ = skinControlFont("", "", "");
 };
@@ -51,10 +57,16 @@ private:
 class SkinLabel : public QLabel {
 public:
     using QLabel::QLabel;
-    void setSkinFont(const SkinFont& f) { sf_ = f; setFont(f.font); update(); }
+    void setSkinFont(const SkinFont& f) {
+        sf_ = f;
+        setFont(f.font);
+        update();
+    }
     const SkinFont& skinFont() const { return sf_; }
+
 protected:
     void paintEvent(QPaintEvent*) override;
+
 private:
     SkinFont sf_ = skinControlFont("", "", "");
 };

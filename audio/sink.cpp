@@ -27,7 +27,10 @@ class WavSink : public Sink {
 public:
     WavSink(std::FILE* f, std::string path, int rate) : f_(f), path_(std::move(path)), rate_(rate) {}
     ~WavSink() override { close(); }
-    bool write(const float* p, size_t frames, std::string*) override { buf_.insert(buf_.end(), p, p + frames * 2); return true; }
+    bool write(const float* p, size_t frames, std::string*) override {
+        buf_.insert(buf_.end(), p, p + frames * 2);
+        return true;
+    }
     void close() override {
         if (!f_) return;
         Bytes b = encodeWav16(rate_, 2, buf_);
@@ -37,6 +40,7 @@ public:
     }
     std::string name() const override { return "wav:" + path_; }
     bool instant() const override { return true; }
+
 private:
     std::FILE* f_;
     std::string path_;
@@ -50,7 +54,10 @@ public:
     ExecSink(pid_t pid, int in, int err, std::string name) : pid_(pid), in_(in), err_(err), name_(std::move(name)) {}
     ~ExecSink() override { close(); }
     bool write(const float* p, size_t frames, std::string* err) override {
-        if (in_ < 0) { if (err) *err = "closed"; return false; }
+        if (in_ < 0) {
+            if (err) *err = "closed";
+            return false;
+        }
         buf_.resize(frames * 4);
         for (size_t i = 0; i < frames * 2; i++) {
             uint16_t u = uint16_t(toS16(p[i]));
@@ -72,18 +79,32 @@ public:
         return true;
     }
     void close() override {
-        if (in_ >= 0) { ::close(in_); in_ = -1; }
+        if (in_ >= 0) {
+            ::close(in_);
+            in_ = -1;
+        }
         if (pid_ > 0) {
             // The player drains and exits on EOF; give it a moment, then make sure it does not outlive us.
             for (int i = 0; i < 50; i++) {
-                if (::waitpid(pid_, nullptr, WNOHANG) == pid_) { pid_ = -1; break; }
+                if (::waitpid(pid_, nullptr, WNOHANG) == pid_) {
+                    pid_ = -1;
+                    break;
+                }
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
             }
-            if (pid_ > 0) { ::kill(pid_, SIGTERM); ::waitpid(pid_, nullptr, 0); pid_ = -1; }
+            if (pid_ > 0) {
+                ::kill(pid_, SIGTERM);
+                ::waitpid(pid_, nullptr, 0);
+                pid_ = -1;
+            }
         }
-        if (err_ >= 0) { ::close(err_); err_ = -1; }
+        if (err_ >= 0) {
+            ::close(err_);
+            err_ = -1;
+        }
     }
     std::string name() const override { return name_; }
+
 private:
     std::string childSaid() {
         if (err_ < 0) return "";
@@ -104,7 +125,10 @@ private:
 
 std::unique_ptr<Sink> openWavSink(const std::string& path, int rate, std::string* err) {
     std::FILE* f = std::fopen(path.c_str(), "wb");
-    if (!f) { if (err) *err = "open " + path + ": " + std::strerror(errno); return nullptr; }
+    if (!f) {
+        if (err) *err = "open " + path + ": " + std::strerror(errno);
+        return nullptr;
+    }
     return std::make_unique<WavSink>(f, path, rate);
 }
 
@@ -113,7 +137,8 @@ std::vector<std::vector<std::string>> execPlayers(int rate) {
     return {
         {"pw-play", "--format", "s16", "--rate", r, "--channels", "2", "--latency", "80ms", "-"},
         {"paplay", "--raw", "--format=s16le", "--rate=" + r, "--channels=2", "--latency-msec=80"},
-        {"aplay", "-q", "-t", "raw", "-f", "S16_LE", "-r", r, "-c", "2", "--buffer-time=160000", "--period-time=40000", "-"},
+        {"aplay", "-q", "-t", "raw", "-f", "S16_LE", "-r", r, "-c", "2", "--buffer-time=160000", "--period-time=40000",
+         "-"},
     };
 }
 
@@ -122,10 +147,21 @@ std::unique_ptr<Sink> openExecSink(const std::vector<std::string>& argv, std::st
     if (err) *err = "cmd sinks are not supported on Windows";
     return nullptr;
 #else
-    if (argv.empty() || argv[0].empty()) { if (err) *err = "empty command"; return nullptr; }
+    if (argv.empty() || argv[0].empty()) {
+        if (err) *err = "empty command";
+        return nullptr;
+    }
     int in[2], er[2];
-    if (platform::pipeCloseOnExec(in) != 0) { if (err) *err = "pipe failed"; return nullptr; }
-    if (platform::pipeCloseOnExec(er) != 0) { ::close(in[0]); ::close(in[1]); if (err) *err = "pipe failed"; return nullptr; }
+    if (platform::pipeCloseOnExec(in) != 0) {
+        if (err) *err = "pipe failed";
+        return nullptr;
+    }
+    if (platform::pipeCloseOnExec(er) != 0) {
+        ::close(in[0]);
+        ::close(in[1]);
+        if (err) *err = "pipe failed";
+        return nullptr;
+    }
     // A small pipe: what sits in it is latency on top of the player's own 80 ms. 8 KiB = ~46 ms of 44.1 kHz s16 stereo.
 #ifdef F_SETPIPE_SZ
     (void)::fcntl(in[1], F_SETPIPE_SZ, 8192);
@@ -183,7 +219,8 @@ std::unique_ptr<Sink> openExecSink(const std::vector<std::string>& argv, std::st
 std::unique_ptr<Sink> openSink(const std::string& specIn, int rate, std::string* err, std::string* skipped) {
     if (skipped) skipped->clear();
     std::string spec = specIn;
-    if (spec.empty()) if (auto e = fugueEnv("AUDIO")) spec = *e;
+    if (spec.empty())
+        if (auto e = fugueEnv("AUDIO")) spec = *e;
     if (spec.empty()) spec = "auto";
     std::string why;
     if (spec == "none" || spec == "null" || spec == "off") return std::make_unique<NullSink>();
@@ -192,7 +229,13 @@ std::unique_ptr<Sink> openSink(const std::string& specIn, int rate, std::string*
     } else if (spec.rfind("cmd:", 0) == 0) {
         std::vector<std::string> argv;
         std::string cur;
-        for (char c : spec.substr(4)) { if (c == ',') { argv.push_back(cur); cur.clear(); } else cur.push_back(c); }
+        for (char c : spec.substr(4)) {
+            if (c == ',') {
+                argv.push_back(cur);
+                cur.clear();
+            } else
+                cur.push_back(c);
+        }
         argv.push_back(cur);
         if (auto s = openExecSink(argv, &why)) return s;
     } else if (spec == "auto") {
@@ -206,7 +249,10 @@ std::unique_ptr<Sink> openSink(const std::string& specIn, int rate, std::string*
         std::string all;
         for (const auto& argv : execPlayers(rate)) {
             std::string e;
-            if (auto s = openExecSink(argv, &e)) { if (skipped) *skipped = all; return s; }
+            if (auto s = openExecSink(argv, &e)) {
+                if (skipped) *skipped = all;
+                return s;
+            }
             all += (all.empty() ? "" : "; ") + e;
         }
         why = "no working PCM player (" + all + ") - running SILENT";

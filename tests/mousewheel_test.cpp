@@ -20,9 +20,18 @@ Bytes hex(const char* h) {
 // A view of `n` x `n` cells whose bottom-left is (ox,oy): every cell a floor turf, plus the obj on (21,20).
 HitScene scene(int n, int ox, int oy, bool objWheel = false) {
     HitScene s;
-    s.cols = s.rows = n; s.originX = ox; s.originY = oy;
-    HitAtom floor; floor.name = "cell"; floor.kind = kAtomTurf;
-    HitAtom thing; thing.name = "thing"; thing.kind = kAtomObj; thing.ref = 0; thing.worldX = 21; thing.worldY = 20;
+    s.cols = s.rows = n;
+    s.originX = ox;
+    s.originY = oy;
+    HitAtom floor;
+    floor.name = "cell";
+    floor.kind = kAtomTurf;
+    HitAtom thing;
+    thing.name = "thing";
+    thing.kind = kAtomObj;
+    thing.ref = 0;
+    thing.worldX = 21;
+    thing.worldY = 20;
     thing.wheel = objWheel;
     s.atoms = {floor, thing};
     auto sp = std::make_shared<Sprite>();
@@ -58,33 +67,40 @@ private slots:
         HitScene s = scene(13, 14, 14);
         auto f = wheelFrames(at(s, 8, 7, 16, 16), env(s), 0, 120);
         QCOMPARE(int(f.size()), 1);
-        QCOMPARE(f[0], hex("07000a0100ffff0000060001000000000100000000010000f042026d617000026d61696e2e6d6170000269636f6e2d783d31363b69"
+        QCOMPARE(f[0], hex("07000a0100ffff0000060001000000000100000000010000f042026d617000026d61696e2e6d6170000269636f6"
+                           "e2d783d31363b69"
                            "636f6e2d793d31363b73637265656e2d6c6f633d6d61703a383a31362c373a313600"));
     }
     void notchOverATurfCarriesHeldButtonAndModifiers() {
         HitScene s = scene(13, 14, 14);
-        auto held = wheelFrames(at(s, 6, 10, 11, 11, 3), env(s), 0, 120);   // right button held
+        auto held = wheelFrames(at(s, 6, 10, 11, 11, 3), env(s), 0, 120);  // right button held
         QCOMPARE(int(held.size()), 1);
-        QCOMPARE(held[0], hex("07000a0100ffff0000060003120016000100000000010000f042026d617000026d61696e2e6d6170000269636f6e2d783d31313b"
-                              "69636f6e2d793d31313b72696768743d313b627574746f6e3d72696768743b73637265656e2d6c6f633d6d61703a363a31312c"
-                              "31303a313100"));
+        QCOMPARE(
+            held[0],
+            hex("07000a0100ffff0000060003120016000100000000010000f042026d617000026d61696e2e6d6170000269636f6e2d783d3131"
+                "3b"
+                "69636f6e2d793d31313b72696768743d313b627574746f6e3d72696768743b73637265656e2d6c6f633d6d61703a363a31312c"
+                "31303a313100"));
         PointerEvent e = at(s, 6, 10, 11, 11);
         e.mods.shift = true;
         auto down = wheelFrames(e, env(s), 0, -120);
         QCOMPARE(int(down.size()), 1);
-        QCOMPARE(down[0], hex("07000a0100ffff0000060003120016000100000000010000f0c2026d617000026d61696e2e6d6170000269636f6e2d783d31313b"
-                              "69636f6e2d793d31313b73686966743d313b73637265656e2d6c6f633d6d61703a363a31312c31303a313100"));
+        QCOMPARE(down[0],
+                 hex("07000a0100ffff0000060003120016000100000000010000f0c2026d617000026d61696e2e6d6170000269636f6e2d783"
+                     "d31313b"
+                     "69636f6e2d793d31313b73686966743d313b73637265656e2d6c6f633d6d61703a363a31312c31303a313100"));
     }
     // Above the image (the letterbox) the cell is extrapolated past the view and the object is null.
     void notchOverTheLetterboxNamesNothing() {
-        HitScene s = scene(11, 15, 15);   // world.view 5
+        HitScene s = scene(11, 15, 15);  // world.view 5
         PointerEvent e;
         e.imgX = 4 * 32 + 16;
         e.imgY = -10;
         e.button = 0;
         auto f = wheelFrames(e, env(s), 0, -120);
         QCOMPARE(int(f.size()), 1);
-        QCOMPARE(f[0], hex("07000a0100ffff0000060000ffff00000100000000010000f0c2026d617000026d61696e2e6d6170000273637265656e2d6c6f63"
+        QCOMPARE(f[0], hex("07000a0100ffff0000060000ffff00000100000000010000f0c2026d617000026d61696e2e6d617000027363726"
+                           "5656e2d6c6f63"
                            "3d6d61703a353a31372c31323a313000"));
     }
     // location is the control's own id, and screen-loc is prefixed with it.
@@ -103,19 +119,24 @@ private slots:
         HitScene plain = scene(13, 14, 14), flagged = scene(13, 14, 14, true);
         QVERIFY(wheelFrames(at(plain, 8, 7, 16, 16), env(plain, false), 0, 120).empty());
         QCOMPARE(int(wheelFrames(at(flagged, 8, 7, 16, 16), env(flagged, false), 0, 120).size()), 1);
-        QVERIFY(wheelFrames(at(flagged, 1, 12, 32, 16), env(flagged, false), 0, -120).empty());   // the floor
-        PointerEvent box; box.imgX = 10; box.imgY = -5; box.button = 0;
-        QVERIFY(wheelFrames(box, env(flagged, false), 0, 120).empty());   // nothing under the pointer
+        QVERIFY(wheelFrames(at(flagged, 1, 12, 32, 16), env(flagged, false), 0, -120).empty());  // the floor
+        PointerEvent box;
+        box.imgX = 10;
+        box.imgY = -5;
+        box.button = 0;
+        QVERIFY(wheelFrames(box, env(flagged, false), 0, 120).empty());  // nothing under the pointer
         QVERIFY(wheelFrames(at(plain, 8, 7, 16, 16), env(plain), 0, 0).empty());
     }
     void clientWheelBitComesFrom003b() {
         net::InputModel im;
         QVERIFY(!im.haveMouseSubs());
-        im.onFrame(0x003b, hex("01000101000100000200000004210080020000000402ea01000000436f6d6d616e647300ff9406000004020000"));
+        im.onFrame(S2C::MouseSubs,
+                   hex("01000101000100000200000004210080020000000402ea01000000436f6d6d616e647300ff9406000004020000"));
         QVERIFY(im.haveMouseSubs());
         QVERIFY(im.clientWheel());
         net::InputModel atomOnly;
-        atomOnly.onFrame(0x003b, hex("010001010001000002000000042100000402ea01000000436f6d6d616e647300ff9406000004020000"));
+        atomOnly.onFrame(S2C::MouseSubs,
+                         hex("010001010001000002000000042100000402ea01000000436f6d6d616e647300ff9406000004020000"));
         QVERIFY(atomOnly.haveMouseSubs());
         QVERIFY(!atomOnly.clientWheel());
     }

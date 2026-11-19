@@ -40,13 +40,14 @@ struct Rect {
 
 struct Control {
     std::string window, name, type;
-    Rect rect;         // what is visible: full clipped to the box its window shows through
-    Rect full;         // the anchor rectangle before that clip; winget `size`, and the box a CHILD splits (stock measures a
-                       // control that overhangs its pane at its whole size)
-    Rect box;          // the box its WINDOW was laid out in (the main client, or the slot hosting its pane): winget `pos`
-                       // is full's corner relative to this (liveskin.cpp wingetLocked)
+    Rect rect;  // what is visible: full clipped to the box its window shows through
+    Rect full;  // the anchor rectangle before that clip; winget `size`, and the box a CHILD splits (stock measures a
+                // control that overhangs its pane at its whole size)
+    Rect box;   // the box its WINDOW was laid out in (the main client, or the slot hosting its pane): winget `pos`
+                // is full's corner relative to this (liveskin.cpp wingetLocked)
     bool visible = true, disabled = false, isDefault = false, offPane = false;
     int depth = 0;
+    std::string top;   // the floating window it lives in (Tree::floats), "" = the main window
     std::string side;  // "left" / "right" / ""
     const Elem* elem = nullptr;
 };
@@ -57,6 +58,15 @@ struct Splitter {
     bool vert = true;
     double frac = 0.5;
     Rect box;
+    std::string top;  // as Control::top
+};
+
+// A top-level skin window other than the main one: not a pane, so it is its own window on the screen (tg's tgui_say,
+// preferences_window). Laid out in its own client box from (0,0); hidden until a winset of is-visible shows it.
+struct Floating {
+    std::string window;  // block name
+    Rect box;            // its client area: a winset `size`, else the .dmf's
+    bool visible = false;
 };
 
 struct Slot {
@@ -71,6 +81,8 @@ struct Tree {
     std::vector<Control> controls;
     std::vector<Splitter> splitters;
     std::vector<Slot> slotList;
+    std::vector<Floating> floats;
+    const Floating* floating(const std::string& window) const;  // case-insensitive; nullptr = not a floating window
     // ByName: "elem" (first match) or "window.elem". nullptr when absent.
     const Control* byName(const std::string& id) const;
 };
@@ -87,6 +99,17 @@ Tree layoutSkin(const File& f, Rect client, const std::map<std::string, double>&
 // inferSlots=false and runs a pane's on-show when the GUI shows it (liveskin.h setPaneShown).
 Tree layoutSkin(const File& f, Rect client, const std::map<std::string, double>& splits, const PropStore* props,
                 bool inferSlots = true);
+
+// Where a control a winset created at runtime (`parent=<window>`) sits, in the coordinates `box` is in: `box` is the box
+// window `window` was laid out in, and pos / size / anchor1 / anchor2 are the control's winset values ("" = unset), in
+// the window's design coordinates, composed by the same anchor formula as a .dmf control. An unset or 0 size fills the
+// rest of the design box; an anchor of "none" or "" is no anchor. pos and size may be fractional and are divided by
+// `scale` first (a page's device pixels to the layout's, as for a runtime map), then rounded.
+Rect runtimeRect(const File& f, const std::string& window, const Rect& box, const std::string& pos,
+                 const std::string& size, const std::string& anchor1, const std::string& anchor2, double scale = 1);
+
+// A window that is neither the main window nor a pane: a top-level window of its own (Tree::floats).
+bool isFloatingWindow(const File& f, const Block& b);
 
 // The MAIN window's `on-size` verbatim ("" when none).
 std::string onSize(const File& f);

@@ -28,7 +28,10 @@ bool readN(socket::Handle fd, uint8_t* p, size_t n) {
     return true;
 }
 
-struct C2s { uint16_t seq = 0, type = 0; Bytes body; };
+struct C2s {
+    uint16_t seq = 0, type = 0;
+    Bytes body;
+};
 
 struct ScriptedServer {
     socket::Handle lfd = -1, fd = -1;
@@ -65,7 +68,7 @@ struct ScriptedServer {
         f.insert(f.end(), enc.begin(), enc.end());
         socket::send(fd, f.data(), f.size());
     }
-    uint32_t reply(const Handshake& hs) {   // the handshake reply under the handshake's base key; returns K_login
+    uint32_t reply(const Handshake& hs) {  // the handshake reply under the handshake's base key; returns K_login
         uint32_t base = sessionKey(hs);
         Bytes plain;
         putLe32(plain, 0x0204);
@@ -73,7 +76,7 @@ struct ScriptedServer {
         plain.insert(plain.end(), {1, 1, 1});
         Bytes nonce(16, 0);
         plain.insert(plain.end(), nonce.begin(), nonce.end());
-        sendS2c(0x0001, plain, base);
+        sendS2c(S2C::Handshake, plain, base);
         return loginKey(base, nonce);
     }
     void serve() {
@@ -94,10 +97,11 @@ struct ScriptedServer {
             uint32_t k = reply(hs);
             Bytes p;
             login1Ok = readC2s(login1) && decryptBody(login1.body, k, p);
-            sendS2c(0x008f, Bytes{7, 8, 9}, k);
+            sendS2c(S2C::Probe, Bytes{7, 8, 9}, k);
             probeOk = readC2s(probeAnswer) && decryptBody(probeAnswer.body, k, p) && p == Bytes{7, 8, 9};
-            sendS2c(0x001e, Bytes{}, k);
-            rehandshakeOk = readC2s(rehandshake) && decryptBody(rehandshake.body, k, rehandshakePlain) && rehandshakePlain.size() == 20;
+            sendS2c(S2C::Reboot, Bytes{}, k);
+            rehandshakeOk = readC2s(rehandshake) && decryptBody(rehandshake.body, k, rehandshakePlain) &&
+                            rehandshakePlain.size() == 20;
             if (rehandshakeOk) {
                 Handshake h2;
                 h2.proto = le32(&rehandshakePlain[0]);
@@ -131,7 +135,7 @@ private slots:
         QCOMPARE(QString::fromStdString(s.connectAndLogin()), QString());
         for (int i = 0; i < 50 && !s.stats().rebootRequested; i++) s.run(std::chrono::milliseconds(100));
         QVERIFY(s.stats().rebootRequested);
-        QVERIFY(s.stats().c2s.count(0x0090));
+        QVERIFY(s.stats().c2s.count(C2S::ProbeEcho));
         QCOMPARE(QString::fromStdString(s.relogin()), QString());
         QVERIFY(!s.stats().rebootRequested);
         QVERIFY(s.stats().connected);
@@ -139,13 +143,13 @@ private slots:
         srv.th.join();
 
         QVERIFY(srv.login1Ok);
-        QCOMPARE(srv.login1.type, uint16_t(0x001a));
+        QCOMPARE(srv.login1.type, uint16_t(C2S::Login));
         QCOMPARE(srv.login1.seq, srv.seq0);
         QVERIFY2(srv.probeOk, "0x008f not answered with 0x0090 carrying its body");
-        QCOMPARE(srv.probeAnswer.type, uint16_t(0x0090));
+        QCOMPARE(srv.probeAnswer.type, uint16_t(C2S::ProbeEcho));
         QCOMPARE(srv.probeAnswer.seq, nextSeq(srv.seq0));
         QVERIFY2(srv.rehandshakeOk, "no sequenced 20-byte 0x0001 under the current key after 0x001e");
-        QCOMPARE(srv.rehandshake.type, uint16_t(0x0001));
+        QCOMPARE(srv.rehandshake.type, uint16_t(C2S::Handshake));
         QCOMPARE(srv.rehandshake.seq, nextSeq(nextSeq(srv.seq0)));
         const Bytes& b = srv.rehandshakePlain;
         QCOMPARE(le32(&b[0]), 516u);
@@ -154,7 +158,7 @@ private slots:
         QCOMPARE(le32(&b[14]), 0u);
         QCOMPARE(uint16_t(b[18] | (b[19] << 8)), uint16_t(0x4000));
         QVERIFY2(srv.login2Ok, "the login after the reboot did not decrypt under the new key");
-        QCOMPARE(srv.login2.type, uint16_t(0x001a));
+        QCOMPARE(srv.login2.type, uint16_t(C2S::Login));
         QCOMPARE(srv.login2.seq, nextSeq(nextSeq(nextSeq(srv.seq0))));
     }
 
@@ -168,34 +172,37 @@ private slots:
         QCOMPARE(r.delayMs, 0);
         QVERIFY(r.sameConnection);
         QVERIFY(r.message.empty());
-        QVERIFY(!reconnectStep(reboot, false, true).sameConnection);   // .reconnect always dials again
+        QVERIFY(!reconnectStep(reboot, false, true).sameConnection);  // .reconnect always dials again
 
-        r = reconnectStep(inWorld, true, false);   // lost without a reason: one retry after 10 s
+        r = reconnectStep(inWorld, true, false);  // lost without a reason: one retry after 10 s
         QCOMPARE(r.delayMs, 10000);
         QVERIFY(!r.sameConnection);
-        QCOMPARE(QString::fromStdString(r.message),
-                 QString("Connection failed after handshake. (code 0: no/unknown reason)\nReconnecting in 10 seconds..."));
+        QCOMPARE(
+            QString::fromStdString(r.message),
+            QString("Connection failed after handshake. (code 0: no/unknown reason)\nReconnecting in 10 seconds..."));
 
         SessionEnding failedRelogin;
         failedRelogin.connected = failedRelogin.afterReboot = true;
         QCOMPARE(reconnectStep(failedRelogin, false, false).delayMs, 10000);
 
-        SessionEnding kicked = inWorld;   // del(client): 0x0000 reason 1; an idle timeout: reason 8
+        SessionEnding kicked = inWorld;  // del(client): 0x0000 reason 1; an idle timeout: reason 8
         kicked.refused = true;
         r = reconnectStep(kicked, false, false);
         QCOMPARE(r.delayMs, -1);
         QVERIFY(r.message.empty());
 
-        SessionEnding neverIn;   // a ban: closed before 0x0071
+        SessionEnding neverIn;  // a ban: closed before 0x0071
         neverIn.connected = neverIn.loggedIn = true;
         QCOMPARE(reconnectStep(neverIn, true, false).delayMs, -1);
         QVERIFY(reconnectStep(neverIn, true, false).message.empty());
-        r = reconnectStep(neverIn, false, false);   // the retry failed: no second one
+        r = reconnectStep(neverIn, false, false);  // the retry failed: no second one
         QCOMPARE(r.delayMs, -1);
-        QCOMPARE(QString::fromStdString(r.message), QString("Connection failed during handshake. (code 0: no/unknown reason)"));
-        QCOMPARE(QString::fromStdString(reconnectStep(SessionEnding{}, false, false).message), QString("Connection failed."));
+        QCOMPARE(QString::fromStdString(r.message),
+                 QString("Connection failed during handshake. (code 0: no/unknown reason)"));
+        QCOMPARE(QString::fromStdString(reconnectStep(SessionEnding{}, false, false).message),
+                 QString("Connection failed."));
 
-        QCOMPARE(reconnectStep(kicked, false, true).delayMs, 0);   // .reconnect works after any ending
+        QCOMPARE(reconnectStep(kicked, false, true).delayMs, 0);  // .reconnect works after any ending
 
         // A link() joins its target; when that join's handshake fails (vg's world is rebooting), it is
         // retried once 10 s later. With no server there at all, it is not.
@@ -204,8 +211,9 @@ private slots:
         r = reconnectStep(linkJoin, false, false);
         QCOMPARE(r.delayMs, 10000);
         QVERIFY(!r.sameConnection);
-        QCOMPARE(QString::fromStdString(r.message),
-                 QString("Connection failed during handshake. (code 0: no/unknown reason)\nReconnecting in 10 seconds..."));
+        QCOMPARE(
+            QString::fromStdString(r.message),
+            QString("Connection failed during handshake. (code 0: no/unknown reason)\nReconnecting in 10 seconds..."));
         SessionEnding linkNoServer;
         linkNoServer.afterLink = true;
         QCOMPARE(reconnectStep(linkNoServer, false, false).delayMs, -1);

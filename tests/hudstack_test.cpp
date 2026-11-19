@@ -15,9 +15,12 @@
 using namespace fugue;
 
 namespace {
-struct Row { std::string label, atoms, verbs; int x, y; };
+struct Row {
+    std::string label, atoms, verbs;
+    int x, y;
+};
 
-constexpr const char* kThingDmi = "6f79d7e8";   // res/: thing.dmi by its resID
+constexpr const char* kThingDmi = "6f79d7e8";  // res/: thing.dmi by its resID
 std::string dir() { return std::string(FUGUE_TEST_DATA_DIR) + "/hudstack-world"; }
 
 Bytes unhex(const std::string& h) {
@@ -62,7 +65,10 @@ class HudStack : public QObject {
         if (!res_.add(b, &claimed, &err)) return false;
         sess_.noteResource(claimed, b, "");
         render::SceneStats st;
-        if (!render::assembleMapControl(sess_, res_, 0, dl_, st, &err, true)) { qWarning("assemble: %s", err.c_str()); return false; }
+        if (!render::assembleMapControl(sess_, res_, 0, dl_, st, &err, true)) {
+            qWarning("assemble: %s", err.c_str());
+            return false;
+        }
         sc_ = dl_.hit;
         return sc_ != nullptr;
     }
@@ -73,7 +79,8 @@ class HudStack : public QObject {
         const model::World& w = sess_.world();
         model::HitTarget ht = model::targetFromHit(w, h.kind, h.ref, h.worldX, h.worldY, h.screen);
         std::string out;
-        for (const model::MenuVerb& mv : model::atomMenu(w, ht.appid, ht.target)) out += (out.empty() ? "" : ",") + mv.verb.name;
+        for (const model::MenuVerb& mv : model::atomMenu(w, ht.appid, ht.target))
+            out += (out.empty() ? "" : ",") + mv.verb.name;
         return out;
     }
 
@@ -101,8 +108,10 @@ private slots:
         for (const Row& r : rows_) {
             std::string got;
             for (const render::Hit& h : stackAt(r)) got += (got.empty() ? "" : "|") + h.name;
-            if (got == r.atoms) agree++;
-            else qWarning("%s: DS %s | ours %s", r.label.c_str(), r.atoms.c_str(), got.c_str());
+            if (got == r.atoms)
+                agree++;
+            else
+                qWarning("%s: DS %s | ours %s", r.label.c_str(), r.atoms.c_str(), got.c_str());
         }
         QCOMPARE(agree, int(rows_.size()));
     }
@@ -118,8 +127,11 @@ private slots:
                 if (want[i] == "-") continue;
                 graded++;
                 std::string got = verbsOf(hits[i]);
-                if (got == want[i]) agree++;
-                else qWarning("%s %s: DS %s | ours %s", r.label.c_str(), hits[i].name.c_str(), want[i].c_str(), got.c_str());
+                if (got == want[i])
+                    agree++;
+                else
+                    qWarning("%s %s: DS %s | ours %s", r.label.c_str(), hits[i].name.c_str(), want[i].c_str(),
+                             got.c_str());
             }
         }
         QCOMPARE(graded, 9);
@@ -139,16 +151,20 @@ private slots:
     // Layer bands in the draw and the left click, as stock DreamSeeker's Click() log named them: a BACKGROUND_LAYER atom,
     // screen or map, under the floor; an EFFECTS_LAYER map atom over a regular screen object.
     void bandsDrawAndClick() {
-        const struct { int x, y; const char* click; bool ink; } cases[] = {
-            {240, 272, "floor", false},   // s_bg
-            {304, 272, "floor", false},   // m_bg
-            {432, 272, "floor", false},   // s_bg1 over m_bg2
-            {304, 464, "floor", false},   // m_20000h
-            {176, 272, "m_eff", true},    // m_eff over s_eff
-            {368, 272, "s_e1", true},     // s_e1 over m_e2
-            {48, 464, "s_l1", true},      // s_l1 over s_bgl
-            {432, 464, "m_huge", true},   // m_huge over s_huge
-            {368, 474, "s_neg", true},    // s_neg over the floor
+        const struct {
+            int x, y;
+            const char* click;
+            bool ink;
+        } cases[] = {
+            {240, 272, "floor", false},  // s_bg
+            {304, 272, "floor", false},  // m_bg
+            {432, 272, "floor", false},  // s_bg1 over m_bg2
+            {304, 464, "floor", false},  // m_20000h
+            {176, 272, "m_eff", true},   // m_eff over s_eff
+            {368, 272, "s_e1", true},    // s_e1 over m_e2
+            {48, 464, "s_l1", true},     // s_l1 over s_bgl
+            {432, 464, "m_huge", true},  // m_huge over s_huge
+            {368, 474, "s_neg", true},   // s_neg over the floor
         };
         render::RgbaImage img = render::execute(dl_);
         QCOMPARE(img.w, sc_->pixW());
@@ -158,7 +174,7 @@ private slots:
             QVERIFY(render::hitAt(*sc_, c.x, py, h));
             QCOMPARE(h.name, std::string(c.click));
             const uint8_t* p = &img.px[(size_t(py) * size_t(img.w) + size_t(c.x)) * 4];
-            QCOMPARE(p[2] == 224, c.ink);   // the item's blue, else the floor's grey
+            QCOMPARE(p[2] == 224, c.ink);  // the item's blue, else the floor's grey
         }
     }
 };

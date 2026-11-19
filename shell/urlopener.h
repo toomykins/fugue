@@ -8,10 +8,10 @@
 namespace fugue::shell {
 class UrlOpener : public QObject {
 public:
-    explicit UrlOpener(QObject* owner, std::function<void(const QUrl&)> open)
-        : QObject(owner), open_(std::move(open)) {
+    explicit UrlOpener(QObject* owner, std::function<void(const QUrl&)> open) : QObject(owner), open_(std::move(open)) {
         QCoreApplication::instance()->installEventFilter(this);
     }
+
 protected:
     bool eventFilter(QObject*, QEvent* event) override {
         if (event->type() != QEvent::FileOpen) return false;
@@ -22,6 +22,7 @@ protected:
         event->accept();
         return true;
     }
+
 private:
     std::function<void(const QUrl&)> open_;
 };

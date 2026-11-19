@@ -22,7 +22,7 @@ ParseResult parse(const QString& name) {
     return parseIcon(d.data(), d.size());
 }
 
-}
+}  // namespace
 
 class Jpeg : public QObject {
     Q_OBJECT

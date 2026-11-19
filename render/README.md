@@ -16,7 +16,7 @@ Icon decoding, the draw-list IR and scene assembly.
 Notes:
 - The executor composites each plane on its own transparent surface, then applies per master group, filters, colour and blend, and blends the surfaces down in ascending plane order.
 - A colour matrix is 20 floats (rows R, G, B, A, then a constant row in unit scale).
-- Filters not implemented (alpha, displacement, ripple, wave, and others) are counted in the stats and not drawn.
+- A plane master runs blur, outline, drop_shadow, an RGB colour matrix and an alpha mask by render_source. Other filters (an alpha mask by icon, displacement, ripple, wave, bloom, and others) are counted in the stats and not drawn.
 - A runtime-icon recipe holding an op this client does not run is refused (logged once) and left invisible rather than guessed.
 - Maptext glyph shapes come from a host rasterizer; positions follow DreamSeeker's layout.
 

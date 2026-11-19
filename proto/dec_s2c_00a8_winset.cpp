@@ -1,18 +1,20 @@
-// s2c 0x00a8: winset(control, "prop=val;...").
+// S2C::Winset: winset(control, "prop=val;...").
 #include "proto/registry.h"
 
 namespace fugue::proto {
-namespace {
 
 // Layout [control\0][props\0]; a null control is an empty string. Props are stored raw, not url-decoded.
-canon::Json decode(State&, ByteSpan body) {
+Winset decodeWinset(ByteSpan body) {
     Reader r(body);
-    std::string control = r.cstr(), props = r.cstr();
+    Winset m;
+    m.control = r.cstr();
+    m.props = r.cstr();
     r.expectEnd();
-    return canon::Object().str("control", control).str("props", props).build();
+    return m;
 }
 
-FUGUE_REGISTER_DECODER(Dir::S2C, 0x00a8, "cpp:stock-dd-wire", decode);
+canon::Json toJson(const Winset& m) { return canon::Object().str("control", m.control).str("props", m.props).build(); }
 
-}  // namespace
+FUGUE_REGISTER_DECODER(Dir::S2C, S2C::Winset, "cpp:stock-dd-wire", jsonOf<decodeWinset>);
+
 }  // namespace fugue::proto

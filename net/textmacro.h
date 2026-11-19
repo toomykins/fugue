@@ -10,7 +10,10 @@ inline std::string plainText(std::string_view s) {
     std::string o;
     o.reserve(s.size());
     for (size_t i = 0; i < s.size(); i++) {
-        if ((unsigned char)s[i] == 0xff) { i++; continue; }
+        if ((unsigned char)s[i] == 0xff) {
+            i++;
+            continue;
+        }
         o.push_back(s[i]);
     }
     return o;

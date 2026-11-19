@@ -38,23 +38,23 @@
 namespace fugue::render {
 
 struct DdmiRef {
-    uint32_t ordinal = 0;  // index into the 0x000e resource-availability list (the same space as an appearance's icon_res)
+    uint32_t ordinal = 0;  // index into the ResourceList (the same space as an appearance's icon_res)
     uint8_t kind = 0;
     bool hasName = false;
-    std::string name;          // the icon_state within the file
+    std::string name;  // the icon_state within the file
     bool hasDir = false;
-    uint8_t trailer[3] = {0, 0, 0};   // the 0x40 payload: dir index, frame index, moving (0xFF: not given)
+    uint8_t trailer[3] = {0, 0, 0};  // the 0x40 payload: dir index, frame index, moving (0xFF: not given)
 };
 
 struct DdmiOp {
     uint8_t tag = 0;
-    std::vector<uint8_t> payload;   // verbatim, excluding the tag
-    int ref = -1;                   // 0x01: its index in refs; 0x05/0x40 qualifying a ref: that ref's index
+    std::vector<uint8_t> payload;  // verbatim, excluding the tag
+    int ref = -1;                  // 0x01: its index in refs; 0x05/0x40 qualifying a ref: that ref's index
 };
 
 struct DdmiRecipe {
     std::vector<DdmiRef> refs;
-    std::vector<DdmiOp> ops;        // every op in wire order
+    std::vector<DdmiOp> ops;  // every op in wire order
 };
 
 bool isDdmi(const uint8_t* d, size_t n);
@@ -64,9 +64,9 @@ bool ddmiRefIsEmptyIcon(const DdmiRef& r);
 bool parseDdmi(const uint8_t* d, size_t n, DdmiRecipe& out, std::string* err);
 
 struct DdmiResult {
-    std::unique_ptr<Icon> owned;       // a new icon, or
-    const Icon* alias = nullptr;       // the operand itself ("the extracted operand, verbatim" shape)
-    std::string err;                   // set when neither: a refusal (unsupported op / bad operand)
+    std::unique_ptr<Icon> owned;  // a new icon, or
+    const Icon* alias = nullptr;  // the operand itself ("the extracted operand, verbatim" shape)
+    std::string err;              // set when neither: a refusal (unsupported op / bad operand)
     const Icon* icon() const { return owned ? owned.get() : alias; }
 };
 // ops[i] is the icon refs[i] names, IN ORDER (null only for an empty-icon ref). Pure; mutates nothing.

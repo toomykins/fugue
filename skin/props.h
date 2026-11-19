@@ -21,12 +21,15 @@ public:
     void set(const std::string& target, const std::string& key, const std::string& val);
     bool get(const std::string& target, const std::string& key, std::string& out) const;
     void erase(const std::string& target, const std::string& key);
-    void eraseTarget(const std::string& target);   // every key of one target (a destroyed runtime control)
+    void eraseTarget(const std::string& target);  // every key of one target (a destroyed runtime control)
     // window-qualified spelling first, then the bare elem name.
-    bool controlProp(const std::string& window, const std::string& name, const std::string& key, std::string& out) const;
+    bool controlProp(const std::string& window, const std::string& name, const std::string& key,
+                     std::string& out) const;
     bool controlBool(const std::string& window, const std::string& name, const std::string& key, bool& out) const;
-    bool controlPoint(const std::string& window, const std::string& name, const std::string& key, long long& a, long long& b) const;  // "A,B"
-    bool controlSize(const std::string& window, const std::string& name, const std::string& key, long long& a, long long& b) const;   // "AxB" or "A,B"
+    bool controlPoint(const std::string& window, const std::string& name, const std::string& key, long long& a,
+                      long long& b) const;  // "A,B"
+    bool controlSize(const std::string& window, const std::string& name, const std::string& key, long long& a,
+                     long long& b) const;  // "AxB" or "A,B"
     bool has(const std::string& target) const;
     std::vector<std::string> targets() const;
     bool empty() const { return p_.empty(); }

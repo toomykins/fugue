@@ -48,6 +48,14 @@
     <content_attribute id="social-chat">intense</content_attribute>
   </content_rating>
   <releases>
+    <release version="0.5.7" date="2026-11-19">
+      <description>
+        <p>Signs in with any BYOND account: key.txt blocks of every layout now decode, where before only some accounts
+        could log in. Drag-and-drop, mouse hover and the mouse wheel reach the world. tgstation's planes render. Skins
+        can open browser controls at runtime. Flicks, animate() on new objects, glides and KEEP_TOGETHER groups behave
+        as in stock BYOND, \icon tags draw in chat, and long sessions use less memory.</p>
+      </description>
+    </release>
     <release version="0.5.6" date="2026-10-30">
       <description>
         <p>Fixes the view from inside an opaque mech, which showed only your own tile and whatever opaque tiles touched it.

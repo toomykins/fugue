@@ -32,7 +32,7 @@ std::string slurp(const std::string& p) {
 constexpr int64_t kT0 = 1'000'000'000'000'000'000;
 constexpr int64_t kDs = 100'000'000;
 constexpr uint32_t kResThing = 0xff2f7ab6;
-constexpr uint32_t kTileApp = 4;   // /turf/tile's appearance
+constexpr uint32_t kTileApp = 4;  // /turf/tile's appearance
 constexpr uint32_t kCyan = 0x00ffff, kTile = 0x969696, kCrate = 0xc8c8c8, kMob = 0x2828ff;
 // gasA's frames (magenta, yellow, green at alpha 160) over the tile, the crate, the mob and the floor's 96 grey. The tile,
 // mob and floor values are stock DreamSeeker 516's pixels for that scene.
@@ -40,7 +40,7 @@ constexpr uint32_t kOnTile[3] = {0xd838d8, 0xd8d838, 0x38d838};
 constexpr uint32_t kOnCrate[3] = {0xeb4beb, 0xebeb4b, 0x4beb4b};
 constexpr uint32_t kOnMob[3] = {0xaf0fff, 0xafaf5f, 0x0faf5f};
 constexpr uint32_t kOnFloor[3] = {0xc424c4, 0xc4c424, 0x24c424};
-constexpr int kLast = 2;   // gasA's frame at kT0
+constexpr int kLast = 2;  // gasA's frame at kT0
 bool near(uint32_t a, uint32_t b) {
     for (int sh : {16, 8, 0})
         if (std::abs(int(a >> sh & 0xff) - int(b >> sh & 0xff)) > 1) return false;
@@ -54,8 +54,8 @@ class Zas : public QObject {
     std::vector<std::pair<uint16_t, Bytes>> frames_;
     render::ResStore res_;
 
-    void ingestUpTo(model::Session& s, size_t lastLine) {
-        s.setIngestClockNs(kT0);
+    void ingestUpTo(model::Session& s, size_t lastLine, int64_t at = kT0) {
+        s.setIngestClockNs(at);
         for (size_t i = 0; i < frames_.size() && i + 2 <= lastLine; i++) s.ingest(frames_[i].first, frames_[i].second);
         std::string b = slurp(dir_ + "/res/ff2f7ab6");
         s.noteResource(kResThing, Bytes(b.begin(), b.end()), "");
@@ -64,7 +64,10 @@ class Zas : public QObject {
         render::DrawList dl;
         render::SceneStats st;
         std::string err;
-        if (!render::assembleMapControl(s, res_, clockNs, dl, st, &err)) { qWarning("assemble: %s", err.c_str()); return {}; }
+        if (!render::assembleMapControl(s, res_, clockNs, dl, st, &err)) {
+            qWarning("assemble: %s", err.c_str());
+            return {};
+        }
         return render::execute(dl);
     }
     // The pixel (px, py) of world tile (x, y) on a 9x9 view whose bottom-left tile is (x0, 1), pixels from the tile's top-left.
@@ -73,7 +76,9 @@ class Zas : public QObject {
         const uint8_t* p = &f.px[(size_t(f.h - (r + 1) * 32 + py) * size_t(f.w) + size_t(c * 32 + px)) * 4];
         return uint32_t(p[0]) << 16 | uint32_t(p[1]) << 8 | p[2];
     }
-#define PX(got, want) QVERIFY2(near((got), (want)), qPrintable(QString("got %1 want %2").arg(got, 6, 16, QChar('0')).arg(want, 6, 16, QChar('0'))))
+#define PX(got, want)             \
+    QVERIFY2(near((got), (want)), \
+             qPrintable(QString("got %1 want %2").arg(got, 6, 16, QChar('0')).arg(want, 6, 16, QChar('0'))))
 
 private slots:
     void initTestCase() {
@@ -85,11 +90,12 @@ private slots:
         while (std::getline(f, line)) {
             QVERIFY(line.rfind("0x", 0) == 0);
             size_t sp = line.find(' ', line.find("len="));
-            frames_.push_back({uint16_t(std::stoul(line.substr(2, 4), nullptr, 16)), sp == std::string::npos ? Bytes{} : unhex(line.substr(sp + 1))});
+            frames_.push_back({uint16_t(std::stoul(line.substr(2, 4), nullptr, 16)),
+                               sp == std::string::npos ? Bytes{} : unhex(line.substr(sp + 1))});
         }
         QCOMPARE(int(frames_.size()), 57);
-        for (size_t l : {35, 38, 42, 50, 54}) QCOMPARE(frames_[l - 2].first, uint16_t(0x00d8));
-        QCOMPARE(frames_[56 - 2].first, uint16_t(0x0008));   // phase 7: the player's step
+        for (size_t l : {35, 38, 42, 50, 54}) QCOMPARE(frames_[l - 2].first, uint16_t(S2C::VisContents));
+        QCOMPARE(frames_[56 - 2].first, uint16_t(S2C::InView));  // phase 7: the player's step
         std::string b = slurp(dir_ + "/res/ff2f7ab6");
         uint32_t id = kResThing;
         std::string err;
@@ -123,14 +129,15 @@ private slots:
         model::Session s;
         ingestUpTo(s, 35);
         render::RgbaImage f = map(s);
-        QCOMPARE(f.w, 288); QCOMPARE(f.h, 288);
+        QCOMPARE(f.w, 288);
+        QCOMPARE(f.h, 288);
         PX(tile(f, 1, 4, 5), kOnTile[kLast]);
-        PX(tile(f, 1, 6, 5), kOnCrate[kLast]);       // over the crate
+        PX(tile(f, 1, 6, 5), kOnCrate[kLast]);  // over the crate
         PX(tile(f, 1, 6, 5, 16, 4), kOnTile[kLast]);
-        PX(tile(f, 1, 5, 6, 16, 4), kCyan);   // gasB: the icon's top half
+        PX(tile(f, 1, 5, 6, 16, 4), kCyan);  // gasB: the icon's top half
         PX(tile(f, 1, 5, 6, 16, 24), kTile);
         PX(tile(f, 1, 5, 5), kMob);
-        PX(tile(f, 1, 3, 5, 16, 17), 0x606060);   // a bare floor
+        PX(tile(f, 1, 3, 5, 16, 17), 0x606060);  // a bare floor
     }
     // The translucent gas cycles its frames on the shared clock, in both turfs that hold it.
     void gasAnimates() {
@@ -161,7 +168,7 @@ private slots:
     void walkInShowsGasSetOutOfView() {
         model::Session s;
         ingestUpTo(s, 50);
-        QVERIFY(!s.world().turfVis.count({5, 4, 0}));   // the turfs left behind are emptied
+        QVERIFY(!s.world().turfVis.count({5, 4, 0}));  // the turfs left behind are emptied
         render::RgbaImage f = map(s);
         PX(tile(f, 11, 17, 5, 16, 17), kOnFloor[kLast]);
         PX(tile(f, 11, 16, 5, 16, 17), 0x606060);
@@ -174,14 +181,16 @@ private slots:
         PX(tile(f, 11, 17, 5, 16, 17), 0x606060);
     }
     // The player steps onto the gassed turf: the gas (plane 12) is drawn over the mob, still animating.
+    // The mob's step is ingested a second early: a mob with glide_size 0 glides 4 px per tick (800 ms a tile), and the
+    // gas is sampled over the mob standing on its tile.
     void phase7GasOverTheMob() {
         model::Session s;
-        ingestUpTo(s, 58);
+        ingestUpTo(s, 58, kT0 - 10 * kDs);
         for (int k = 0; k < 3; k++) {
             render::RgbaImage f = map(s, kT0 + (2 + 2 * k) * kDs);
             QCOMPARE(f.w, 288);
             PX(tile(f, 12, 16, 5), kOnMob[k]);
-            PX(tile(f, 12, 16, 5, 2, 17), kOnFloor[k]);   // beside the mob
+            PX(tile(f, 12, 16, 5, 2, 17), kOnFloor[k]);  // beside the mob
             PX(tile(f, 12, 15, 5, 16, 17), 0x606060);
         }
     }

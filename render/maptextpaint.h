@@ -1,4 +1,4 @@
-// maptextpaint: draws atom.maptext from the render/dsmaptext.h layout, the same one the MeasureText reply (0x00fc)
+// maptextpaint: draws atom.maptext from the render/dsmaptext.h layout, the same one the C2S::MeasureText reply
 // uses, so a box the server sizes from that reply holds the lines drawn.
 //
 // A runechat is a client.image whose whole visible content is its maptext.

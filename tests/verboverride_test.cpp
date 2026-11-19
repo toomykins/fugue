@@ -30,11 +30,22 @@ Bytes unhex(const std::string& h) {
 std::string hex(const Bytes& b) {
     static const char* d = "0123456789abcdef";
     std::string o;
-    for (uint8_t c : b) { o += d[c >> 4]; o += d[c & 15]; }
+    for (uint8_t c : b) {
+        o += d[c >> 4];
+        o += d[c & 15];
+    }
     return o;
 }
 
-struct DsSend { std::string line, pick; uint16_t verb; uint8_t kind; bool self; uint32_t ref; std::string text; bool hasText; };
+struct DsSend {
+    std::string line, pick;
+    uint16_t verb;
+    uint8_t kind;
+    bool self;
+    uint32_t ref;
+    std::string text;
+    bool hasText;
+};
 
 struct Recorded {
     model::Session sess;
@@ -59,8 +70,10 @@ struct Recorded {
             std::vector<net::SrcCandidate> out;
             const model::World& w = sess.world();
             for (const model::VerbSrcCandidate& c : model::verbSrcCandidates(w, id, true)) {
-                bool own = c.src.kind == proto::enc::kVerbSrcClient || (c.src.kind == proto::enc::kVerbSrcMob && c.src.ref == w.selfRef);
-                out.push_back({{c.src.kind, c.src.ref}, c.name, !own, std::nullopt, c.rank.dist, c.rank.cell, c.rank.carried});
+                bool own = c.src.kind == proto::enc::kVerbSrcClient ||
+                           (c.src.kind == proto::enc::kVerbSrcMob && c.src.ref == w.selfRef);
+                out.push_back(
+                    {{c.src.kind, c.src.ref}, c.name, !own, std::nullopt, c.rank.dist, c.rank.cell, c.rank.carried});
             }
             return out;
         };
@@ -76,7 +89,11 @@ void loadDs(std::vector<DsSend>& sends, std::vector<std::string>& listbox) {
     while (std::getline(f, line)) {
         if (std::regex_search(line, m, lb)) {
             std::string s = m[1];
-            for (size_t p = 0, q; p <= s.size(); p = q + 1) { q = s.find('|', p); if (q == std::string::npos) q = s.size(); listbox.push_back(s.substr(p, q - p)); }
+            for (size_t p = 0, q; p <= s.size(); p = q + 1) {
+                q = s.find('|', p);
+                if (q == std::string::npos) q = s.size();
+                listbox.push_back(s.substr(p, q - p));
+            }
             continue;
         }
         if (!std::regex_search(line, m, re)) continue;
@@ -114,10 +131,13 @@ private slots:
         Recorded r;
         QVERIFY(r.load());
         int whisper = 0, poke = 0;
-        for (const auto& [id, e] : r.im.verbs()) { whisper += e.name == "Whisper"; poke += e.name == "Poke"; }
+        for (const auto& [id, e] : r.im.verbs()) {
+            whisper += e.name == "Whisper";
+            poke += e.name == "Poke";
+        }
         QCOMPARE(whisper, 2);
         QCOMPARE(poke, 2);
-        QVERIFY(model::verbSrcCandidates(r.sess.world(), 2).empty());   // /mob/verb/whisper
+        QVERIFY(model::verbSrcCandidates(r.sess.world(), 2).empty());  // /mob/verb/whisper
     }
 
     void eachTypedLineGoesOutAsDreamSeekerSentIt() {
@@ -140,10 +160,16 @@ private slots:
             }
             QVERIFY2(res.frames.size() == 1, qPrintable(QString::fromStdString(d.line + ": " + res.error)));
             std::vector<VerbArg> args;
-            if (d.hasText) { VerbArg a; a.tag = 2; a.str = d.text; args.push_back(a); }
+            if (d.hasText) {
+                VerbArg a;
+                a.tag = 2;
+                a.str = d.text;
+                args.push_back(a);
+            }
             Bytes want = proto::enc::encodeVerb(d.verb, d.kind, d.self ? w.selfRef : d.ref, args);
             QVERIFY2(hex(res.frames[0].body) == hex(want),
-                     qPrintable(QString::fromStdString(d.line + " " + d.pick + ": got " + hex(res.frames[0].body) + ", DreamSeeker " + hex(want))));
+                     qPrintable(QString::fromStdString(d.line + " " + d.pick + ": got " + hex(res.frames[0].body) +
+                                                       ", DreamSeeker " + hex(want))));
         }
     }
 
@@ -151,7 +177,8 @@ private slots:
     void anUncarriedVerbIsDroppedSilently() {
         Recorded r;
         QVERIFY(r.load());
-        net::CommandResult res = r.im.verbCommand("Whisper hi", true, [](uint16_t) { return std::vector<net::SrcCandidate>{}; });
+        net::CommandResult res =
+            r.im.verbCommand("Whisper hi", true, [](uint16_t) { return std::vector<net::SrcCandidate>{}; });
         QVERIFY(res.frames.empty() && !res.srcChoice);
         QVERIFY(res.quiet);
         res = r.im.verbCommand("Zzz", true, r.srcFor());

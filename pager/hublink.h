@@ -9,7 +9,7 @@
 
 namespace fugue::pager {
 
-constexpr const char* kHubLinkAddr = "hub.byond.com:6001";   // the hub's dtclink endpoint
+constexpr const char* kHubLinkAddr = "hub.byond.com:6001";  // the hub's dtclink endpoint
 
 class HubLink {
 public:
@@ -34,10 +34,11 @@ private:
 class HubThrottle {
 public:
     using Clock = std::chrono::steady_clock;
-    explicit HubThrottle(std::chrono::milliseconds base, std::chrono::milliseconds cap) : base_(base), cap_(cap), gap_(base) {}
+    explicit HubThrottle(std::chrono::milliseconds base, std::chrono::milliseconds cap)
+        : base_(base), cap_(cap), gap_(base) {}
     // True (and the dial counts as made at `now`) when enough time has passed; otherwise false and *waitMs is the time left.
     bool allow(Clock::time_point now, int* waitMs = nullptr);
-    void record(bool ok);   // the outcome of the dial that allow() let through
+    void record(bool ok);  // the outcome of the dial that allow() let through
 
 private:
     std::chrono::milliseconds base_, cap_, gap_;

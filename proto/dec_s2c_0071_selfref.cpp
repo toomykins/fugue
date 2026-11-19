@@ -1,16 +1,16 @@
-// s2c 0x0071: a bare [value u32 LE]: the client's own mob ref.
+// S2C::SelfRef: a bare [value u32 LE]: the client's own mob ref.
 #include "proto/registry.h"
 
 namespace fugue::proto {
-namespace {
 
 // Exactly 4 bytes.
-canon::Json decode(State&, ByteSpan body) {
+SelfRef decodeSelfRef(ByteSpan body) {
     if (body.size() != 4) throw DecodeError("0x71 body is " + std::to_string(body.size()) + " bytes, want 4");
-    return canon::Object().u("value", le32(body.data())).build();
+    return SelfRef{Reader(body).u32()};
 }
 
-FUGUE_REGISTER_DECODER(Dir::S2C, 0x0071, "cpp:stock-dd-wire", decode);
+canon::Json toJson(const SelfRef& m) { return canon::Object().u("value", m.value).build(); }
 
-}  // namespace
+FUGUE_REGISTER_DECODER(Dir::S2C, S2C::SelfRef, "cpp:stock-dd-wire", jsonOf<decodeSelfRef>);
+
 }  // namespace fugue::proto

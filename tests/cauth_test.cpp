@@ -44,7 +44,9 @@ struct FakeServer {
         ::getsockname(lfd, reinterpret_cast<sockaddr*>(&a), &l);
         port = ntohs(a.sin_port);
         ::listen(lfd, 4);
-        th = std::thread([this, conns] { for (int i = 0; i < conns; i++) serve(); });
+        th = std::thread([this, conns] {
+            for (int i = 0; i < conns; i++) serve();
+        });
     }
     void serve() {
         auto fd = socket::Handle(::accept(lfd, nullptr, nullptr));
@@ -72,14 +74,18 @@ struct FakeServer {
                 socket::send(fd, f.data(), f.size());
                 if (readN(fd, h, 6)) {  // c2s header: [seq BE][type BE][len BE]
                     Bytes c((size_t(h[4]) << 8) | h[5]);
-                    if (readN(fd, c.data(), c.size()) && ((h[2] << 8) | h[3]) == 0x001a) decryptBody(c, loginKey(base, nonce), login);
+                    if (readN(fd, c.data(), c.size()) && ((h[2] << 8) | h[3]) == C2S::Login)
+                        decryptBody(c, loginKey(base, nonce), login);
                 }
             }
         }
         socket::close(fd);
         logins.push_back(login);
     }
-    ~FakeServer() { if (th.joinable()) th.join(); socket::close(lfd); }
+    ~FakeServer() {
+        if (th.joinable()) th.join();
+        socket::close(lfd);
+    }
 };
 
 void loginTo(uint16_t port, const std::string& stateDir, Bytes accountRecord = {}, const std::string& label = "") {
@@ -100,23 +106,26 @@ std::string slurp(const std::string& p) {
     QFile f(QString::fromStdString(p));
     return f.open(QIODevice::ReadOnly) ? f.readAll().toStdString() : std::string();
 }
-}
+}  // namespace
 
 class CauthTest : public QObject {
     Q_OBJECT
 private slots:
     void entryNameIsCkeyAtHostPort() {
-        QCOMPARE(cauthEntryName("Guest", "127.0.0.1", 52516), std::string("guest@127.0.0.1:52516"));  // the stock DreamSeeker line name
+        QCOMPARE(cauthEntryName("Guest", "127.0.0.1", 52516),
+                 std::string("guest@127.0.0.1:52516"));  // the stock DreamSeeker line name
         QCOMPARE(cauthEntryName("Some Key_9", "play.example.org", 1337), std::string("somekey9@play.example.org:1337"));
         // The endpoint name gets ':' + port only when the URL has a port; fugue-qt always has one.
-        QCOMPARE(cauthEntryName("guest", "play.example.org", std::string_view()), std::string("guest@play.example.org"));
+        QCOMPARE(cauthEntryName("guest", "play.example.org", std::string_view()),
+                 std::string("guest@play.example.org"));
         QCOMPARE(cauthEntryName("guest", "play.example.org", "7777"), std::string("guest@play.example.org:7777"));
     }
 
     // Reuse the entry for this endpoint; another endpoint or state dir mints its own.
     void keyIsStablePerEndpointAndPerStateDir() {
         QTemporaryDir a, b;
-        const std::string n1 = cauthEntryName("guest", "127.0.0.1", 52516), n2 = cauthEntryName("guest", "127.0.0.1", 52518);
+        const std::string n1 = cauthEntryName("guest", "127.0.0.1", 52516),
+                          n2 = cauthEntryName("guest", "127.0.0.1", 52518);
         std::string err;
         uint32_t k1 = cauthKeyFor(a.path().toStdString(), n1, &err);
         QVERIFY2(err.empty(), err.c_str());
@@ -130,7 +139,8 @@ private slots:
 
         // BYOND's cauth.txt grammar, one line per endpoint.
         const QString text = QString::fromStdString(slurp(cauthPath(a.path().toStdString())));
-        const QRegularExpression line("^guest@127\\.0\\.0\\.1:5251[68] key=[0-9a-f]{1,8};pwd=03[0-9a-f]{24};ctime=[0-9a-f]+$");
+        const QRegularExpression line(
+            "^guest@127\\.0\\.0\\.1:5251[68] key=[0-9a-f]{1,8};pwd=03[0-9a-f]{24};ctime=[0-9a-f]+$");
         const QStringList lines = text.split('\n', Qt::SkipEmptyParts);
         QCOMPARE(lines.size(), 2);
         for (auto& l : lines) QVERIFY2(line.match(l).hasMatch(), qPrintable(l));
@@ -148,8 +158,9 @@ private slots:
         {
             QFile f(QString::fromStdString(cauthPath(dir)));
             QVERIFY(f.open(QIODevice::WriteOnly));
-            f.write("guest@127.0.0.1:52516 key=644788f;pwd=03000000010000000200000003;ctime=6a9d856c\r\n"  // back-dated 40 days, CRLF line ending
-                    "guest@127.0.0.1:52518 key=57816b99;pwd=03000000040000000500000006;ctime=6ad2410c\r\n");
+            f.write(
+                "guest@127.0.0.1:52516 key=644788f;pwd=03000000010000000200000003;ctime=6a9d856c\r\n"  // back-dated 40 days, CRLF line ending
+                "guest@127.0.0.1:52518 key=57816b99;pwd=03000000040000000500000006;ctime=6ad2410c\r\n");
         }
         QCOMPARE(cauthKeyFor(dir, "guest@127.0.0.1:52516", nullptr, now), 0x0644788fu);
         QCOMPARE(cauthKeyFor(dir, "guest@127.0.0.1:52516", nullptr, now), 0x0644788fu);
@@ -183,7 +194,7 @@ private slots:
         CauthEntry e;
         QVERIFY(cauthLookup(dir, cauthEntryName("guest", "127.0.0.1", s.port), &e));
         QCOMPARE(le32(&s.logins[0][16]), e.key);
-        QCOMPARE(le32(&s.logins[1][16]), e.key);  // same endpoint, same state dir: same window
+        QCOMPARE(le32(&s.logins[1][16]), e.key);   // same endpoint, same state dir: same window
         QVERIFY(le32(&s.logins[2][16]) != e.key);  // another install
         QVERIFY(le32(&t.logins[0][16]) != e.key);  // another endpoint
         QVERIFY(cauthLookup(dir, cauthEntryName("guest", "127.0.0.1", t.port), &e));
@@ -231,7 +242,7 @@ private slots:
         std::string cs;
         first.certRequest(&rk, &cs);
         QCOMPARE(rk, k);
-        QCOMPARE(cs, e.pwd);  // minted with the key on this connection
+        QCOMPARE(cs, e.pwd);            // minted with the key on this connection
         QCOMPARE(first.certStr(), cs);  // what the 0x0036 ack re-keys with
         CauthEntry e2;
         QVERIFY(cauthLookup(dir, name, &e2));
@@ -248,7 +259,7 @@ private slots:
         QCOMPARE(second.certStr(), cs);
         QVERIFY(cauthLookup(dir, name, &e2));
         QCOMPARE(e2.key, k);
-        QCOMPARE(e2.pwd, cs);  // written back
+        QCOMPARE(e2.pwd, cs);    // written back
         QCOMPARE(e2.ctime, t1);  // ctime = now: a server you keep logging into is never pruned
     }
 
@@ -288,8 +299,9 @@ private slots:
         {
             QFile f(QString::fromStdString(cauthPath(dir)));
             QVERIFY(f.open(QIODevice::WriteOnly));
-            f.write("guest@a:1 key=0;pwd=03000000010000000200000003;ctime=6ad24000\n"
-                    "guest@b:1 pwd=03000000010000000200000003;ctime=6ad24000\n");
+            f.write(
+                "guest@a:1 key=0;pwd=03000000010000000200000003;ctime=6ad24000\n"
+                "guest@b:1 pwd=03000000010000000200000003;ctime=6ad24000\n");
         }
         QCOMPARE(cauthKeyFor(dir, "guest@a:1", nullptr, 0x6ad24100), 0u);
         const uint32_t kb = cauthKeyFor(dir, "guest@b:1", nullptr, 0x6ad24100);

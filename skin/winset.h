@@ -27,7 +27,7 @@ struct WinsetPair {
 // escapes: a backslash inside quotes escapes the next byte.
 std::vector<std::string> splitOutsideQuotes(std::string_view s, bool escapes = false);
 // id = the winset's control operand ("" when each key carries its own [window.]elem.key path). urlEncoded: the props
-// came from the WORLD (a 0x00a8 winset) and each value is url-decoded after the split: '+' is a space, %XX a byte. A
+// came from the WORLD (an S2C::Winset) and each value is url-decoded after the split: '+' is a space, %XX a byte. A
 // "..." value is not url-decoded; its \n is a CRLF, \t a tab, and any other escaped byte stands for itself.
 // Stock DreamSeeker 516 decodes them so that `pos=100%2c120` reads back "100,120", `text=a+b` reads "a b", and
 // `background-color=%23ff0000` answers "#ff0000" (re-encoded). vg's list2params winsets need it. A world value also
@@ -48,9 +48,9 @@ bool onShowParams(std::string_view cmd, std::string& params);
 // a clause's then-branch; elsewhere it is value text (urls, `byond://`).
 struct WinsetClause {
     bool conditional = false;
-    WinsetPair cond;              // conditional only: target/key/value to test
-    bool negate = false;          // `!=`
-    std::vector<WinsetPair> then, otherwise;   // unconditional clause: `then` only
+    WinsetPair cond;                          // conditional only: target/key/value to test
+    bool negate = false;                      // `!=`
+    std::vector<WinsetPair> then, otherwise;  // unconditional clause: `then` only
 };
 std::vector<WinsetClause> parseClientWinset(std::string_view body);
 // Does `body` hold a `?` outside a quoted value (i.e. need parseClientWinset rather than splitWinset)?

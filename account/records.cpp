@@ -15,9 +15,16 @@ std::string ckey(std::string_view s) {
     return o;
 }
 
-std::optional<Bytes> mintAccountLoginRecord(ByteSpan identity, uint32_t cauthKey, ByteSpan installBlock, uint8_t marker, std::string* err) {
-    if (identity.empty()) { if (err) *err = "accountIdentity is empty"; return std::nullopt; }
-    if (installBlock.size() != 17) { if (err) *err = "installBlock must be 17 bytes"; return std::nullopt; }
+std::optional<Bytes> mintAccountLoginRecord(ByteSpan identity, uint32_t cauthKey, ByteSpan installBlock, uint8_t marker,
+                                            std::string* err) {
+    if (identity.empty()) {
+        if (err) *err = "accountIdentity is empty";
+        return std::nullopt;
+    }
+    if (installBlock.size() != 17) {
+        if (err) *err = "installBlock must be 17 bytes";
+        return std::nullopt;
+    }
     const size_t n = identity.size() + 1;
     Bytes rec(2 + n + 4 + 17 + 1 + 5, 0);
     std::copy(identity.begin(), identity.end(), rec.begin() + 2);
@@ -44,12 +51,20 @@ static std::optional<Bytes> searchDigest(const std::string& domain, const std::s
     return std::nullopt;
 }
 std::optional<Bytes> digestForCkey(std::string_view key) { return searchDigest("fugue-cid-v1:key:", ckey(key)); }
-std::optional<Bytes> digestForInstall(std::string_view sid) { return searchDigest("fugue-cid-v1:install:", std::string(sid)); }
+std::optional<Bytes> digestForInstall(std::string_view sid) {
+    return searchDigest("fugue-cid-v1:install:", std::string(sid));
+}
 
 std::optional<Bytes> watermarkedInstallBlock(ByteSpan installBlock, std::string_view key, std::string* err) {
-    if (installBlock.size() != 17) { if (err) *err = "installBlock must be 17 bytes"; return std::nullopt; }
+    if (installBlock.size() != 17) {
+        if (err) *err = "installBlock must be 17 bytes";
+        return std::nullopt;
+    }
     auto d = digestForCkey(key);
-    if (!d) { if (err) *err = "no watermarked digest"; return std::nullopt; }
+    if (!d) {
+        if (err) *err = "no watermarked digest";
+        return std::nullopt;
+    }
     Bytes out(installBlock.begin(), installBlock.end());
     std::copy(d->begin(), d->end(), out.begin() + 1);
     return out;
@@ -76,10 +91,13 @@ uint8_t hubUnscramble(Bytes& buf, uint32_t key) {
     return bl;
 }
 
-static void putStr0(Bytes& b, std::string_view s) { b.insert(b.end(), s.begin(), s.end()); b.push_back(0); }
+static void putStr0(Bytes& b, std::string_view s) {
+    b.insert(b.end(), s.begin(), s.end());
+    b.push_back(0);
+}
 
-Bytes buildDownloadKeyRequest(std::string_view username, std::string_view domain, std::string_view cred1, std::string_view crypt,
-                              std::string_view installId, uint32_t nonce) {
+Bytes buildDownloadKeyRequest(std::string_view username, std::string_view domain, std::string_view cred1,
+                              std::string_view crypt, std::string_view installId, uint32_t nonce) {
     Bytes b;
     putStr0(b, username);
     putStr0(b, domain);
@@ -94,7 +112,10 @@ Bytes buildDownloadKeyRequest(std::string_view username, std::string_view domain
 }
 
 std::optional<std::string> parseDownloadKeyReply(ByteSpan body, uint32_t nonce, std::string* err) {
-    auto fail = [&](const char* m) -> std::optional<std::string> { if (err) *err = m; return std::nullopt; };
+    auto fail = [&](const char* m) -> std::optional<std::string> {
+        if (err) *err = m;
+        return std::nullopt;
+    };
     if (body.size() < 2) return fail("hub: DownloadKey reply too short");
     Bytes dec(body.begin(), body.end());
     hubUnscramble(dec, nonce);
@@ -107,13 +128,16 @@ std::optional<std::string> parseDownloadKeyReply(ByteSpan body, uint32_t nonce, 
     return text.substr(i, j - i + 7);
 }
 
-std::optional<ChallengeAnswer> mintChallengeAnswer(ByteSpan challenge, std::string_view accountId, uint32_t installId, uint32_t innerKey,
-                                                   ByteSpan padPlain, std::string* err) {
+std::optional<ChallengeAnswer> mintChallengeAnswer(ByteSpan challenge, std::string_view accountId, uint32_t installId,
+                                                   uint32_t innerKey, ByteSpan padPlain, std::string* err) {
     if (challenge.size() < 16) {
         if (err) *err = "hub: 0x42 challenge too short (" + std::to_string(challenge.size()) + " bytes, want >=16)";
         return std::nullopt;
     }
-    if (padPlain.size() % 4 || padPlain.size() < 8 || padPlain.size() > 44) { if (err) *err = "pad must be 2..11 u32 words"; return std::nullopt; }
+    if (padPlain.size() % 4 || padPlain.size() < 8 || padPlain.size() > 44) {
+        if (err) *err = "pad must be 2..11 u32 words";
+        return std::nullopt;
+    }
     uint32_t nonce = le32(&challenge[12]);
     ChallengeAnswer r;
     for (size_t i = 0; i < padPlain.size(); i += 4) r.sigmaPad += le32(&padPlain[i]);
@@ -134,7 +158,8 @@ std::optional<ChallengeAnswer> mintChallengeAnswer(ByteSpan challenge, std::stri
     return r;
 }
 
-std::optional<ChallengeAnswer> mintChallengeAnswerRandom(ByteSpan challenge, std::string_view accountId, uint32_t installId, uint32_t innerKey, std::string* err) {
+std::optional<ChallengeAnswer> mintChallengeAnswerRandom(ByteSpan challenge, std::string_view accountId,
+                                                         uint32_t installId, uint32_t innerKey, std::string* err) {
     std::random_device rd;
     int count = int(rd() % 10) + 2;
     Bytes pad;
@@ -153,7 +178,10 @@ uint32_t rekey(std::string_view cert, uint32_t seed) {
     if (cert.size() <= 2) return seed;
     // sscanf(cert, "%2x"): up to two leading hex digits, at least one.
     int n = 0, cnt = 0;
-    while (cnt < 2 && cnt < int(cert.size()) && hexDigit(cert[cnt]) >= 0) { n = n * 16 + hexDigit(cert[cnt]); cnt++; }
+    while (cnt < 2 && cnt < int(cert.size()) && hexDigit(cert[cnt]) >= 0) {
+        n = n * 16 + hexDigit(cert[cnt]);
+        cnt++;
+    }
     if (cnt == 0) return seed;
     if (size_t(n) * 8 + 2 > cert.size()) return seed;
     uint32_t result = 0;
@@ -162,7 +190,10 @@ uint32_t rekey(std::string_view cert, uint32_t seed) {
         int idx = int(float(byteVal) * float(n * 8) * (1.0f / 256.0f));
         size_t pos = 2 + size_t(idx);
         int nib = 0;
-        if (pos < cert.size()) { int v = hexDigit(cert[pos]); if (v >= 0) nib = v; }
+        if (pos < cert.size()) {
+            int v = hexDigit(cert[pos]);
+            if (v >= 0) nib = v;
+        }
         result |= uint32_t(nib) << shift;
     }
     return result;
@@ -182,14 +213,15 @@ std::string generateCertStr() {
     std::random_device rd;
     return certStrFrom(rd(), rd(), rd());
 }
-std::string cauthName(std::string_view accountKey, std::string_view serverAddr) { return ckey(accountKey) + "@" + std::string(serverAddr); }
+std::string cauthName(std::string_view accountKey, std::string_view serverAddr) {
+    return ckey(accountKey) + "@" + std::string(serverAddr);
+}
 Bytes encodeCertResponseCached(std::string_view certStr, std::string_view pp) {
     Bytes b{1};
     putStr0(b, certStr);
     putStr0(b, pp);
     return b;
 }
-
 
 Bytes buildCertMintRequest(uint32_t cauthKey, std::string_view certStr, uint32_t key5e) {
     Bytes b;
@@ -201,8 +233,11 @@ Bytes buildCertMintRequest(uint32_t cauthKey, std::string_view certStr, uint32_t
 }
 
 std::optional<uint32_t> parseHubTokenReply(ByteSpan body, uint32_t key5e, std::string* err) {
-    if (body.size() < 2) { if (err) *err = "hub: 0x0043 reply too short (" + std::to_string(body.size()) + " bytes)"; return std::nullopt; }
-    Bytes p(body.begin(), body.end() - 1);   // the trailing sum byte is dropped unchecked
+    if (body.size() < 2) {
+        if (err) *err = "hub: 0x0043 reply too short (" + std::to_string(body.size()) + " bytes)";
+        return std::nullopt;
+    }
+    Bytes p(body.begin(), body.end() - 1);  // the trailing sum byte is dropped unchecked
     hubUnscramble(p, key5e);
     std::string text;
     for (size_t i = 1; i < p.size() && p[i]; i++) text.push_back(char(p[i]));
@@ -210,7 +245,7 @@ std::optional<uint32_t> parseHubTokenReply(ByteSpan body, uint32_t key5e, std::s
         if (err) *err = "hub: refused (code=" + std::to_string(p[0]) + " text=\"" + text + "\")";
         return std::nullopt;
     }
-    uint64_t v = 0;   // hex digits only, no prefix, value fits 32 bits
+    uint64_t v = 0;  // hex digits only, no prefix, value fits 32 bits
     for (char c : text) {
         int d = hexDigit(c);
         if (d < 0 || (v = v * 16 + uint64_t(d)) > 0xffffffffull) {

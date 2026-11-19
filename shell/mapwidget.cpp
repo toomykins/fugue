@@ -15,7 +15,7 @@ MapWidget::MapWidget(QWidget* parent) : QWidget(parent) {
     setFocusPolicy(Qt::StrongFocus);
     setAttribute(Qt::WA_OpaquePaintEvent);
     setObjectName("map");
-    setMouseTracking(true);   // button-less motion too, for the status bar's hover name (updateHover)
+    setMouseTracking(true);  // button-less motion too, for the status bar's hover name (updateHover)
 }
 
 void MapWidget::setFrame(const QImage& img, HitPtr hit) {
@@ -26,14 +26,19 @@ void MapWidget::setFrame(const QImage& img, HitPtr hit) {
     hit_ = std::move(hit);
     shown_++;
     // A new frame can move a different atom under a still pointer, so the hover is re-resolved on every frame.
-    if (hovering_ && updateHover() && !QGuiApplication::mouseButtons()) emitHover(hoverPos_, QGuiApplication::keyboardModifiers(), false);
+    if (hovering_ && updateHover() && !QGuiApplication::mouseButtons())
+        emitHover(hoverPos_, QGuiApplication::keyboardModifiers(), false);
     update();
 }
 
 void MapWidget::setExternalView(QWidget* view, QWindow* window) {
     externalView_ = view;
     externalWindow_ = window;
-    if (view) { view->setParent(this); view->setGeometry(rect()); clipExternalView(); }
+    if (view) {
+        view->setParent(this);
+        view->setGeometry(rect());
+        clipExternalView();
+    }
 }
 
 void MapWidget::clipExternalView() {
@@ -41,8 +46,11 @@ void MapWidget::clipExternalView() {
     if (!externalWindow_ || !parent) return;
     QRegion shown(rect());
     bool above = false;
-    for (QObject* o : parent->children()) {   // bottom of the stack first
-        if (o == this) { above = true; continue; }
+    for (QObject* o : parent->children()) {  // bottom of the stack first
+        if (o == this) {
+            above = true;
+            continue;
+        }
         auto* w = qobject_cast<QWidget*>(o);
         if (above && w && !w->isWindow() && !w->isHidden()) shown -= w->geometry().translated(-pos());
     }
@@ -57,12 +65,16 @@ void MapWidget::setExternalFrame(QSize size, HitPtr hit, std::function<QImage()>
     hit_ = std::move(hit);
     ++shown_;
     if (externalView_) externalView_->show();
-    if (hovering_ && updateHover() && !QGuiApplication::mouseButtons()) emitHover(hoverPos_, QGuiApplication::keyboardModifiers(), false);
+    if (hovering_ && updateHover() && !QGuiApplication::mouseButtons())
+        emitHover(hoverPos_, QGuiApplication::keyboardModifiers(), false);
 }
 
 void MapWidget::resizeEvent(QResizeEvent* event) {
     QWidget::resizeEvent(event);
-    if (externalView_) { externalView_->setGeometry(rect()); clipExternalView(); }
+    if (externalView_) {
+        externalView_->setGeometry(rect());
+        clipExternalView();
+    }
     emit presentationChanged();
 }
 
@@ -90,7 +102,8 @@ QRect MapWidget::imageRect(QSize sourceSize) const {
     if (sourceSize.isEmpty()) sourceSize = frameSize_;
     if (sourceSize.isEmpty()) return {};
     double s = scaleF(sourceSize);
-    int w = std::max(1, int(std::lround(sourceSize.width() * s))), h = std::max(1, int(std::lround(sourceSize.height() * s)));
+    int w = std::max(1, int(std::lround(sourceSize.width() * s))),
+        h = std::max(1, int(std::lround(sourceSize.height() * s)));
     return QRect((width() - w) / 2, (height() - h) / 2, w, h);
 }
 
@@ -179,20 +192,28 @@ static int x11Button(Qt::MouseButton b) {
 // not seen.
 std::optional<bool> MapWidget::positionsKnown_;
 
-MapWidget::Target MapWidget::targetAt(const QPoint& globalPos) const {
+MapWidget::Target MapWidget::targetAt(const QPoint& globalPos) const { return targetAtGlobal(globalPos, window()); }
+
+// top: the window whose coordinates the global position is in, where the platform does not say where windows are.
+MapWidget::Target MapWidget::targetAtGlobal(const QPoint& globalPos, const QWidget* top) {
     Target t;
     const QWidget* w = nullptr;
     if (positionsKnown_.value_or(!QGuiApplication::platformName().startsWith("wayland"))) {
         w = QApplication::widgetAt(globalPos);
-    } else {
-        const QWidget* top = window();
+    } else if (top) {
         const QPoint p = top->mapFromGlobal(globalPos);
         if (top->rect().contains(p)) w = top->childAt(p) ? top->childAt(p) : top;
     }
     for (; w; w = w->parentWidget()) {
-        if (auto* m = qobject_cast<const MapWidget*>(w)) { t.map = m; return t; }
+        if (auto* m = qobject_cast<const MapWidget*>(w)) {
+            t.map = m;
+            return t;
+        }
         QVariant id = w->property("fugueControl");
-        if (id.isValid()) { t.control = id.toString().toStdString(); return t; }
+        if (id.isValid()) {
+            t.control = id.toString().toStdString();
+            return t;
+        }
     }
     return t;
 }
@@ -210,51 +231,35 @@ void MapWidget::emitPointer(MapPointer::Kind k, QMouseEvent* e, int button) {
         mp.control = t.map->controlId_;
         // Over the letterbox the pixel is extrapolated: nothing is named there (render::MouseChain). A map with no scene
         // yet is all empty area, with no cell.
-        if (!t.map->hit_ || !t.map->toImage(t.map->mapFromGlobal(g), mp.ev.imgX, mp.ev.imgY, /*extrapolate=*/true)) mp.scene = {};
+        if (!t.map->hit_ || !t.map->toImage(t.map->mapFromGlobal(g), mp.ev.imgX, mp.ev.imgY, /*extrapolate=*/true))
+            mp.scene = {};
     } else {
         mp.offMap = true;
         mp.control = t.control;
     }
-    mp.ev.winX = g.x();   // screen pixels: one frame for a press on one control and the motion over another
+    mp.ev.winX = g.x();  // screen pixels: one frame for a press on one control and the motion over another
     mp.ev.winY = g.y();
     mp.ev.button = button;
     mp.ev.mods.ctrl = e->modifiers() & Qt::ControlModifier;
     mp.ev.mods.shift = e->modifiers() & Qt::ShiftModifier;
     mp.ev.mods.alt = e->modifiers() & Qt::AltModifier;
-    mp.ev.tMs = qint64(e->timestamp());   // Qt's event clock (ms); only relative timing matters
+    mp.ev.tMs = qint64(e->timestamp());  // Qt's event clock (ms); only relative timing matters
     emit pointer(mp);
 }
 
 void MapWidget::mousePressEvent(QMouseEvent* e) {
     setFocus(Qt::MouseFocusReason);
     int b = x11Button(e->button());
-    if (b == 0 || heldButton_) return;   // wheel and extra buttons; a second button while one is held is ignored
-    if (b == 3 && !rightClickToWire()) {
+    if (b == 0 || heldButton_) return;  // wheel and extra buttons; a second button while one is held is ignored
+    if (b == 3 && (consumedPress_ || !rightClickToWire())) {
+        consumedPress_ = false;
         // Stock DreamSeeker answers the right button locally unless the map declares right-click = true or the world
-        // turned client.show_popup_menus off.
-        int ix, iy;
-        QString name;
-        if (hit_ && toImage(e->position().toPoint(), ix, iy, false)) {
-            fugue::render::Naming n;
-            if (fugue::render::nameMouse(*hit_, ix, iy, n)) name = QString::fromStdString(n.hit.name);
-        }
-        emit localMenuRequested(e->globalPosition().toPoint(), name);
-        MapPointer mp;
-        mp.kind = MapPointer::Press;
-        mp.scene = hit_;
-        mp.control = controlId_;
-        if (toImage(e->position().toPoint(), mp.ev.imgX, mp.ev.imgY, false)) {
-            mp.ev.winX = e->globalPosition().toPoint().x(); mp.ev.winY = e->globalPosition().toPoint().y();
-            mp.ev.button = 3;
-            mp.ev.mods.ctrl = e->modifiers() & Qt::ControlModifier;
-            mp.ev.mods.shift = e->modifiers() & Qt::ShiftModifier;
-            mp.ev.mods.alt = e->modifiers() & Qt::AltModifier;
-            emit localMenuPointer(e->globalPosition().toPoint(), mp);
-        }
+        // turned client.show_popup_menus off; what it does is decided at the release (mouseReleaseEvent).
+        localPress_ = true;
         return;
     }
     int ix, iy;
-    if (!toImage(e->position().toPoint(), ix, iy, false)) return;   // on the letterbox
+    if (!toImage(e->position().toPoint(), ix, iy, false)) return;  // on the letterbox
     heldButton_ = b;
     emitPointer(MapPointer::Press, e, b);
 }
@@ -275,8 +280,8 @@ bool MapWidget::updateHover() {
             key = HoverKey{true, h.screen, h.kind, h.ref, h.worldX, h.worldY};
         }
     }
-    bool changed = key.hit != hoverKey_.hit || key.screen != hoverKey_.screen || key.kind != hoverKey_.kind || key.ref != hoverKey_.ref ||
-                   key.x != hoverKey_.x || key.y != hoverKey_.y;
+    bool changed = key.hit != hoverKey_.hit || key.screen != hoverKey_.screen || key.kind != hoverKey_.kind ||
+                   key.ref != hoverKey_.ref || key.x != hoverKey_.x || key.y != hoverKey_.y;
     hoverKey_ = key;
     if (name != hoverName_) {
         hoverName_ = name;
@@ -303,7 +308,7 @@ uint64_t MapWidget::leaves_ = 0;
 
 // A hover report for the session thread (render::HoverTracker decides what reaches the wire). Motion to the image pixel
 // last posted is dropped here, unless a map's leave was posted since (it ends the hover the step would continue).
-void MapWidget::emitHover(const QPoint& pos, Qt::KeyboardModifiers mods, bool motion) {
+void MapWidget::emitHover(const QPoint& pos, Qt::KeyboardModifiers mods, bool motion, int button) {
     MapPointer mp;
     mp.kind = MapPointer::Hover;
     mp.scene = hit_;
@@ -311,23 +316,45 @@ void MapWidget::emitHover(const QPoint& pos, Qt::KeyboardModifiers mods, bool mo
     mp.motion = motion;
     if (!wantsHover() || !unclampedImage(pos, mp.ev.imgX, mp.ev.imgY)) return;
     if (motion && hoverSent_ && hoverLeaves_ == leaves_ && mp.ev.imgX == hoverImgX_ && mp.ev.imgY == hoverImgY_) return;
-    hoverSent_ = true; hoverImgX_ = mp.ev.imgX; hoverImgY_ = mp.ev.imgY; hoverLeaves_ = leaves_;
+    hoverSent_ = true;
+    hoverImgX_ = mp.ev.imgX;
+    hoverImgY_ = mp.ev.imgY;
+    hoverLeaves_ = leaves_;
     hoverLive_ = hit_->clientHover || hit_->anyHover;
     const QPoint g = mapToGlobal(pos);
-    mp.ev.winX = g.x(); mp.ev.winY = g.y();
-    mp.ev.button = 0;
+    mp.ev.winX = g.x();
+    mp.ev.winY = g.y();
+    mp.ev.button = button;
     mp.ev.mods.ctrl = mods & Qt::ControlModifier;
     mp.ev.mods.shift = mods & Qt::ShiftModifier;
     mp.ev.mods.alt = mods & Qt::AltModifier;
     emit pointer(mp);
 }
 
+void MapWidget::popupClosed() {
+    QTimer::singleShot(0, this, [this] {
+        if (QApplication::activePopupWidget()) return;
+        reportHoverAfterPopup(QCursor::pos(), QGuiApplication::mouseButtons() & Qt::RightButton);
+    });
+}
+
+void MapWidget::reportHoverAfterPopup(const QPoint& globalPos, bool rightHeld) {
+    if (targetAt(globalPos).map != this) return;
+    hovering_ = true;
+    hoverPos_ = mapFromGlobal(globalPos);
+    updateHover();
+    hoverSent_ = false;
+    emitHover(hoverPos_, QGuiApplication::keyboardModifiers(), false, rightHeld ? 3 : 0);
+}
+
 void MapWidget::mouseMoveEvent(QMouseEvent* e) {
     hovering_ = true;
     hoverPos_ = e->position().toPoint();
     updateHover();
-    if (heldButton_) emitPointer(MapPointer::Move, e, heldButton_);
-    else if (!e->buttons()) emitHover(hoverPos_, e->modifiers(), true);   // stock sends no hover report while a button is held
+    if (heldButton_)
+        emitPointer(MapPointer::Move, e, heldButton_);
+    else if (!e->buttons())
+        emitHover(hoverPos_, e->modifiers(), true);  // stock sends no hover report while a button is held
 }
 
 void MapWidget::enterEvent(QEnterEvent* e) {
@@ -340,8 +367,10 @@ void MapWidget::leaveEvent(QEvent* e) {
     hovering_ = false;
     updateHover();
     hoverSent_ = false;
-    if (skipLeave_) skipLeave_ = false;
-    else leaveSoon();
+    if (skipLeave_)
+        skipLeave_ = false;
+    else
+        leaveSoon();
     QWidget::leaveEvent(e);
 }
 
@@ -350,7 +379,10 @@ void MapWidget::leaveEvent(QEvent* e) {
 void MapWidget::leaveSoon() {
     QTimer::singleShot(0, this, [this] {
         if (QWidget* pop = QApplication::activePopupWidget()) {
-            if (heldPopup_ != pop) { pop->installEventFilter(this); heldPopup_ = pop; }
+            if (heldPopup_ != pop) {
+                pop->installEventFilter(this);
+                heldPopup_ = pop;
+            }
             return;
         }
         MapPointer mp;
@@ -372,10 +404,121 @@ bool MapWidget::eventFilter(QObject* o, QEvent* ev) {
 
 void MapWidget::mouseReleaseEvent(QMouseEvent* e) {
     int b = x11Button(e->button());
+    if (b == 3 && localPress_ && !heldButton_) {
+        finishRightRelease(e->globalPosition().toPoint(), e->modifiers(), qint64(e->timestamp()));
+        return;
+    }
     if (!heldButton_ || b != heldButton_) return;
     heldButton_ = 0;
     if (targetAt(e->globalPosition().toPoint()).map != this) skipLeave_ = true;
     emitPointer(MapPointer::Release, e, b);
+}
+
+// The release of a right press answered locally. The flag is read now: still TRUE opens the menu, FALSE sends the
+// MouseUp and Click of a press that never went out.
+void MapWidget::finishRightRelease(const QPoint& g, Qt::KeyboardModifiers mods, qint64 tMs) {
+    localPress_ = false;
+    if (rightClickToWire()) {
+        MapPointer mp;
+        mp.kind = MapPointer::Release;
+        mp.pressUnsent = true;
+        if (Target t = targetAt(g); t.map) {
+            mp.scene = t.map->hit_;
+            mp.control = t.map->controlId_;
+            if (!t.map->hit_ || !t.map->toImage(t.map->mapFromGlobal(g), mp.ev.imgX, mp.ev.imgY, true)) mp.scene = {};
+        } else {
+            mp.offMap = true;
+            mp.control = t.control;
+        }
+        mp.ev.winX = g.x();
+        mp.ev.winY = g.y();
+        mp.ev.button = 3;
+        mp.ev.mods.ctrl = mods & Qt::ControlModifier;
+        mp.ev.mods.shift = mods & Qt::ShiftModifier;
+        mp.ev.mods.alt = mods & Qt::AltModifier;
+        mp.ev.tMs = tMs;
+        emit pointer(mp);
+        return;
+    }
+    int ix = 0, iy = 0;
+    const bool onImage = toImage(mapFromGlobal(g), ix, iy, false);
+    QString name;
+    fugue::render::Naming n;
+    if (hit_ && onImage && fugue::render::nameMouse(*hit_, ix, iy, n)) name = QString::fromStdString(n.hit.name);
+    emit localMenuRequested(g, name);
+    if (!onImage) return;  // on the letterbox: no verb menu
+    MapPointer mp;
+    mp.kind = MapPointer::Press;
+    mp.scene = hit_;
+    mp.control = controlId_;
+    mp.ev.imgX = ix;
+    mp.ev.imgY = iy;
+    mp.ev.winX = g.x();
+    mp.ev.winY = g.y();
+    mp.ev.button = 3;
+    mp.ev.mods.ctrl = mods & Qt::ControlModifier;
+    mp.ev.mods.shift = mods & Qt::ShiftModifier;
+    mp.ev.mods.alt = mods & Qt::AltModifier;
+    emit localMenuPointer(g, mp);
+}
+
+// A right press outside the open verb menu. Qt's popup grab closes the menu on it and the press never reaches the map, nor
+// does its release; stock consumes the press and lets the release act as a right release of its own. The gate sees both
+// at the application level: it records the press (the map under it), and takes the release as that map's.
+class PopupGate : public QObject {
+public:
+    QPointer<QMenu> menu;
+    QPointer<MapWidget> pressMap;
+    bool armed = false;
+    ulong pressTs = 0;
+
+    bool insideMenu(const QPoint& g) const {
+        for (QWidget* w : QApplication::topLevelWidgets())
+            if (auto* m = qobject_cast<QMenu*>(w); m && m->isVisible() && m->geometry().contains(g)) return true;
+        return false;
+    }
+    bool ourPopup() const {
+        QWidget* pop = QApplication::activePopupWidget();
+        return pop && menu && (pop == menu || menu->isAncestorOf(pop));
+    }
+    bool eventFilter(QObject*, QEvent* ev) override {
+        const QEvent::Type t = ev->type();
+        if (t != QEvent::MouseButtonPress && t != QEvent::MouseButtonRelease) return false;
+        auto* e = static_cast<QMouseEvent*>(ev);
+        if (e->button() != Qt::RightButton) return false;
+        const QPoint g = e->globalPosition().toPoint();
+        if (t == QEvent::MouseButtonPress) {
+            if (armed && e->timestamp() == pressTs) return false;  // the same press is seen once per receiver
+            armed = false;
+            MapWidget::consumedPress_ = false;
+            if (!ourPopup() || insideMenu(g)) return false;
+            pressMap = nullptr;
+            if (MapWidget::Target tg = MapWidget::targetAtGlobal(g, QApplication::activeWindow()); tg.map)
+                pressMap = const_cast<MapWidget*>(tg.map);
+            if (!pressMap) return false;
+            armed = true;
+            pressTs = e->timestamp();
+            MapWidget::consumedPress_ = true;
+            return false;  // Qt closes the menu on it
+        }
+        if (!armed) return false;
+        armed = false;
+        MapWidget::consumedPress_ = false;
+        MapWidget* m = pressMap;
+        pressMap = nullptr;
+        if (!m || m->localPress_) return false;  // the press was replayed to the map: its own release handles it
+        m->finishRightRelease(g, e->modifiers(), qint64(e->timestamp()));
+        return true;
+    }
+};
+
+void MapWidget::watchPopup(QMenu* menu) {
+    static PopupGate* gate = [] {
+        auto* g = new PopupGate;
+        qApp->installEventFilter(g);
+        return g;
+    }();
+    gate->menu = menu;
 }
 
 // One frame per wheel event, as stock DreamSeeker sends one per WM_MOUSEWHEEL. Over the letterbox the image position

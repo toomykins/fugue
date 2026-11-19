@@ -3,6 +3,8 @@
 // (skin/skinfeed.h), so the window keeps its controls and macros.
 #pragma once
 
+class QString;
+
 namespace fugue::shell {
 
 class FocusFilter;
@@ -14,5 +16,7 @@ void applySkinMacros(const SkinWindow& win, FocusFilter& filt);
 // The window syncs from the live skin and the macros are applied. Only the first skin sizes the window (sized): a reboot
 // or a link() keeps the player's window size.
 void worldSkinLoaded(SkinWindow& win, FocusFilter& filt, bool& sized);
+// A --size WxH from the command line: the window takes it, and counts as sized so no skin overrides it.
+bool applyUserSize(SkinWindow& win, const QString& wxh, bool& sized);
 
 }  // namespace fugue::shell

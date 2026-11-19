@@ -1,0 +1,13 @@
+# Stock DreamSeeker 516.1684 (wine) vs stock DreamDaemon 516, camera shift of the view when client.eye (a mob with
+# glide_size 0) steps east one tile, measured on 50 Hz video of the pixel oracle (issue27 contrast world:
+# world.fps 10, icon_size 32, view 5; the eye mob is moved with loc= or Move(); `iso` = one step then 4.5 s of rest,
+# `held` = one step per tick, 14 steps). Each value is the shift in tiles, relative to the position before the first
+# step, as drawn during tick n (stock redraws once per tick; the plateau value is read). Accuracy about 0.01 tile.
+# Columns: mode (LEGACY|PIXEL), kind (iso|held), then the values for ticks 0, 1, 2, ...
+# iso, glide_size 0: 4 px per tick for 8 ticks (the plain tiles-per-tick figure would be 1.0 in tick 0).
+# held, glide_size 0, LEGACY: 4, 6, 8, 10, 12, 14 px per tick (the rate grows by 2 per move landing mid-glide).
+# held, glide_size 0, PIXEL: the rate stays 4 px per tick and the offset catches up; it is bounded at two tiles.
+LEGACY iso  0.12 0.25 0.37 0.51 0.63 0.74 0.88 1.00
+PIXEL  iso  0.12 0.25 0.37 0.51 0.63 0.74 0.88 1.00
+LEGACY held 0.12 1.19 2.25 3.32 4.38 5.43
+PIXEL  held 0.12 0.37 1.25 2.25 3.24 4.26 5.26

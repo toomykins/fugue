@@ -10,15 +10,21 @@ const char* buttonName(int b) { return b == 1 ? "left" : b == 2 ? "middle" : b =
 enc::ClickCmd clickCmdFrom(const Naming& n, int x11Button, const enc::Mods& mods, const std::string& control) {
     enc::ClickCmd c;
     c.sub = enc::kMouseClick;
-    c.over = n.overKind == 3 ? enc::turfRef(n.overX, n.overY)
-           : n.overKind == 7 ? enc::AtomRef{enc::RefTurfId, n.overRef, 0, 0}
-           : n.overKind == 2 ? enc::mobRef(n.overRef) : enc::objRef(n.overRef);
+    c.over = n.overKind == 3   ? enc::turfRef(n.overX, n.overY)
+             : n.overKind == 7 ? enc::AtomRef{enc::RefTurfId, n.overRef, 0, 0}
+             : n.overKind == 2 ? enc::mobRef(n.overRef)
+                               : enc::objRef(n.overRef);
     c.loc = n.locNull ? enc::nullRef() : enc::turfRef(n.locX, n.locY);
     c.control = control;
-    c.iconX = n.iconX; c.iconY = n.iconY;
-    c.visX = n.visX; c.visY = n.visY; c.hasVis = n.hasVis;
-    c.screenX = n.screenX; c.screenY = n.screenY;
-    c.screenPX = n.screenPX; c.screenPY = n.screenPY;
+    c.iconX = n.iconX;
+    c.iconY = n.iconY;
+    c.visX = n.visX;
+    c.visY = n.visY;
+    c.hasVis = n.hasVis;
+    c.screenX = n.screenX;
+    c.screenY = n.screenY;
+    c.screenPX = n.screenPX;
+    c.screenPY = n.screenPY;
     c.button = buttonName(x11Button);
     c.mods = mods;
     return c;
@@ -50,7 +56,10 @@ int floorDiv(int a, int b) { return a >= 0 ? a / b : -((-a + b - 1) / b); }
 void cellOf(const HitScene& s, int imgX, int imgY, int& sx, int& spx, int& sy, int& spy) {
     int fromBottom = s.pixH() - 1 - imgY;
     int tx = floorDiv(imgX, s.tileW), ty = floorDiv(fromBottom, s.tileH);
-    sx = tx + 1 + s.screenX0; spx = imgX - tx * s.tileW + 1; sy = ty + 1 + s.screenY0; spy = fromBottom - ty * s.tileH + 1;
+    sx = tx + 1 + s.screenX0;
+    spx = imgX - tx * s.tileW + 1;
+    sy = ty + 1 + s.screenY0;
+    spy = fromBottom - ty * s.tileH + 1;
 }
 
 bool sameRef(const enc::AtomRef& a, const enc::AtomRef& b) {
@@ -68,7 +77,8 @@ std::vector<Bytes> wheelFrames(const PointerEvent& e, const ChainEnv& env, int d
     if (!env.clientWheel && !(named && n.hit.wheel)) return out;
 
     enc::WheelCmd w;
-    w.dx = float(deltaX); w.dy = float(deltaY);
+    w.dx = float(deltaX);
+    w.dy = float(deltaY);
     w.control = env.control;
     w.location = shortId(env.control);
     std::string p;
@@ -78,7 +88,10 @@ std::vector<Bytes> wheelFrames(const PointerEvent& e, const ChainEnv& env, int d
         w.over = c.over;
         p = "icon-x=" + std::to_string(n.iconX) + ";icon-y=" + std::to_string(n.iconY) + ";";
         if (n.hasVis) p += "vis-x=" + std::to_string(n.visX) + ";vis-y=" + std::to_string(n.visY) + ";";
-        sx = n.screenX; spx = n.screenPX; sy = n.screenY; spy = n.screenPY;
+        sx = n.screenX;
+        spx = n.screenPX;
+        sy = n.screenY;
+        spy = n.screenPY;
     } else {
         cellOf(s, e.imgX, e.imgY, sx, spx, sy, spy);
     }
@@ -87,8 +100,8 @@ std::vector<Bytes> wheelFrames(const PointerEvent& e, const ChainEnv& env, int d
     if (e.mods.ctrl) p += "ctrl=1;";
     if (e.mods.shift) p += "shift=1;";
     if (e.mods.alt) p += "alt=1;";
-    p += "screen-loc=" + enc::mapIdParam(w.location) + ":" + std::to_string(sx) + ":" + std::to_string(spx) + "," + std::to_string(sy) + ":" +
-         std::to_string(spy);
+    p += "screen-loc=" + enc::mapIdParam(w.location) + ":" + std::to_string(sx) + ":" + std::to_string(spx) + "," +
+         std::to_string(sy) + ":" + std::to_string(spy);
     w.params = p;
     out.push_back(enc::encodeWheelCmd(w));
     return out;
@@ -104,21 +117,27 @@ std::vector<Bytes> HoverTracker::at(const PointerEvent& e, const ChainEnv& env, 
     std::string params, locStr = s.secondary ? shortId(env.control) : std::string();
     bool want = env.clientHover, moves = false;
     if (nameMouse(s, e.imgX, e.imgY, n)) {
-        enc::ClickCmd c = clickCmdFrom(n, 0, e.mods, env.control);
+        enc::ClickCmd c = clickCmdFrom(n, e.button == 3 ? 3 : 0, e.mods, env.control);
         onSecondary(c, env, /*fullId=*/false);
-        over = c.over; loc = c.loc;
+        over = c.over;
+        loc = c.loc;
         params = enc::hoverParams(c);
         want = want || env.clientMove || n.hit.hover;
         moves = env.clientMove || n.hit.mouseMove;
     } else {
         int sx, spx, sy, spy;
         cellOf(s, e.imgX, e.imgY, sx, spx, sy, spy);
-        params = "screen-loc=" + (locStr.empty() ? std::string() : enc::mapIdParam(locStr) + ":") + std::to_string(sx) + ":" +
-                 std::to_string(spx) + "," + std::to_string(sy) + ":" + std::to_string(spy);
+        params = "screen-loc=" + (locStr.empty() ? std::string() : enc::mapIdParam(locStr) + ":") + std::to_string(sx) +
+                 ":" + std::to_string(spx) + "," + std::to_string(sy) + ":" + std::to_string(spy);
     }
     bool same = have_ && sameRef(over, over_) && control_ == env.control;
     bool send = same ? motion && moves && params != params_ : want || wanted_;
-    if (!same) { over_ = over; control_ = env.control; wanted_ = want; have_ = true; }
+    if (!same) {
+        over_ = over;
+        control_ = env.control;
+        wanted_ = want;
+        have_ = true;
+    }
     if (motion || !same) params_ = params;
     if (send) out.push_back(enc::encodeHover(over, loc, env.control, params, locStr));
     return out;
@@ -139,8 +158,16 @@ void HoverTracker::forget() {
 
 std::vector<Bytes> MouseChain::press(const PointerEvent& e, const ChainEnv& env) {
     std::vector<Bytes> out;
-    if (!wired(e.button, env)) { note_ = "unwired"; held_ = false; return out; }
-    held_ = true; dragging_ = false; button_ = e.button; pressWinX_ = e.winX; pressWinY_ = e.winY;
+    if (!wired(e.button, env)) {
+        note_ = "unwired";
+        held_ = false;
+        return out;
+    }
+    held_ = true;
+    dragging_ = false;
+    button_ = e.button;
+    pressWinX_ = e.winX;
+    pressWinY_ = e.winY;
     dragActive_ = dragMoved_ = false;
 
     // The double-click detector is window-pixel + button + time, independent of the hit.
@@ -148,17 +175,32 @@ std::vector<Bytes> MouseChain::press(const PointerEvent& e, const ChainEnv& env)
     if (haveLast_ && e.button == lastBtn_ && e.tMs - lastAt_ <= kDblWindowMs && e.tMs >= lastAt_ &&
         distSq(e.winX, e.winY, lastWinX_, lastWinY_) < int64_t(kDragThresholdPx) * kDragThresholdPx) {
         dbl = true;
-        haveLast_ = false;   // consumed: a third rapid press starts a fresh pair
+        haveLast_ = false;  // consumed: a third rapid press starts a fresh pair
     } else {
-        haveLast_ = true; lastAt_ = e.tMs; lastWinX_ = e.winX; lastWinY_ = e.winY; lastBtn_ = e.button;
+        haveLast_ = true;
+        lastAt_ = e.tMs;
+        lastWinX_ = e.winX;
+        lastWinY_ = e.winY;
+        lastBtn_ = e.button;
     }
 
     enc::ClickCmd cmd;
-    if (!commandAt(e, env, cmd)) { note_ = "nohit"; return out; }
+    if (!commandAt(e, env, cmd)) {
+        note_ = "nohit";
+        return out;
+    }
     onSecondary(cmd, env, /*fullId=*/false);
-    dragActive_ = true; src_ = cmd.over; srcLoc_ = cmd.loc; srcLocStr_ = cmd.locStr; srcControl_ = cmd.control;
-    pressCmd_ = cmd; cellOk_ = true; cellX_ = cmd.screenX; cellY_ = cmd.screenY;
-    pressTileW_ = std::max(1, env.scene->tileW); pressTileH_ = std::max(1, env.scene->tileH);
+    dragActive_ = true;
+    src_ = cmd.over;
+    srcLoc_ = cmd.loc;
+    srcLocStr_ = cmd.locStr;
+    srcControl_ = cmd.control;
+    pressCmd_ = cmd;
+    cellOk_ = true;
+    cellX_ = cmd.screenX;
+    cellY_ = cmd.screenY;
+    pressTileW_ = std::max(1, env.scene->tileW);
+    pressTileH_ = std::max(1, env.scene->tileH);
     out = enc::pressFrames(cmd, env.hooks);
     note_ = out.empty() ? "down(unsubscribed)" : "down";
     if (dbl && env.hooks.dblClick) {
@@ -172,28 +214,53 @@ std::vector<Bytes> MouseChain::press(const PointerEvent& e, const ChainEnv& env)
 
 std::vector<Bytes> MouseChain::move(const PointerEvent& e, const ChainEnv& env) {
     std::vector<Bytes> out;
-    if (!held_) { note_ = "idle"; return out; }
+    if (!held_) {
+        note_ = "idle";
+        return out;
+    }
     if (!dragging_) {
-        if (distSq(e.winX, e.winY, pressWinX_, pressWinY_) < int64_t(kDragThresholdPx) * kDragThresholdPx) { note_ = "idle"; return out; }
+        if (distSq(e.winX, e.winY, pressWinX_, pressWinY_) < int64_t(kDragThresholdPx) * kDragThresholdPx) {
+            note_ = "idle";
+            return out;
+        }
         dragging_ = true;
     }
-    if (!dragActive_) { note_ = "nohit"; return out; }
+    if (!dragActive_) {
+        note_ = "nohit";
+        return out;
+    }
     dragMoved_ = true;  // a drag is marked whether or not drags are subscribed
-    if (!env.hooks.drag) { note_ = "drag(unsubscribed)"; return out; }
+    if (!env.hooks.drag) {
+        note_ = "drag(unsubscribed)";
+        return out;
+    }
     enc::ClickCmd cmd;
-    PointerEvent pe = e; pe.button = button_;
+    PointerEvent pe = e;
+    pe.button = button_;
     if (env.offMap || !commandAt(pe, env, cmd)) {
         out = dragOff(pe, env, /*drop=*/false);
         note_ = out.empty() ? "drag(nohit)" : "drag(off)";
         return out;
     }
-    cellOk_ = true; cellX_ = cmd.screenX; cellY_ = cmd.screenY;
+    cellOk_ = true;
+    cellX_ = cmd.screenX;
+    cellY_ = cmd.screenY;
     onSecondary(cmd, env, /*fullId=*/true);
     enc::DragCmd d;
-    d.drop = false; d.src = src_; d.srcLoc = srcLoc_; d.srcLocStr = srcLocStr_; d.over = cmd.over; d.overLoc = cmd.loc;
+    d.drop = false;
+    d.src = src_;
+    d.srcLoc = srcLoc_;
+    d.srcLocStr = srcLocStr_;
+    d.over = cmd.over;
+    d.overLoc = cmd.loc;
     d.overLocStr = cmd.locStr;
-    if (cmd.over.kind == enc::RefTurf && !cmd.locStr.empty()) { d.overLoc = cmd.over; d.overLocStr.clear(); }   // a turf by cell is its own location
-    d.srcControl = srcControl_; d.overControl = cmd.control; d.params = enc::clickParams(cmd);
+    if (cmd.over.kind == enc::RefTurf && !cmd.locStr.empty()) {
+        d.overLoc = cmd.over;
+        d.overLocStr.clear();
+    }  // a turf by cell is its own location
+    d.srcControl = srcControl_;
+    d.overControl = cmd.control;
+    d.params = enc::clickParams(cmd);
     out.push_back(enc::encodeDragCmd(d));
     note_ = "drag";
     return out;
@@ -201,13 +268,17 @@ std::vector<Bytes> MouseChain::move(const PointerEvent& e, const ChainEnv& env) 
 
 std::vector<Bytes> MouseChain::release(const PointerEvent& e, const ChainEnv& env) {
     std::vector<Bytes> out;
-    if (!held_) { note_ = "idle"; return out; }
+    if (!held_) {
+        note_ = "idle";
+        return out;
+    }
     bool active = dragActive_, moved = dragMoved_;
     enc::AtomRef src = src_, srcLoc = srcLoc_;
     std::string srcCtl = srcControl_, srcLocStr = srcLocStr_;
     int btn = button_;
     held_ = dragging_ = dragActive_ = dragMoved_ = false;
-    PointerEvent pe = e; pe.button = btn;
+    PointerEvent pe = e;
+    pe.button = btn;
     enc::ClickCmd cmd;
     if (env.offMap || !commandAt(pe, env, cmd)) {
         if (active && moved) out = dragOff(pe, env, /*drop=*/true);
@@ -218,21 +289,34 @@ std::vector<Bytes> MouseChain::release(const PointerEvent& e, const ChainEnv& en
     onSecondary(up, env, /*fullId=*/true);
 
     if (active && moved) {
-        if (env.hooks.up) { up.sub = enc::kMouseUp; out.push_back(enc::encodeMouseCmd(up)); }
+        if (env.hooks.up) {
+            up.sub = enc::kMouseUp;
+            out.push_back(enc::encodeMouseCmd(up));
+        }
         if (env.hooks.drop) {
             // The drop's over-location on a secondary map: a turf named by its cell is its own location; otherwise the
             // source's short id when the drop lands on the source's own map, else a turf by id itself and anything else
             // null. Its screen-loc carries the SOURCE map's short id.
             enc::DragCmd d;
-            d.drop = true; d.src = src; d.srcLoc = srcLoc; d.srcLocStr = srcLocStr; d.over = cmd.over; d.overLoc = cmd.loc;
+            d.drop = true;
+            d.src = src;
+            d.srcLoc = srcLoc;
+            d.srcLocStr = srcLocStr;
+            d.over = cmd.over;
+            d.overLoc = cmd.loc;
             if (env.scene && env.scene->secondary) {
                 d.overLoc = enc::nullRef();
-                if (cmd.over.kind == enc::RefTurf) d.overLoc = cmd.over;
-                else if (cmd.control == srcCtl) d.overLocStr = srcLocStr;
-                else if (cmd.over.kind == enc::RefTurfId) d.overLoc = cmd.over;
+                if (cmd.over.kind == enc::RefTurf)
+                    d.overLoc = cmd.over;
+                else if (cmd.control == srcCtl)
+                    d.overLocStr = srcLocStr;
+                else if (cmd.over.kind == enc::RefTurfId)
+                    d.overLoc = cmd.over;
             }
             cmd.screenLocMap = srcLocStr;
-            d.srcControl = srcCtl; d.overControl = cmd.control; d.params = enc::clickParams(cmd);
+            d.srcControl = srcCtl;
+            d.overControl = cmd.control;
+            d.params = enc::clickParams(cmd);
             out.push_back(enc::encodeDragCmd(d));
             note_ = "drop";
         } else {
@@ -242,6 +326,19 @@ std::vector<Bytes> MouseChain::release(const PointerEvent& e, const ChainEnv& en
     }
     out = enc::releaseFrames(up, env.hooks);
     note_ = "click";
+    return out;
+}
+
+std::vector<Bytes> MouseChain::releaseUnpressed(const PointerEvent& e, const ChainEnv& env) {
+    std::vector<Bytes> out;
+    enc::ClickCmd cmd;
+    if (env.offMap || !commandAt(e, env, cmd)) {
+        note_ = "nohit";
+        return out;
+    }
+    onSecondary(cmd, env, /*fullId=*/true);
+    out = enc::releaseFrames(cmd, env.hooks);
+    note_ = "click(unpressed)";
     return out;
 }
 
@@ -256,17 +353,22 @@ std::vector<Bytes> MouseChain::release(const PointerEvent& e, const ChainEnv& en
 std::vector<Bytes> MouseChain::dragOff(const PointerEvent& e, const ChainEnv& env, bool drop) {
     std::vector<Bytes> out;
     const std::string btn = buttonName(button_);
-    const std::string held = enc::infoClickParams(btn, e.mods), withIcon = enc::infoClickParams(btn, e.mods, true, pressCmd_.iconX, pressCmd_.iconY);
+    const std::string held = enc::infoClickParams(btn, e.mods),
+                      withIcon = enc::infoClickParams(btn, e.mods, true, pressCmd_.iconX, pressCmd_.iconY);
     auto at = [](const std::string& map, int x, int px, int y, int py) {
-        return ";screen-loc=" + (map.empty() ? std::string() : enc::mapIdParam(map) + ":") + std::to_string(x) + ":" + std::to_string(px) + "," +
-               std::to_string(y) + ":" + std::to_string(py);
+        return ";screen-loc=" + (map.empty() ? std::string() : enc::mapIdParam(map) + ":") + std::to_string(x) + ":" +
+               std::to_string(px) + "," + std::to_string(y) + ":" + std::to_string(py);
     };
     const int ppx = std::clamp(pressCmd_.screenPX ? pressCmd_.screenPX : pressCmd_.iconX, 1, pressTileW_);
     const int ppy = std::clamp(pressCmd_.screenPY ? pressCmd_.screenPY : pressCmd_.iconY, 1, pressTileH_);
-    const std::string srcFull = srcLocStr_.empty() ? std::string() : srcControl_;   // a secondary source's full id
+    const std::string srcFull = srcLocStr_.empty() ? std::string() : srcControl_;  // a secondary source's full id
     enc::DragCmd d;
-    d.drop = drop; d.src = src_; d.srcLoc = srcLoc_; d.srcLocStr = srcLocStr_; d.srcControl = srcControl_;
-    std::string upLoc, upControl, up;   // the MouseUp's loc string, control and params
+    d.drop = drop;
+    d.src = src_;
+    d.srcLoc = srcLoc_;
+    d.srcLocStr = srcLocStr_;
+    d.srcControl = srcControl_;
+    std::string upLoc, upControl, up;  // the MouseUp's loc string, control and params
     if (!env.offMap) {
         // A map with no scene yet (before its first picture) is its empty area, with no cell, named as a secondary map's.
         // Stock has no such state.
@@ -281,10 +383,15 @@ std::vector<Bytes> MouseChain::dragOff(const PointerEvent& e, const ChainEnv& en
         if (drop) {
             if (secondary && env.control == srcControl_) d.overLocStr = srcLocStr_;
             d.params = withIcon + cell(srcLocStr_);
-            upLoc = full; upControl = env.control; up = withIcon + cell(full);
+            upLoc = full;
+            upControl = env.control;
+            up = withIcon + cell(full);
         } else {
-            cellOk_ = s != nullptr; cellX_ = sx; cellY_ = sy;
-            d.overLocStr = full; d.overLocBlank = full.empty();
+            cellOk_ = s != nullptr;
+            cellX_ = sx;
+            cellY_ = sy;
+            d.overLocStr = full;
+            d.overLocBlank = full.empty();
             d.params = held + cell(full);
         }
     } else if (!env.control.empty()) {
@@ -294,13 +401,17 @@ std::vector<Bytes> MouseChain::dragOff(const PointerEvent& e, const ChainEnv& en
             upControl = env.control;
         } else {
             cellOk_ = false;
-            d.overLocBlank = true; d.overControl = env.control; d.params = held;
+            d.overLocBlank = true;
+            d.overControl = env.control;
+            d.params = held;
         }
     } else if (drop) {
         d.overControlNull = true;
         d.params = up = held + at({}, pressCmd_.screenX, ppx, pressCmd_.screenY, ppy);
     } else {
-        d.overControl = srcControl_; d.overLocStr = srcFull; d.overLocBlank = srcFull.empty();
+        d.overControl = srcControl_;
+        d.overLocStr = srcFull;
+        d.overLocBlank = srcFull.empty();
         d.params = held + (cellOk_ ? at(srcFull, cellX_, ppx, cellY_, ppy) : std::string());
     }
     if (drop && env.hooks.up) out.push_back(enc::encodeMouseNone(enc::kMouseUp, upLoc, upControl, up));

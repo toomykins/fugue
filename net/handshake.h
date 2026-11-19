@@ -1,10 +1,10 @@
-// Type-0x01 version handshake, the base session key, the encrypted reply, nonce and K_login.
+// The Handshake (version handshake), the base session key, the encrypted reply, nonce and K_login.
 #pragma once
 #include "net/bytes.h"
 
 namespace fugue::net {
 
-// The type-0x01 handshake body, little-endian: proto, field2, field3 (u32 each), then, when extended, extra1 and extra2
+// The Handshake body, little-endian: proto, field2, field3 (u32 each), then, when extended, extra1 and extra2
 // (u32 each), then tail (u16). 14 bytes, or 22 extended. The stock 516 client sends the extended form with proto=516,
 // field2=276, field3=<client nonce>, extra1=(build << 16) | <first seq>, extra2=0.
 struct Handshake {

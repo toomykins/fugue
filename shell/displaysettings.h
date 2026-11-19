@@ -11,7 +11,7 @@ class DisplaySettings : public QObject {
 public:
     explicit DisplaySettings(QObject* parent = nullptr);
     void addToMenu(QMenu* client);
-    void setGpuAvailable(bool available);   // the menu entries exist only in GPU builds
+    void setGpuAvailable(bool available);  // the menu entries exist only in GPU builds
     bool gpuAvailable() const { return gpuAvailable_; }
     void setUseGpu(bool enabled);
     bool useGpu() const { return useGpu_; }
@@ -23,8 +23,9 @@ signals:
     void rendererChanged(bool useGpu);
     void performanceOverlayChanged(bool enabled);
     void performanceDetailsChanged(bool enabled);
+
 private:
     bool gpuAvailable_ = false, useGpu_ = false;
     QAction *cpu_, *gpu_, *metrics_, *details_;
 };
-} // namespace fugue::shell
+}  // namespace fugue::shell

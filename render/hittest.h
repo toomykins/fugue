@@ -99,8 +99,14 @@ inline DrawKey drawKey(double layer, bool screen, int cell) {
     k.layer = float(layer);
     if (cell >= 0) k.layer = float(double(k.layer) - std::ldexp(double(cell), -18));
     if (k.layer >= 5000) {
-        if (k.layer >= 20000) { k.layer = float(double(k.layer) - 20000); k.band -= 64; }
-        if (k.layer >= 5000) { k.layer = float(double(k.layer) - 5000); k.band += 16; }
+        if (k.layer >= 20000) {
+            k.layer = float(double(k.layer) - 20000);
+            k.band -= 64;
+        }
+        if (k.layer >= 5000) {
+            k.layer = float(double(k.layer) - 5000);
+            k.band += 16;
+        }
     }
     return k;
 }
@@ -108,20 +114,21 @@ inline DrawKey drawKey(double layer, bool screen, int cell) {
 constexpr uint8_t kAtomTurf = 0, kAtomObj = 1, kAtomMob = 2;
 
 struct HitAtom {
-    std::string name;            // atom.name off the 0x0026 appearance, text-macro markers already stripped (scene.cpp)
+    std::string name;            // atom.name off its S2C::Appearance, text-macro markers already stripped (scene.cpp)
     int mouseOpacity = 1;        // decoded: ((flags >> 12) + 1) & 3
     uint8_t kind = kAtomTurf;    // kAtomTurf = no movable: the caller names the turf under the cursor
     uint32_t ref = 0;            // obj/mob ref (registry bit stripped)
     int worldX = 0, worldY = 0;  // the cell it is drawn on (1-based); 0,0 for a screen object
     // A turf on another z than the default map's (a secondary map's vis_contents): named [07][turfId], not by x,y.
     bool byId = false;
-    uint32_t turfId = 0;         // (x-1) + (y-1)*maxx + (z-1)*maxx*maxy
+    uint32_t turfId = 0;  // (x-1) + (y-1)*maxx + (z-1)*maxx*maxy
     bool screen = false;
-    uint32_t appid = 0;          // the appearance it is drawn from (the right-click menu's icon: render::appearanceIcon)
-    int dir = -1;                // the facing it is drawn with; -1 = the appearance's own
-    bool wheel = false;          // appearance flag 0x100000: the atom declares MouseWheel or MouseMove (stock sends it wheel events)
-    bool hover = false;          // appearance flag 0x800: the atom declares a Mouse proc of its own (Entered/Exited/Move/Wheel)
-    bool mouseMove = false;      // appearance flag 0x80000: the atom declares MouseMove
+    uint32_t appid = 0;  // the appearance it is drawn from (the right-click menu's icon: render::appearanceIcon)
+    int dir = -1;        // the facing it is drawn with; -1 = the appearance's own
+    bool wheel =
+        false;  // appearance flag 0x100000: the atom declares MouseWheel or MouseMove (stock sends it wheel events)
+    bool hover = false;  // appearance flag 0x800: the atom declares a Mouse proc of its own (Entered/Exited/Move/Wheel)
+    bool mouseMove = false;  // appearance flag 0x80000: the atom declares MouseMove
 };
 
 // An atom's ICON FRAME in map-image pixels: its untransformed icon rectangle where the atom is anchored (pixel offsets
@@ -139,42 +146,46 @@ struct HitFrame {
 
 struct HitLayer {
     SpritePtr sprite;
-    int x = 0, y = 0;            // top-left in the map image (HUD: inside the pass canvas)
-    int atom = -1;               // index into HitScene::atoms
-    HitFrame frame;              // map layers only
-    bool own = false;            // the atom's OWN icon (not one of its overlays/underlays): see hittest.cpp covers()
-    double plane = 0;            // the (resolved) plane it is drawn on: HUD and map layers meet by it (hitAt)
-    bool maptext = false;        // a maptext box: answers only under mouse_opacity 2, never by its ink (see "maptext" above)
-    bool footprint = false;      // a transparent stand-in for an atom's own icon that draws nothing: hitStack only, never hitAt
-    DrawKey key;                 // its draw key (drawKey): orders it against the other layers of its plane
-    bool passMouse = false;      // drawn through a PASS_MOUSE relay: answers by its alpha, not by the atom's mouse_opacity
+    int x = 0, y = 0;      // top-left in the map image (HUD: inside the pass canvas)
+    int atom = -1;         // index into HitScene::atoms
+    HitFrame frame;        // map layers only
+    bool own = false;      // the atom's OWN icon (not one of its overlays/underlays): see hittest.cpp covers()
+    double plane = 0;      // the (resolved) plane it is drawn on: HUD and map layers meet by it (hitAt)
+    bool maptext = false;  // a maptext box: answers only under mouse_opacity 2, never by its ink (see "maptext" above)
+    bool footprint =
+        false;    // a transparent stand-in for an atom's own icon that draws nothing: hitStack only, never hitAt
+    DrawKey key;  // its draw key (drawKey): orders it against the other layers of its plane
+    bool passMouse = false;  // drawn through a PASS_MOUSE relay: answers by its alpha, not by the atom's mouse_opacity
 };
 
 struct HitHud {
     int atom = -1;
-    double plane = 0, layer = 0;                  // the screen atom's resolved plane and layer
-    int tileW = 0, tileH = 0;                     // the hit canvas: the cell joined with every layer
-    int originX = 0, originY = 0;                 // the atom's own icon's bottom-left: icon-x/icon-y count from it
-    std::vector<HitLayer> layers;                 // draw order, canvas coordinates, each on its own resolved plane
-    struct Dest { int x, y; };
-    std::vector<Dest> dests;                      // canvas top-left; screen_loc range form repeats it
+    double plane = 0, layer = 0;   // the screen atom's resolved plane and layer
+    int tileW = 0, tileH = 0;      // the hit canvas: the cell joined with every layer
+    int originX = 0, originY = 0;  // the atom's own icon's bottom-left: icon-x/icon-y count from it
+    std::vector<HitLayer> layers;  // draw order, canvas coordinates, each on its own resolved plane
+    struct Dest {
+        int x, y;
+    };
+    std::vector<Dest> dests;  // canvas top-left; screen_loc range form repeats it
 };
 
 // Everything a pointer question needs, immutable once built (share it across threads via shared_ptr).
 struct HitScene {
     int tileW = 32, tileH = 32;
-    int cols = 0, rows = 0;                       // viewport extent in tiles
-    int originX = 0, originY = 0;                 // 1-based world coords of the viewport's BOTTOM-LEFT tile
+    int cols = 0, rows = 0;        // viewport extent in tiles
+    int originX = 0, originY = 0;  // 1-based world coords of the viewport's BOTTOM-LEFT tile
     std::vector<HitAtom> atoms;
-    std::vector<HitLayer> world;                  // every placed map layer, in DRAW order (last = topmost)
-    std::vector<HitHud> hud;                      // client.screen passes, client.screen order (hitAt sorts by plane/layer)
+    std::vector<HitLayer> world;  // every placed map layer, in DRAW order (last = topmost)
+    std::vector<HitHud> hud;      // client.screen passes, client.screen order (hitAt sorts by plane/layer)
     // A secondary map control (render/scene.h assembleSecondaryMap): its screen objects, their vis_contents turfs and
     // what stands on them are all world layers, a turf is named by its own cell, and screen cells count from the box's
     // own corner (screenX0/screenY0 cells past screen_loc 1,1).
     bool secondary = false;
     int screenX0 = 0, screenY0 = 0;
-    bool anyHover = false;     // some atom carries HitAtom::hover
-    bool clientHover = false;  // the world declares a client hover proc (0x003b; set by the session, not the assembler)
+    bool anyHover = false;  // some atom carries HitAtom::hover
+    bool clientHover =
+        false;  // the world declares a client hover proc (MouseSubs; set by the session, not the assembler)
     int pixW() const { return cols * tileW; }
     int pixH() const { return rows * tileH; }
 };
@@ -184,17 +195,17 @@ struct Hit {
     uint8_t kind = kAtomTurf;
     uint32_t ref = 0;
     int worldX = 0, worldY = 0;
-    bool byId = false;           // HitAtom::byId / turfId
+    bool byId = false;  // HitAtom::byId / turfId
     uint32_t turfId = 0;
     bool screen = false;
     // The WINNING SPRITE's rectangle in map-image pixels (top-left origin).
     int spriteX = 0, spriteY = 0, spriteW = 0, spriteH = 0;
-    int atom = -1;               // index into HitScene::atoms when known (hitStack sets it), else -1
-    uint32_t appid = 0;          // HitAtom::appid / dir of the named atom (map AND screen atoms)
+    int atom = -1;       // index into HitScene::atoms when known (hitStack sets it), else -1
+    uint32_t appid = 0;  // HitAtom::appid / dir of the named atom (map AND screen atoms)
     int dir = -1;
-    bool wheel = false;          // HitAtom::wheel
-    bool hover = false, mouseMove = false;   // HitAtom::hover / mouseMove
-    HitFrame frame;              // the winning layer's frame (HitLayer::frame)
+    bool wheel = false;                     // HitAtom::wheel
+    bool hover = false, mouseMove = false;  // HitAtom::hover / mouseMove
+    HitFrame frame;                         // the winning layer's frame (HitLayer::frame)
 };
 
 // DreamSeeker's right-click STACK: every atom with a layer (its icon, an overlay, a client.image) whose rectangle
@@ -212,15 +223,15 @@ bool hitAt(const HitScene& s, int px, int py, Hit& out);
 // What a mouse command at that pixel names. overKind: 1 obj, 2 mob, 3 turf, 7 turf by id (the wire's RefKind numbering).
 struct Naming {
     uint8_t overKind = 3;
-    uint32_t overRef = 0;                 // obj/mob, or the turf id (7)
-    int overX = 0, overY = 0;             // turf, 1-based world
+    uint32_t overRef = 0;      // obj/mob, or the turf id (7)
+    int overX = 0, overY = 0;  // turf, 1-based world
     bool locNull = false;
-    int locX = 0, locY = 0;               // turf, 1-based world
-    int iconX = 1, iconY = 1;             // within the NAMED ATOM's icon, before its transform (unclamped, on the wire too)
-    int visX = 1, visY = 1;               // within the transformed icon's bounding box (DreamSeeker's vis-x/vis-y)
-    bool hasVis = false;                  // vis != icon: the only case DreamSeeker sends vis-x/vis-y
-    int screenX = 1, screenY = 1;         // 1-based viewport cell
-    int screenPX = 1, screenPY = 1;       // pixel within that cell, 1-based, lower-left origin
+    int locX = 0, locY = 0;          // turf, 1-based world
+    int iconX = 1, iconY = 1;        // within the NAMED ATOM's icon, before its transform (unclamped, on the wire too)
+    int visX = 1, visY = 1;          // within the transformed icon's bounding box (DreamSeeker's vis-x/vis-y)
+    bool hasVis = false;             // vis != icon: the only case DreamSeeker sends vis-x/vis-y
+    int screenX = 1, screenY = 1;    // 1-based viewport cell
+    int screenPX = 1, screenPY = 1;  // pixel within that cell, 1-based, lower-left origin
     Hit hit;
 };
 // false: pixel outside the image, unusable geometry, or no sprite covers it (=> send nothing).

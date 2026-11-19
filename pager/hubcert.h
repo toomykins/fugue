@@ -14,9 +14,9 @@
 
 namespace fugue::pager {
 
-constexpr int kHubCertTimeoutMs = 15000;   // whole-exchange deadline for the token mint
-constexpr std::chrono::milliseconds kHubMintGap{5000};        // least time between two token mints
-constexpr std::chrono::milliseconds kHubMintMaxGap{300000};   // the gap grows with each consecutive failure up to this
+constexpr int kHubCertTimeoutMs = 15000;                     // whole-exchange deadline for the token mint
+constexpr std::chrono::milliseconds kHubMintGap{5000};       // least time between two token mints
+constexpr std::chrono::milliseconds kHubMintMaxGap{300000};  // the gap grows with each consecutive failure up to this
 
 struct HubCertIdentity {
     std::string accountId;
@@ -25,8 +25,8 @@ struct HubCertIdentity {
 };
 
 // The live token mint. padPlain (tests only) pins the 0x0042 answer's padding; null = random. Never logs a value.
-std::optional<uint32_t> queryTokenCert(const std::string& hubAddr, const HubCertIdentity& id, int timeoutMs, std::string* err,
-                                       const Bytes* padPlain = nullptr);
+std::optional<uint32_t> queryTokenCert(const std::string& hubAddr, const HubCertIdentity& id, int timeoutMs,
+                                       std::string* err, const Bytes* padPlain = nullptr);
 
 // The per-session identity for an account login: fresh accountId, cauthKey and certStr left 0/empty for the session.
 // nullopt when the identity has no hub constants (an identity cache written without them): *why says so.
@@ -37,7 +37,7 @@ std::optional<HubCertIdentity> hubCertIdentityFor(const account::AccountLogin& a
 // (kHubMintGap, growing after failures), so a server that repeats its challenge cannot make the client hammer the hub.
 // The answer outlives one session (a link() joins the next world with the same cfg): a challenge that comes inside
 // kHubMintGap of the last mint blocks until the gap has passed; one with more than kHubMintGap still to wait is refused.
-bool wireHubCert(net::SessionConfig& cfg, const account::AccountLogin& al, std::string* why, const std::string& hubAddr = kHubLinkAddr,
-                 int timeoutMs = kHubCertTimeoutMs);
+bool wireHubCert(net::SessionConfig& cfg, const account::AccountLogin& al, std::string* why,
+                 const std::string& hubAddr = kHubLinkAddr, int timeoutMs = kHubCertTimeoutMs);
 
 }  // namespace fugue::pager

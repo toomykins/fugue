@@ -22,7 +22,7 @@ ParseResult parse(const QString& name) {
     return parseIcon(d.data(), d.size());
 }
 
-}
+}  // namespace
 
 class GifAnim : public QObject {
     Q_OBJECT
@@ -61,9 +61,20 @@ private slots:
         QVERIFY(a.ok());
         const IconState& st = a.icon->states[0];
         // Stock playback: R ~0.5 s, G ~1.0 s, B ~0.1 s (a 0-delay frame is one tick), Y ~1.5 s, then R again (cycle 3.1 s)
-        const std::pair<double, int> rows[] = {{0, 0}, {4.9, 0}, {5, 1}, {14.9, 1}, {15, 2}, {15.9, 2}, {16, 3}, {30.9, 3},
-                                               {31, 0}, {36, 1}, {31 * 1000 + 15.5, 2}};
-        for (auto [t, f] : rows) QVERIFY2(frameAtTime(st, t) == f, qPrintable(QString("a.gif at %1 ds: frame %2, want %3").arg(t).arg(frameAtTime(st, t)).arg(f)));
+        const std::pair<double, int> rows[] = {{0, 0},
+                                               {4.9, 0},
+                                               {5, 1},
+                                               {14.9, 1},
+                                               {15, 2},
+                                               {15.9, 2},
+                                               {16, 3},
+                                               {30.9, 3},
+                                               {31, 0},
+                                               {36, 1},
+                                               {31 * 1000 + 15.5, 2}};
+        for (auto [t, f] : rows)
+            QVERIFY2(frameAtTime(st, t) == f,
+                     qPrintable(QString("a.gif at %1 ds: frame %2, want %3").arg(t).arg(frameAtTime(st, t)).arg(f)));
         // pixels of each frame: solid R, G, B, Y
         const uint8_t want[4][4] = {{255, 0, 0, 255}, {0, 255, 0, 255}, {0, 0, 255, 255}, {255, 255, 0, 255}};
         for (int f = 0; f < 4; f++) {
@@ -83,8 +94,8 @@ private slots:
     // A single-frame GIF is one cell with no delays.
     void singleFrameIsStill() {
         // 1x1 GIF89a, global table of 2, one frame
-        const uint8_t one[] = {'G', 'I', 'F', '8', '9', 'a', 1, 0, 1, 0, 0x80, 0, 0, 255, 0, 0, 0, 0, 0,
-                               0x2c, 0, 0, 0, 0, 1, 0, 1, 0, 0, 2, 2, 0x44, 0x01, 0, 0x3b};
+        const uint8_t one[] = {'G', 'I',  'F', '8', '9', 'a', 1, 0, 1, 0, 0x80, 0, 0, 255,  0,    0, 0,   0,
+                               0,   0x2c, 0,   0,   0,   0,   1, 0, 1, 0, 0,    2, 2, 0x44, 0x01, 0, 0x3b};
         ParseResult r = parseIcon(one, sizeof one);
         QVERIFY2(r.ok(), qPrintable(QString::fromStdString(r.errClass + ": " + r.errDetail)));
         QCOMPARE(r.icon->states[0].frames, int64_t(1));

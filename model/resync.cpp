@@ -23,17 +23,20 @@ void chainOrder(World& w, std::vector<uint32_t>& l, bool mobs) {
             const Atom* a = record(w, l[i], mobs);
             if (!a) continue;
             for (int j = i - 1; j >= 0; j--)
-                if (l[j] == a->backlink) { std::rotate(l.begin() + j, l.begin() + i, l.begin() + i + 1); break; }
+                if (l[j] == a->backlink) {
+                    std::rotate(l.begin() + j, l.begin() + i, l.begin() + i + 1);
+                    break;
+                }
         }
         return;
     }
-    std::unordered_map<uint32_t, int> pos;           // id -> its place in l
-    std::unordered_map<uint32_t, uint32_t> binder;   // bound id -> its binder nearest the front
+    std::unordered_map<uint32_t, int> pos;          // id -> its place in l
+    std::unordered_map<uint32_t, uint32_t> binder;  // bound id -> its binder nearest the front
     for (int k = n - 1; k >= 0; k--) {
         pos[l[k]] = k;
         if (const Atom* a = record(w, l[k], mobs); a && a->bindOther != 0xffff) binder[a->bindOther] = l[k];
     }
-    int at = 0;   // carried between places, as the client carries it
+    int at = 0;  // carried between places, as the client carries it
     for (int i = 0; i < n;) {
         const uint32_t first = l[i];
         uint32_t cur = first;
@@ -48,7 +51,12 @@ void chainOrder(World& w, std::vector<uint32_t>& l, bool mobs) {
             cur = b->second;
         }
         if (Atom* a = record(w, cur, mobs)) a->backlink = 0xffff;
-        if (cur != first) { l[i] = cur; l[at] = first; pos[cur] = i; pos[first] = at; }
+        if (cur != first) {
+            l[i] = cur;
+            l[at] = first;
+            pos[cur] = i;
+            pos[first] = at;
+        }
         int last = i;
         for (uint32_t u = l[i];;) {
             const Atom* a = record(w, u, mobs);
@@ -59,7 +67,12 @@ void chainOrder(World& w, std::vector<uint32_t>& l, bool mobs) {
             at = q->second;
             if (at <= last) break;
             last++;
-            if (at > last) { l[at] = l[last]; pos[l[at]] = at; l[last] = y; pos[y] = last; }
+            if (at > last) {
+                l[at] = l[last];
+                pos[l[at]] = at;
+                l[last] = y;
+                pos[y] = last;
+            }
             u = y;
         }
         i = last + 1;
@@ -112,19 +125,22 @@ static void relinkBindsOnly(World& w, bool mobs) {
     for (auto& [cell, l] : mobs ? w.cellMobs : w.cellObjs) chainOrder(w, l, mobs);
 }
 
-void resyncAfterArrays(World& w, const JVal& m, bool mobs) {
-    // The 0x0008 tail relinks objs when the window moved or the frame had a New or Pos entry, else rebuilds their
-    // back-links alone when it had a Bind entry. The 0x0007 tail does the same for mobs and also runs a pending obj relink.
-    bool moved = m["new"].size() || m["pos"].size(), bound = m["bind"].size();
+void resyncAfterArrays(World& w, const proto::ObjectArrays& m, bool mobs) {
+    // The InView tail relinks objs when the window moved or the frame had a New or Pos entry, else rebuilds their
+    // back-links alone when it had a Bind entry. The WorldState tail does the same for mobs and also runs a pending obj
+    // relink.
+    bool moved = !m.created.empty() || !m.pos.empty(), bound = !m.bind.empty();
     if (mobs && w.resync.relinkObjs) relinkObjs(w);
     if (mobs ? w.resync.relinkMobs : w.resync.relinkObjs) moved = true;
-    if (moved) (mobs ? relinkMobs : relinkObjs)(w);
-    else if (bound) relinkBindsOnly(w, mobs);
+    if (moved)
+        (mobs ? relinkMobs : relinkObjs)(w);
+    else if (bound)
+        relinkBindsOnly(w, mobs);
 }
 
 void ResyncPoller::sweepSet(const World& w, std::set<uint32_t>& mobs, std::set<uint32_t>& objs) {
     // Per held record: placed, its tile's cell held a record of its table at the last relink, bound to nothing, not
-    // back-linked, and a mob not still awaiting its creation poll's 0x0009.
+    // back-linked, and a mob not still awaiting its creation poll's MobBind.
     for (const auto& [key, a] : w.atoms) {
         if (!a.hasPos || a.bindOther != 0xffff || w.resync.freed.count(key)) continue;
         std::array<int, 3> cell{a.x, a.y, a.z};
@@ -198,14 +214,18 @@ std::vector<ResyncFrame> ResyncPoller::poll(World& w, int64_t nowNs) {
     while (nowNs >= nextTickNs_) {
         nextTickNs_ += tick;
         if (counter_ != 0 && sweep_) {
-            if (counter_ <= kResyncSweepTicks - 1) counter_++;
-            else { counter_ = 0; sweepSet(w, markMob_, markObj_); }
+            if (counter_ <= kResyncSweepTicks - 1)
+                counter_++;
+            else {
+                counter_ = 0;
+                sweepSet(w, markMob_, markObj_);
+            }
         }
-        if ((w.resync.tick++ & 0x3ff) == 0) gc(w);   // every 1024th tick collects
+        if ((w.resync.tick++ & 0x3ff) == 0) gc(w);  // every 1024th tick collects
     }
     // A collection also runs when the 501st appearance record since the last one is built.
     if (w.resync.appearances - gcAppearances_ > kGcAppearances) gc(w);
-    if (w.resync.teardowns != seenTeardowns_) {   // a teardown (re)arms the counter to 1, not an increment
+    if (w.resync.teardowns != seenTeardowns_) {  // a teardown (re)arms the counter to 1, not an increment
         seenTeardowns_ = w.resync.teardowns;
         counter_ = 1;
     }
@@ -222,8 +242,8 @@ std::vector<ResyncFrame> ResyncPoller::poll(World& w, int64_t nowNs) {
         ids.clear();
         out.push_back(std::move(f));
     };
-    emit(kResyncMobMsg, markMob_);
-    emit(kResyncObjMsg, markObj_);
+    emit(C2S::ResyncMob, markMob_);
+    emit(C2S::ResyncObj, markObj_);
     return out;
 }
 

@@ -97,7 +97,8 @@ private slots:
         while (std::getline(f, line)) {
             QVERIFY(line.rfind("0x", 0) == 0);
             size_t sp = line.find(' ', line.find("len="));
-            s.ingest(uint16_t(std::stoul(line.substr(2, 4), nullptr, 16)), sp == std::string::npos ? Bytes{} : unhex(line.substr(sp + 1)));
+            s.ingest(uint16_t(std::stoul(line.substr(2, 4), nullptr, 16)),
+                     sp == std::string::npos ? Bytes{} : unhex(line.substr(sp + 1)));
             frames++;
         }
         QCOMPARE(frames, 36);
@@ -105,7 +106,10 @@ private slots:
         QVERIFY(v);
         std::string step;
         while (std::getline(v, line)) {
-            if (line.rfind("# ", 0) == 0) { step = line.substr(2, line.find_first_of(":(, ", 2) - 2); continue; }
+            if (line.rfind("# ", 0) == 0) {
+                step = line.substr(2, line.find_first_of(":(, ", 2) - 2);
+                continue;
+            }
             if (!line.empty() && line[0] != '#') c2s_[step].push_back(unhex(line));
         }
         QCOMPARE(int(c2s_["S1-release-outside"].size()), 5);
@@ -118,7 +122,8 @@ private slots:
         DrawList dl, dc;
         SceneStats st;
         QVERIFY2(assembleMapControl(s, res, kT0, dl, st, &err, /*withHit=*/true), err.c_str());
-        QVERIFY2(assembleSecondaryMap(s, res, kT0, kCamShort, dc, st, &err, {}, nullptr, /*withHit=*/true), err.c_str());
+        QVERIFY2(assembleSecondaryMap(s, res, kT0, kCamShort, dc, st, &err, {}, nullptr, /*withHit=*/true),
+                 err.c_str());
         QVERIFY(dl.hit && dc.hit);
         main_ = std::make_shared<HitScene>(*dl.hit);
         cam_ = std::make_shared<HitScene>(*dc.hit);
@@ -143,7 +148,8 @@ private slots:
     // the MouseUp names it as its control and carries the press's icon-x/icon-y and cell; the drop's over_control is null.
     void releaseOverAControl() {
         ChainEnv em = env(*main_, "main.map");
-        for (auto [step, control] : {std::pair{"S3-release-on-output", "main.out"}, std::pair{"S4-release-on-popup-page", "campop"}}) {
+        for (auto [step, control] :
+             {std::pair{"S3-release-on-output", "main.out"}, std::pair{"S4-release-on-popup-page", "campop"}}) {
             MouseChain c;
             one(c.press(at(*main_, 3, 3, 6, 4, 0), em), step, 1);
             one(c.move(at(*main_, 9, 2, 19, 3, 200), em), step, 2);
@@ -153,7 +159,7 @@ private slots:
         MouseChain c;
         one(c.press(at(*main_, 3, 3, 6, 4, 0), em), "S14-output-then-outside", 1);
         one(c.move(off(500), offEnv("main.out")), "S14-output-then-outside", 2);
-        one(c.move(off(900), offEnv("")), "S14-output-then-outside", 3);   // no screen-loc once over another control
+        one(c.move(off(900), offEnv("")), "S14-output-then-outside", 3);  // no screen-loc once over another control
         two(c.release(off(900), offEnv("")), "S14-output-then-outside", 4);
     }
     // From a camera turf: outside, the drag step's over_location and screen-loc carry the camera's full id; the MouseUp and
@@ -229,7 +235,8 @@ private slots:
     void releaseOutsideKeepsThePressPixelAtAnyTileSize() {
         HitScene s;
         s.tileW = s.tileH = 64;
-        s.cols = s.rows = 3; s.originX = s.originY = 1;
+        s.cols = s.rows = 3;
+        s.originX = s.originY = 1;
         s.atoms.push_back({"thing", 1, kAtomObj, 9, 2, 2, false});
         auto sp = std::make_shared<Sprite>();
         sp->w = sp->h = 64;

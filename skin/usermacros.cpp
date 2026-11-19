@@ -10,7 +10,7 @@
 namespace fugue::skin {
 
 namespace {
-std::string quote(const std::string& s) {   // the inverse of dmf.cpp scanValue's escapes
+std::string quote(const std::string& s) {  // the inverse of dmf.cpp scanValue's escapes
     std::string o = "\"";
     for (char c : s) {
         switch (c) {
@@ -66,7 +66,7 @@ bool editUserMacro(MacroSet& s, const std::string& oldSpec, const std::string& s
     };
     drop(oldSpec);
     if (add) {
-        drop(spec);   // re-binding an existing key replaces it
+        drop(spec);  // re-binding an existing key replaces it
         MacroEntry e;
         e.id = trimSpace(id);
         e.spec = trimSpace(spec);
@@ -82,7 +82,7 @@ bool editUserMacro(MacroSet& s, const std::string& oldSpec, const std::string& s
 template <class Pick>
 static const MacroEntry* layered(const MacroSet* skin, const MacroSet& game, const MacroSet& global, Pick pick) {
     if (skin)
-        if (const MacroEntry* e = pick(*skin)) return e->disabled ? nullptr : e;   // in use by the skin
+        if (const MacroEntry* e = pick(*skin)) return e->disabled ? nullptr : e;  // in use by the skin
     for (const MacroSet* s : {&game, &global})
         if (const MacroEntry* e = pick(*s); e && !e->disabled) return e;
     return nullptr;
@@ -97,8 +97,8 @@ HeldMatch matchLayered(const MacroSet* skin, const MacroSet& game, const MacroSe
     return matchHeld({skin, &game, &global}, k);
 }
 
-const MacroEntry* lookupLayeredAny(const MacroSet* skin, const MacroSet& game, const MacroSet& global, const MacroKey& k,
-                                   bool repeat) {
+const MacroEntry* lookupLayeredAny(const MacroSet* skin, const MacroSet& game, const MacroSet& global,
+                                   const MacroKey& k, bool repeat) {
     return layered(skin, game, global, [&](const MacroSet& s) { return s.findAny(k, repeat); });
 }
 
@@ -111,7 +111,8 @@ std::string userMacrosPath(const std::string& stateDir, const std::string& world
 std::string worldKeyFor(const std::string& host, int port) {
     std::string k = host + "_" + std::to_string(port);
     for (char& c : k)
-        if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '.' || c == '-' || c == '_'))
+        if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '.' || c == '-' ||
+              c == '_'))
             c = '_';
     return k;
 }
@@ -128,16 +129,28 @@ bool saveUserMacros(const std::string& path, const MacroSet& s, std::string* err
     std::error_code ec;
     std::filesystem::path p(path);
     if (p.has_parent_path()) std::filesystem::create_directories(p.parent_path(), ec);
-    if (ec) { if (err) *err = ec.message(); return false; }
+    if (ec) {
+        if (err) *err = ec.message();
+        return false;
+    }
     std::string tmp = path + ".tmp";
     {
         std::ofstream f(tmp, std::ios::binary | std::ios::trunc);
-        if (!f) { if (err) *err = "cannot write " + tmp; return false; }
+        if (!f) {
+            if (err) *err = "cannot write " + tmp;
+            return false;
+        }
         f << formatUserMacros(s);
-        if (!f) { if (err) *err = "write failed: " + tmp; return false; }
+        if (!f) {
+            if (err) *err = "write failed: " + tmp;
+            return false;
+        }
     }
     std::filesystem::rename(tmp, p, ec);
-    if (ec) { if (err) *err = ec.message(); return false; }
+    if (ec) {
+        if (err) *err = ec.message();
+        return false;
+    }
     return true;
 }
 

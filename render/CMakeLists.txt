@@ -8,7 +8,7 @@ endif()
 target_compile_options(fugue_render PRIVATE ${_fugue_fp})
 
 # maptext + font tables: the MeasureText twin (render/maptext.h) and DreamSeeker's own measure
-# (render/dsmaptext.h, what net/session.cpp answers 0x00fc with). A STATIC library so that fugue_net can use it
+# (render/dsmaptext.h, what net/session.cpp answers S2C::MeasureText with). A STATIC library so that fugue_net can use it
 # without every net consumer adding a link line; excluded from the fugue_render object set so nothing is compiled or
 # defined twice. Pure C++: TrueType metrics come in through
 # render::setTrueTypeResolver (shell/ttmetrics.h), so no Qt Gui dependency reaches the net layer.

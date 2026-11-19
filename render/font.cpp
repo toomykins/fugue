@@ -7,7 +7,7 @@ namespace {
 #include "render/gofont_adv.inc"
 
 struct Tables {
-    std::vector<int> start;   // cumulative index of each range's first rune in a row
+    std::vector<int> start;  // cumulative index of each range's first rune in a row
     GoFace faces[kGoFontNumFaces][kGoFontMaxSize - kGoFontMinSize + 1];
     Tables() {
         int n = 0;
@@ -62,8 +62,10 @@ int GoFace::advance(char32_t r) const {
     size_t lo = 0, hi = t.start.size();
     while (lo < hi) {
         size_t mid = (lo + hi) / 2;
-        if (kGoFontRanges[mid][1] < r) lo = mid + 1;
-        else hi = mid;
+        if (kGoFontRanges[mid][1] < r)
+            lo = mid + 1;
+        else
+            hi = mid;
     }
     if (lo >= t.start.size() || r < kGoFontRanges[lo][0]) return space;
     size_t idx = size_t(row) * kGoFontNumRunes + size_t(t.start[lo]) + (r - kGoFontRanges[lo][0]);

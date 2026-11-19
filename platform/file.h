@@ -42,7 +42,10 @@ inline int mkdir(const char* path, int mode) {
 #ifdef _WIN32
     if (mode & 077) return _mkdir(path);
     PSECURITY_DESCRIPTOR sd = nullptr;
-    if (!ConvertStringSecurityDescriptorToSecurityDescriptorW(kPrivateDirSddl, SDDL_REVISION_1, &sd, nullptr)) { errno = EACCES; return -1; }
+    if (!ConvertStringSecurityDescriptorToSecurityDescriptorW(kPrivateDirSddl, SDDL_REVISION_1, &sd, nullptr)) {
+        errno = EACCES;
+        return -1;
+    }
     SECURITY_ATTRIBUTES sa{sizeof(sa), sd, FALSE};
     const BOOL ok = CreateDirectoryW(std::filesystem::u8path(path).c_str(), &sa);
     const DWORD e = ok ? 0 : GetLastError();
@@ -56,8 +59,11 @@ inline int mkdir(const char* path, int mode) {
 }
 inline int rename(const char* from, const char* to) {
 #ifdef _WIN32
-    if (MoveFileExW(std::filesystem::u8path(from).c_str(), std::filesystem::u8path(to).c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) return 0;
-    errno = EIO; return -1;
+    if (MoveFileExW(std::filesystem::u8path(from).c_str(), std::filesystem::u8path(to).c_str(),
+                    MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
+        return 0;
+    errno = EIO;
+    return -1;
 #else
     return ::rename(from, to);
 #endif
@@ -72,7 +78,9 @@ inline int open(const char* path, int flags, int mode) {
 inline int fchmod(int fd, int mode) {
 #ifdef _WIN32
     // CRT permission bits do not implement Unix ACLs. Secret files use privateWrite below.
-    (void)fd; (void)mode; return 0;
+    (void)fd;
+    (void)mode;
+    return 0;
 #else
     return ::fchmod(fd, mode);
 #endif
@@ -83,31 +91,46 @@ inline int fchmod(int fd, int mode) {
 inline bool privateWrite(const std::string& path, const std::string& data, std::string* err) {
     auto dest = std::filesystem::u8path(path);
     PSECURITY_DESCRIPTOR sd = nullptr;
-    if (!ConvertStringSecurityDescriptorToSecurityDescriptorW(L"D:P(A;;FA;;;SY)(A;;FA;;;OW)", SDDL_REVISION_1, &sd, nullptr)) {
-        if (err) *err = "cannot create private file security descriptor"; return false;
+    if (!ConvertStringSecurityDescriptorToSecurityDescriptorW(L"D:P(A;;FA;;;SY)(A;;FA;;;OW)", SDDL_REVISION_1, &sd,
+                                                              nullptr)) {
+        if (err) *err = "cannot create private file security descriptor";
+        return false;
     }
     SECURITY_ATTRIBUTES sa{sizeof(sa), sd, FALSE};
     HANDLE file = INVALID_HANDLE_VALUE;
     std::filesystem::path tmp;
     for (unsigned i = 0; i < 100 && file == INVALID_HANDLE_VALUE; ++i) {
-        tmp = dest; tmp += L".tmp-" + std::to_wstring(GetCurrentProcessId()) + L"-" + std::to_wstring(GetTickCount64()) + L"-" + std::to_wstring(i);
+        tmp = dest;
+        tmp += L".tmp-" + std::to_wstring(GetCurrentProcessId()) + L"-" + std::to_wstring(GetTickCount64()) + L"-" +
+               std::to_wstring(i);
         file = CreateFileW(tmp.c_str(), GENERIC_WRITE, 0, &sa, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
         if (file == INVALID_HANDLE_VALUE && GetLastError() != ERROR_FILE_EXISTS) break;
     }
     LocalFree(sd);
-    if (file == INVALID_HANDLE_VALUE) { if (err) *err = "cannot create private temporary file"; return false; }
+    if (file == INVALID_HANDLE_VALUE) {
+        if (err) *err = "cannot create private temporary file";
+        return false;
+    }
     bool ok = true;
     size_t off = 0;
     while (off < data.size()) {
         DWORD written = 0;
-        if (!WriteFile(file, data.data() + off, DWORD(std::min(data.size() - off, size_t(1 << 30))), &written, nullptr) || !written) { ok = false; break; }
+        if (!WriteFile(file, data.data() + off, DWORD(std::min(data.size() - off, size_t(1 << 30))), &written,
+                       nullptr) ||
+            !written) {
+            ok = false;
+            break;
+        }
         off += written;
     }
     ok = FlushFileBuffers(file) && ok;
     ok = CloseHandle(file) && ok;
     if (ok) ok = MoveFileExW(tmp.c_str(), dest.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != 0;
-    if (!ok) { DeleteFileW(tmp.c_str()); if (err) *err = "cannot commit private file"; }
+    if (!ok) {
+        DeleteFileW(tmp.c_str());
+        if (err) *err = "cannot commit private file";
+    }
     return ok;
 }
 #endif
-}
+}  // namespace fugue::platform

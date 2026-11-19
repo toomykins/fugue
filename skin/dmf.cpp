@@ -16,13 +16,15 @@ std::string trimSpace(std::string_view s) {
 
 std::string lowerAscii(std::string_view s) {
     std::string o(s);
-    for (char& c : o) if (c >= 'A' && c <= 'Z') c = char(c - 'A' + 'a');
+    for (char& c : o)
+        if (c >= 'A' && c <= 'Z') c = char(c - 'A' + 'a');
     return o;
 }
 
 std::string upperAscii(std::string_view s) {
     std::string o(s);
-    for (char& c : o) if (c >= 'a' && c <= 'z') c = char(c - 'a' + 'A');
+    for (char& c : o)
+        if (c >= 'a' && c <= 'z') c = char(c - 'a' + 'A');
     return o;
 }
 
@@ -30,7 +32,10 @@ bool parseInt64(std::string_view s, int64_t& out) {
     if (s.empty()) return false;
     size_t i = 0;
     bool neg = false;
-    if (s[0] == '+' || s[0] == '-') { neg = s[0] == '-'; i = 1; }
+    if (s[0] == '+' || s[0] == '-') {
+        neg = s[0] == '-';
+        i = 1;
+    }
     if (i >= s.size()) return false;
     // accumulate as negative so INT64_MIN is representable
     const int64_t lim = std::numeric_limits<int64_t>::min();
@@ -58,19 +63,25 @@ bool scanValue(std::string_view s, std::string& out) {
     out.clear();
     if (s.empty()) return true;
     char q = s[0];
-    if (q != '"' && q != '\'') { out = trimSpace(s); return true; }
+    if (q != '"' && q != '\'') {
+        out = trimSpace(s);
+        return true;
+    }
     for (size_t i = 1; i < s.size(); i++) {
         char c = s[i];
         if (c == '\\') {
-            if (i + 1 >= s.size()) { out.push_back('\\'); break; }
+            if (i + 1 >= s.size()) {
+                out.push_back('\\');
+                break;
+            }
             i++;
             switch (s[i]) {
-            case '\\': out.push_back('\\'); break;
-            case '"': out.push_back('"'); break;
-            case '\'': out.push_back('\''); break;
-            case 't': out.push_back('\t'); break;
-            case 'n': out.push_back('\n'); break;
-            default: out.push_back('\\'); out.push_back(s[i]);  // unknown escape: keep both
+                case '\\': out.push_back('\\'); break;
+                case '"': out.push_back('"'); break;
+                case '\'': out.push_back('\''); break;
+                case 't': out.push_back('\t'); break;
+                case 'n': out.push_back('\n'); break;
+                default: out.push_back('\\'); out.push_back(s[i]);  // unknown escape: keep both
             }
             continue;
         }
@@ -144,45 +155,60 @@ bool Elem::color(const std::string& key, uint8_t rgba[4]) const {
     uint32_t n = 0;
     for (char c : s) {
         int d;
-        if (c >= '0' && c <= '9') d = c - '0';
-        else if (c >= 'a' && c <= 'f') d = c - 'a' + 10;
-        else if (c >= 'A' && c <= 'F') d = c - 'A' + 10;
-        else return false;
+        if (c >= '0' && c <= '9')
+            d = c - '0';
+        else if (c >= 'a' && c <= 'f')
+            d = c - 'a' + 10;
+        else if (c >= 'A' && c <= 'F')
+            d = c - 'A' + 10;
+        else
+            return false;
         n = n * 16 + uint32_t(d);
     }
     uint8_t a = 255;
-    if (s.size() == 8) { a = uint8_t(n); n >>= 8; }
-    rgba[0] = uint8_t(n >> 16); rgba[1] = uint8_t(n >> 8); rgba[2] = uint8_t(n); rgba[3] = a;
+    if (s.size() == 8) {
+        a = uint8_t(n);
+        n >>= 8;
+    }
+    rgba[0] = uint8_t(n >> 16);
+    rgba[1] = uint8_t(n >> 8);
+    rgba[2] = uint8_t(n);
+    rgba[3] = a;
     return true;
 }
 
 std::string Elem::type() const { return upperAscii(trimSpace(str("type", ""))); }
 
 const Elem* Block::elem(const std::string& n) const {
-    for (const Elem& e : elems) if (e.name == n) return &e;
+    for (const Elem& e : elems)
+        if (e.name == n) return &e;
     return nullptr;
 }
 
 const Elem* Block::main() const {
-    for (const Elem& e : elems) if (e.type() == "MAIN") return &e;
+    for (const Elem& e : elems)
+        if (e.type() == "MAIN") return &e;
     return nullptr;
 }
 
 std::vector<const Elem*> Block::controls() const {
     std::vector<const Elem*> out;
-    for (const Elem& e : elems) if (e.type() != "MAIN") out.push_back(&e);
+    for (const Elem& e : elems)
+        if (e.type() != "MAIN") out.push_back(&e);
     return out;
 }
 
 const Block* File::window(const std::string& n) const {
     const Block* r = nullptr;
-    for (const Block& b : blocks) if (b.kind == "window" && b.name == n) r = &b;
+    for (const Block& b : blocks)
+        if (b.kind == "window" && b.name == n) r = &b;
     return r;
 }
 
 const Block* File::macro(const std::string& n) const {
     const Block* r = nullptr;
-    for (const Block& b : blocks) if (b.kind == "macro" && b.name == n) r = &b;
+    for (const Block& b : blocks)
+        if (b.kind == "macro" && b.name == n) r = &b;
     return r;
 }
 
@@ -192,7 +218,9 @@ ParseResult parseDmf(std::string_view src) {
     Block* cur = nullptr;
     Elem* elem = nullptr;
     auto fail = [&](int line, const std::string& msg) {
-        R.ok = false; R.errLine = line; R.error = msg;
+        R.ok = false;
+        R.errLine = line;
+        R.error = msg;
         return R;
     };
     int lineNo = 0;
@@ -217,7 +245,9 @@ ParseResult parseDmf(std::string_view src) {
             if (!scanValue(trimSpace(rest), name)) return fail(lineNo, "unterminated quoted value");
             f.blocks.push_back(Block{});
             cur = &f.blocks.back();
-            cur->kind = kind; cur->name = name; cur->line = lineNo;
+            cur->kind = kind;
+            cur->name = name;
+            cur->line = lineNo;
             elem = nullptr;
             continue;
         }
@@ -229,7 +259,8 @@ ParseResult parseDmf(std::string_view src) {
             if (!rest.empty() && !scanValue(rest, name)) return fail(lineNo, "unterminated quoted value");
             cur->elems.push_back(Elem{});
             elem = &cur->elems.back();
-            elem->name = name; elem->line = lineNo;
+            elem->name = name;
+            elem->line = lineNo;
             continue;
         }
         size_t eq = trimmed.find('=');

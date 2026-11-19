@@ -16,7 +16,8 @@ namespace {
 const std::string kKey = "fakeaccount";
 void signIn(const QTemporaryDir& home, bool withIdentity = true) {
     qputenv("HOME", home.path().toUtf8());
-    for (const char* v : {"FUGUE_PAGER_CONFIG", "FUGUE_IDENTITY", "FUGUE_KEYTXT", "FUGUE_BYOND_SID", "XDG_STATE_HOME"}) qunsetenv(v);
+    for (const char* v : {"FUGUE_PAGER_CONFIG", "FUGUE_IDENTITY", "FUGUE_KEYTXT", "FUGUE_BYOND_SID", "XDG_STATE_HOME"})
+        qunsetenv(v);
     account::Config c;
     c.account = kKey;
     std::string e;
@@ -24,21 +25,26 @@ void signIn(const QTemporaryDir& home, bool withIdentity = true) {
     if (withIdentity) {
         account::Account a;
         for (char ch : kKey + "0123456789abc") a.identity.push_back(uint8_t(ch));
-        a.installId = 0x1234;   // saveAccount refuses zero hub credentials
+        a.installId = 0x1234;  // saveAccount refuses zero hub credentials
         a.innerKey = 0x5678;
         QVERIFY2(account::saveAccount(kKey, a, &e), e.c_str());
     }
 }
-AccountRequest player() { AccountRequest r; r.playerLaunch = true; return r; }   // no --account: `dreamseeker "byond://h:p"`
+AccountRequest player() {
+    AccountRequest r;
+    r.playerLaunch = true;
+    return r;
+}  // no --account: `dreamseeker "byond://h:p"`
 
 // The whole client command line, as the binary really takes it: pager/dsargv.cpp's chooseMode, then app/main.cpp's parseDsArgv
 // (with Qt's arguments, given by index, removed by pointer as QApplication removes them) and accountRequestFor.
 struct Run {
     AccountRequest req;
     AccountDecision d;
-    int mints = 0;   // how many times an identity was loaded
+    int mints = 0;  // how many times an identity was loaded
 };
-Run launch(std::vector<std::string> argv, bool testHook = false, std::set<size_t> qtRemoves = {}, bool release = false) {
+Run launch(std::vector<std::string> argv, bool testHook = false, std::set<size_t> qtRemoves = {},
+           bool release = false) {
     Run r;
     const std::string argv0 = argv.front();
     pager::Mode m = pager::chooseMode(argv0, std::vector<std::string>(argv.begin() + 1, argv.end()), release);
@@ -58,8 +64,10 @@ Run launch(std::vector<std::string> argv, bool testHook = false, std::set<size_t
     return r;
 }
 bool isGuest(const Run& r) { return r.d.kind == AccountDecision::Guest && !r.d.login && r.mints == 0; }
-bool isPagerAccount(const Run& r) { return r.d.kind == AccountDecision::Account && r.d.fromPager && r.d.account == kKey && r.d.login; }
+bool isPagerAccount(const Run& r) {
+    return r.d.kind == AccountDecision::Account && r.d.fromPager && r.d.account == kKey && r.d.login;
 }
+}  // namespace
 
 class PagerClientAccount : public QObject {
     Q_OBJECT
@@ -74,17 +82,21 @@ private slots:
         QVERIFY(d.login && !d.login->record.empty());
         QCOMPARE(d.login->source, std::string("identity cache"));
     }
-    void nonPlayerRunIsAGuest() {   // only a player launch reads the signed-in account
+    void nonPlayerRunIsAGuest() {  // only a player launch reads the signed-in account
         QTemporaryDir home;
         signIn(home);
-        AccountRequest r;   // not a player launch: --state-dir, --connect, --screenshot, a test hook
+        AccountRequest r;  // not a player launch: --state-dir, --connect, --screenshot, a test hook
         bool minted = false;
-        AccountDecision d = pager::decideAccount(r, [&](const std::string&, std::string*) { minted = true; return std::optional<account::AccountLogin>{}; });
+        AccountDecision d = pager::decideAccount(r, [&](const std::string&, std::string*) {
+            minted = true;
+            return std::optional<account::AccountLogin>{};
+        });
         QCOMPARE(int(d.kind), int(AccountDecision::Guest));
         QVERIFY(!d.login);
         QVERIFY(d.account.empty());
-        QVERIFY(!minted);   // no identity was even loaded
-        QVERIFY(QFile::exists(home.path() + "/.fugue/identity-" + QString::fromStdString(kKey)));   // and it was there to load
+        QVERIFY(!minted);  // no identity was even loaded
+        QVERIFY(QFile::exists(home.path() + "/.fugue/identity-" +
+                              QString::fromStdString(kKey)));  // and it was there to load
     }
     void nonPlayerRunStillHonoursAnExplicitAccount() {
         QTemporaryDir home;
@@ -109,7 +121,7 @@ private slots:
         QTemporaryDir home;
         signIn(home);
         AccountRequest r;
-        r.accountGiven = true;   // --account ""
+        r.accountGiven = true;  // --account ""
         AccountDecision d = pager::decideAccount(r);
         QCOMPARE(int(d.kind), int(AccountDecision::Guest));
         QVERIFY(!d.login);
@@ -130,7 +142,7 @@ private slots:
         QCOMPARE(d.account, kKey);
         QVERIFY(!d.login);
     }
-    void explicitAccountWithoutIdentityFails() {   // app/main.cpp: exit 2
+    void explicitAccountWithoutIdentityFails() {  // app/main.cpp: exit 2
         QTemporaryDir home;
         signIn(home, false);
         AccountRequest r;
@@ -148,7 +160,8 @@ private slots:
         signIn(home);
         QVERIFY(isGuest(launch({"fugue-qt", "--connect", "127.0.0.1:52411", "--audio", "none"})));
         QVERIFY(isGuest(launch({"fugue-qt", "client", "--connect", "127.0.0.1:52411"})));
-        QVERIFY(isGuest(launch({"fugue-qt", "client", "--connect", "127.0.0.1:52411"}, false, {}, true)));   // release build
+        QVERIFY(
+            isGuest(launch({"fugue-qt", "client", "--connect", "127.0.0.1:52411"}, false, {}, true)));  // release build
         QVERIFY(isGuest(launch({"fugue-qt", "--connect=127.0.0.1:52411"})));
         QVERIFY(isGuest(launch({"/opt/fugue/fugue-qt", "--no-pacing", "--connect", "h:1", "-pager"})));
         // a DreamSeeker target beside --connect: --connect wins the target (app/main.cpp), and it is not a DS-style launch
@@ -158,21 +171,21 @@ private slots:
         QVERIFY(isGuest(launch({"dreamseeker", "--connect", "127.0.0.1:52411"})));
         QVERIFY(isGuest(launch({"DreamSeeker.exe", "byond://h:1", "--connect=h:2"})));
     }
-    void noTargetIsAGuest() {   // the client with no target: DS's Open Location box, or the quiet exit
+    void noTargetIsAGuest() {  // the client with no target: DS's Open Location box, or the quiet exit
         QTemporaryDir home;
         signIn(home);
         QVERIFY(isGuest(launch({"fugue-qt"})));
         QVERIFY(isGuest(launch({"fugue-qt", "client"}, false, {}, true)));
         QVERIFY(isGuest(launch({"fugue-qt", "-trace"})));
-        QVERIFY(isGuest(launch({"fugue-qt", "+connect", "h:1"})));   // the +connect bound fails, so there is no target
+        QVERIFY(isGuest(launch({"fugue-qt", "+connect", "h:1"})));  // the +connect bound fails, so there is no target
     }
     void dreamSeekerStyleLaunchUsesThePagerAccount() {
         QTemporaryDir home;
         signIn(home);
         QVERIFY(isPagerAccount(launch({"dreamseeker", "byond://127.0.0.1:52411", "-pager", "-trusted"})));
         QVERIFY(isPagerAccount(launch({"C:\\BYOND\\bin\\DreamSeeker.exe", "+connect", "h:1", "-trace"})));
-        QVERIFY(isPagerAccount(launch({"/usr/bin/dreamseeker", "h:1"}, false, {}, true)));   // release: still the client
-        QVERIFY(isPagerAccount(launch({"dreamseeker"})));                     // the Open Location box, then the account
+        QVERIFY(isPagerAccount(launch({"/usr/bin/dreamseeker", "h:1"}, false, {}, true)));  // release: still the client
+        QVERIFY(isPagerAccount(launch({"dreamseeker"})));  // the Open Location box, then the account
         // as fugue-qt, a DreamSeeker-grammar target with no --connect
         QVERIFY(isPagerAccount(launch({"fugue-qt", "byond://h:1", "-pager"})));
         QVERIFY(isPagerAccount(launch({"fugue-qt", "client", "h:1"}, false, {}, true)));
@@ -188,7 +201,7 @@ private slots:
         QVERIFY(isGuest(launch({"dreamseeker", "byond://h:1", "--state-dir=/tmp/x"})));
         QVERIFY(isGuest(launch({"fugue-qt", "h:1", "--screenshot", "out.png", "--after", "3"})));
         QVERIFY(isGuest(launch({"fugue-qt", "h:1", "--screenshot=out.png"})));
-        QVERIFY(isGuest(launch({"dreamseeker", "byond://h:1"}, true)));   // FUGUE_AUTO_PICK / FUGUE_AUTO_RIGHTCLICK set
+        QVERIFY(isGuest(launch({"dreamseeker", "byond://h:1"}, true)));  // FUGUE_AUTO_PICK / FUGUE_AUTO_RIGHTCLICK set
         QCOMPARE(launch({"dreamseeker", "h:1", "--state-dir", "d"}).req.why, std::string("--state-dir"));
         // a Qt argument that LOOKS like Fugue's is Qt's: removed before the parse, so it isolates nothing
         QVERIFY(isPagerAccount(launch({"dreamseeker", "h:1", "-style", "--state-dir"}, false, {1, 2})));
@@ -197,7 +210,8 @@ private slots:
         QTemporaryDir home;
         signIn(home);
         for (std::vector<std::string> a : std::vector<std::vector<std::string>>{
-                 {"fugue-qt", "client", "--connect", "h:1", "--account", kKey, "--no-pacing"},   // the pager's join (launch.cpp)
+                 {"fugue-qt", "client", "--connect", "h:1", "--account", kKey,
+                  "--no-pacing"},  // the pager's join (launch.cpp)
                  {"fugue-qt", "--connect", "h:1", "--state-dir", "d", "--account=" + kKey},
                  {"dreamseeker", "h:1", "--screenshot", "o.png", "--account", kKey}}) {
             Run r = launch(a);
@@ -205,12 +219,14 @@ private slots:
             QVERIFY(!r.d.fromPager);
             QCOMPARE(r.d.account, kKey);
         }
-        Run g = launch({"dreamseeker", "byond://h:1", "--account="});   // an explicit guest on a player launch
+        Run g = launch({"dreamseeker", "byond://h:1", "--account="});  // an explicit guest on a player launch
         QVERIFY(isGuest(g));
         QVERIFY(g.req.accountGiven);
-        Run last = launch({"fugue-qt", "--connect", "h:1", "--account", "someoneelse", "--account", kKey});   // the last one given
+        Run last = launch(
+            {"fugue-qt", "--connect", "h:1", "--account", "someoneelse", "--account", kKey});  // the last one given
         QCOMPARE(last.req.account, kKey);
-        QCOMPARE(int(launch({"fugue-qt", "--connect", "h:1", "--account", "nobodyhere"}).d.kind), int(AccountDecision::Fail));
+        QCOMPARE(int(launch({"fugue-qt", "--connect", "h:1", "--account", "nobodyhere"}).d.kind),
+                 int(AccountDecision::Fail));
     }
 };
 

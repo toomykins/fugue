@@ -10,14 +10,14 @@
 namespace fugue::net {
 
 struct PrefetchResult {
-    bool ok = false;            // list seen AND everything resolved (or the cache already held it)
+    bool ok = false;  // list seen AND everything resolved (or the cache already held it)
     std::string error;
-    uint64_t offered = 0;       // availability-list entries
-    uint64_t cached = 0;        // served from the store: never declared
-    uint64_t declared = 0;      // declarations sent
-    uint64_t stored = 0;        // new verified files written
+    uint64_t offered = 0;   // availability-list entries
+    uint64_t cached = 0;    // served from the store: never declared
+    uint64_t declared = 0;  // declarations sent
+    uint64_t stored = 0;    // new verified files written
     uint64_t unverified = 0;
-    uint64_t bytes = 0;         // bytes newly written
+    uint64_t bytes = 0;  // bytes newly written
     double seconds = 0;
 };
 

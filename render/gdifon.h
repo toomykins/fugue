@@ -10,10 +10,13 @@
 namespace fugue::render {
 
 struct FonStrike {
-    int pt = 0, h = 0, ascent = 0, il = 0;    // dfPoints, dfPixHeight, dfAscent, dfInternalLeading
-    int first = 0, last = 0, defaultChar = 0; // byte range; defaultChar is absolute
-    struct Glyph { int w = 0; std::vector<uint8_t> bits; };   // h rows of w pixels, 1 = ink
-    std::vector<Glyph> glyphs;                // first..last
+    int pt = 0, h = 0, ascent = 0, il = 0;     // dfPoints, dfPixHeight, dfAscent, dfInternalLeading
+    int first = 0, last = 0, defaultChar = 0;  // byte range; defaultChar is absolute
+    struct Glyph {
+        int w = 0;
+        std::vector<uint8_t> bits;
+    };  // h rows of w pixels, 1 = ink
+    std::vector<Glyph> glyphs;  // first..last
 };
 
 // The file's 96-dpi raster strikes, by increasing height; empty when `file` is not a readable .FON.

@@ -11,7 +11,8 @@
 namespace fugue::net {
 namespace {
 // The 16-byte guest scaffold (credential bytes [0:16]).
-const uint8_t kScaffold[16] = {0x00, 0x00, 0x7e, 0xcc, 0x5a, 0x2e, 0x89, 0x35, 0x73, 0xd7, 0x6d, 0x97, 0x6c, 0xb5, 0xf6, 0x00};
+const uint8_t kScaffold[16] = {0x00, 0x00, 0x7e, 0xcc, 0x5a, 0x2e, 0x89, 0x35,
+                               0x73, 0xd7, 0x6d, 0x97, 0x6c, 0xb5, 0xf6, 0x00};
 
 std::string hexLower(const Digest16& d) { return hexEncode(ByteSpan(d.data(), d.size())); }
 }  // namespace
@@ -53,7 +54,8 @@ std::string loadOrCreateSid(const std::string& dir, std::string* err) {
 #endif
     auto valid = [](const std::string& s) {
         if (s.size() != 24) return false;
-        for (char c : s) if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))) return false;
+        for (char c : s)
+            if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))) return false;
         return true;
     };
     std::error_code ec;
@@ -77,7 +79,7 @@ std::string loadOrCreateSid(const std::string& dir, std::string* err) {
     std::ofstream f(p, std::ios::trunc);
     if (!f) {
         if (err) *err = "cannot write " + p.string();
-        return sid;   // ephemeral: still a valid identity for this process
+        return sid;  // ephemeral: still a valid identity for this process
     }
     f << sid << "\n";
     f.close();

@@ -1,31 +1,51 @@
-// s2c 0x000a: in-view add/remove delta. Four back-to-back u16-counted arrays, no header/trailer.
-#include "proto/g3_inview.h"
+// S2C::ContentsDelta: usr.contents entering / leaving (model/world.cpp). Four back-to-back u16-counted arrays, no
+// header/trailer.
+#include "proto/registry.h"
 
 namespace fugue::proto {
-namespace {
 
-// The add/remove delta: two id arrays and two pair arrays, each u16-counted.
-canon::Json decode(State&, ByteSpan body) {
-    g3::Cur c(body);
-    auto ids = [&]() {
-        std::vector<canon::Json> v;
-        for (unsigned n = c.u16(); n > 0; n--) v.push_back(canon::u(c.u32()));
-        return canon::array(v);
+// [n u16] n x [id u32]   [n u16] n x [id u32][appid u32]   [n u16] n x [id u32]   [n u16] n x [id u32][appid u32]
+ContentsDelta decodeContentsDelta(ByteSpan body) {
+    Reader r(body);
+    auto ids = [&](std::vector<uint32_t>& out) {
+        for (unsigned n = r.u16(); n > 0; n--) out.push_back(r.u32());
     };
-    auto pairs = [&]() {
-        std::vector<canon::Json> v;
-        for (unsigned n = c.u16(); n > 0; n--) {
-            uint32_t id = c.u32(), ap = c.u32();
-            v.push_back(canon::Object().u("id", id).u("appearance", ap).build());
+    auto pairs = [&](std::vector<ContentsDelta::Pair>& out) {
+        for (unsigned n = r.u16(); n > 0; n--) {
+            ContentsDelta::Pair p;
+            p.id = r.u32();
+            p.appearance = r.u32();
+            out.push_back(p);
         }
-        return canon::array(v);
     };
-    canon::Json a = ids(), b = pairs(), r = ids(), d = pairs();
-    c.expectEnd("0x000a");
-    return canon::Object().set("addA", a).set("bindA", b).set("removeB", r).set("bindB", d).build();
+    ContentsDelta m;
+    ids(m.addA);
+    pairs(m.bindA);
+    ids(m.removeB);
+    pairs(m.bindB);
+    r.expectEnd();
+    return m;
 }
 
-FUGUE_REGISTER_DECODER(Dir::S2C, 0x000a, "cpp:stock-dd-wire", decode);
+canon::Json toJson(const ContentsDelta& m) {
+    auto ids = [](const std::vector<uint32_t>& v) {
+        std::vector<canon::Json> out;
+        for (uint32_t id : v) out.push_back(canon::u(id));
+        return canon::array(out);
+    };
+    auto pairs = [](const std::vector<ContentsDelta::Pair>& v) {
+        std::vector<canon::Json> out;
+        for (const auto& p : v) out.push_back(canon::Object().u("id", p.id).u("appearance", p.appearance).build());
+        return canon::array(out);
+    };
+    return canon::Object()
+        .set("addA", ids(m.addA))
+        .set("bindA", pairs(m.bindA))
+        .set("removeB", ids(m.removeB))
+        .set("bindB", pairs(m.bindB))
+        .build();
+}
 
-}  // namespace
+FUGUE_REGISTER_DECODER(Dir::S2C, S2C::ContentsDelta, "cpp:stock-dd-wire", jsonOf<decodeContentsDelta>);
+
 }  // namespace fugue::proto

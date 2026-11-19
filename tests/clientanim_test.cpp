@@ -26,11 +26,15 @@ constexpr int64_t kTick = 100'000'000;
 constexpr uint32_t kRes = 0x163d55fd;
 constexpr uint32_t kPlayer = 0xc82828, kMarker = 0x28c828, kHud = 0x2828dc;
 int64_t at(double tick) { return kT0 + int64_t(tick * double(kTick)); }
-}
+}  // namespace
 
 class ClientAnim : public QObject {
     Q_OBJECT
-    struct Frame { uint16_t typ; Bytes body; int tick; };
+    struct Frame {
+        uint16_t typ;
+        Bytes body;
+        int tick;
+    };
     std::vector<Frame> frames_;
     std::string resBytes_;
     render::ResStore res_;
@@ -78,13 +82,15 @@ private slots:
         std::ifstream f(dir + "/frames.txt");
         QVERIFY(f);
         std::string line;
-        std::getline(f, line);   // header
+        std::getline(f, line);  // header
         int tick = 0;
         while (std::getline(f, line)) {
             QVERIFY(line.rfind("0x", 0) == 0);
             size_t sp = line.find(' ', line.find("len="));
-            Frame fr{uint16_t(std::stoul(line.substr(2, 4), nullptr, 16)), sp == std::string::npos ? Bytes{} : unhex(line.substr(sp + 1)), 0};
-            if (fr.typ == 0x0027 && fr.body.size() > 1 && fr.body[0] == '@') tick = std::stoi(std::string(fr.body.begin() + 1, fr.body.end()));
+            Frame fr{uint16_t(std::stoul(line.substr(2, 4), nullptr, 16)),
+                     sp == std::string::npos ? Bytes{} : unhex(line.substr(sp + 1)), 0};
+            if (fr.typ == S2C::Text && fr.body.size() > 1 && fr.body[0] == '@')
+                tick = std::stoi(std::string(fr.body.begin() + 1, fr.body.end()));
             fr.tick = tick;
             frames_.push_back(std::move(fr));
         }
@@ -106,10 +112,10 @@ private slots:
         QCOMPARE(offset(41), QPoint(16, 8));
         QCOMPARE(offset(51), QPoint(32, 24));
         QCOMPARE(offset(56), QPoint(32, 32));
-        render::RgbaImage img = image(56);   // the marker past the east edge fills the revealed column; the HUD stays
+        render::RgbaImage img = image(56);  // the marker past the east edge fills the revealed column; the HUD stays
         QCOMPARE(rgb(img, 340, 200), kMarker);
         QCOMPARE(rgb(img, 0, 320), kHud);
-        QCOMPARE(offset(65), QPoint(32, 32));   // the Count = 0 frame at 60 clears the chain; 0x0007 still says 32, 32
+        QCOMPARE(offset(65), QPoint(32, 32));  // the Count = 0 frame at 60 clears the chain; 0x0007 still says 32, 32
         QCOMPARE(offset(66), QPoint(0, 0));
     }
 
@@ -120,7 +126,7 @@ private slots:
         QCOMPARE(offset(78), QPoint(14, 5));
         QCOMPARE(offset(80), QPoint(20, 8));
         QCOMPARE(offset(81), QPoint(20, 8));
-        QCOMPARE(offset(87), QPoint(15, 6));    // half way through 12 ticks of SINE | EASE_IN
+        QCOMPARE(offset(87), QPoint(15, 6));  // half way through 12 ticks of SINE | EASE_IN
         QCOMPARE(offset(93), QPoint(0, 0));
     }
 

@@ -1,20 +1,27 @@
-// s2c 0x00fc: client.MeasureText() query.
+// S2C::MeasureText: client.MeasureText() query.
+#include <algorithm>
+
 #include "proto/registry.h"
 
 namespace fugue::proto {
-namespace {
 
-// Layout [text\0][style\0][width u16][id u32].
-canon::Json decode(State&, ByteSpan body) {
+// Layout [text\0][style\0][width u16][id u32]. A style with no NUL reads as "", and the six bytes after the text are
+// then the width and id (as internal/proto.DecodeMeasureTextRequest reads it).
+MeasureText decodeMeasureText(ByteSpan body) {
     Reader r(body);
-    std::string text = r.cstr(), style = r.cstr();
-    uint16_t width = r.u16();
-    uint32_t id = r.u32();
+    MeasureText m;
+    m.text = r.cstr();
+    if (std::find(body.begin() + ptrdiff_t(r.pos()), body.end(), uint8_t(0)) != body.end()) m.style = r.cstr();
+    m.width = r.u16();
+    m.id = r.u32();
     r.expectEnd();
-    return canon::Object().str("text", text).str("style", style).u("width", width).u("id", id).build();
+    return m;
 }
 
-FUGUE_REGISTER_DECODER(Dir::S2C, 0x00fc, "cpp:stock-dd-wire", decode);
+canon::Json toJson(const MeasureText& m) {
+    return canon::Object().str("text", m.text).str("style", m.style).u("width", m.width).u("id", m.id).build();
+}
 
-}  // namespace
+FUGUE_REGISTER_DECODER(Dir::S2C, S2C::MeasureText, "cpp:stock-dd-wire", jsonOf<decodeMeasureText>);
+
 }  // namespace fugue::proto

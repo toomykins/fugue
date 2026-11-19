@@ -16,7 +16,8 @@ struct Home {
     QTemporaryDir dir;
     Home() {
         qputenv("HOME", dir.path().toUtf8());
-        for (auto v : {"FUGUE_PAGER_CONFIG", "FUGUE_IDENTITY", "FUGUE_BYOND_SID", "FUGUE_KEYTXT", "XDG_STATE_HOME"}) qunsetenv(v);
+        for (auto v : {"FUGUE_PAGER_CONFIG", "FUGUE_IDENTITY", "FUGUE_BYOND_SID", "FUGUE_KEYTXT", "XDG_STATE_HOME"})
+            qunsetenv(v);
     }
     QString p(const QString& rel) const { return dir.path() + "/" + rel; }
     void put(const QString& rel, const QByteArray& b) {
@@ -27,7 +28,7 @@ struct Home {
     }
     bool has(const QString& rel) const { return QFileInfo::exists(p(rel)); }
 };
-}
+}  // namespace
 
 class PagerCache : public QObject {
     Q_OBJECT
@@ -47,15 +48,15 @@ private slots:
         QVERIFY(savedSignInNames().empty());
         QVERIFY(account::saveAccount("Some Key", account::Account{Bytes(21, 1), 1, 2}));
         QVERIFY(account::saveAccount("Other", account::Account{Bytes(21, 2), 3, 4}));
-        h.put(".fugue/identity-", "x");                 // no name
-        h.put(".fugue/identities/identity-x", "x");     // not at the top level
-        QDir().mkpath(h.p(".fugue/identity-adir"));      // not a file
+        h.put(".fugue/identity-", "x");              // no name
+        h.put(".fugue/identities/identity-x", "x");  // not at the top level
+        QDir().mkpath(h.p(".fugue/identity-adir"));  // not a file
         QCOMPARE(savedSignInNames(), (std::vector<std::string>{"other", "somekey"}));
     }
     void removesExactlyIdentitiesGuestFlagAndResources() {
         Home h;
-        QVERIFY(account::saveAccount("Some Key", account::Account{Bytes(21, 1), 1, 2}));   // identity-somekey
-        QVERIFY(account::saveAccount("Other", account::Account{Bytes(21, 2), 3, 4}));      // identity-other
+        QVERIFY(account::saveAccount("Some Key", account::Account{Bytes(21, 1), 1, 2}));  // identity-somekey
+        QVERIFY(account::saveAccount("Other", account::Account{Bytes(21, 2), 3, 4}));     // identity-other
         QVERIFY(rememberGuest(true));
         h.put(".fugue/rsc/ab/abcdef01", QByteArray(1000, 'a'));
         h.put(".fugue/rsc/ab/abcdef02", QByteArray(24, 'b'));
@@ -67,7 +68,8 @@ private slots:
         h.put(".fugue/sid", "0123456789abcdef01234567");
         h.put(".fugue/client.log", "log\n");
         h.put(".fugue/qt/other-setting", "x");
-        h.put(".fugue/cauth.txt", "guest@127.0.0.1:52516 key=644788f;pwd=03000000010000000200000003;ctime=6ad240c8\n");   // removed
+        h.put(".fugue/cauth.txt",
+              "guest@127.0.0.1:52516 key=644788f;pwd=03000000010000000200000003;ctime=6ad240c8\n");  // removed
         h.put(".fugue/macros.dmf", "x");
         h.put(".byond/cfg/key.txt", "BEGIN KEY x\n`\nEND KEY\n");
         h.put(".fugue/rsc/ab/not-a-resource", "keep");
@@ -80,7 +82,7 @@ private slots:
         QCOMPARE(QString::fromStdString(p.items[1].what), QString("Saved sign-in for somekey"));
         QCOMPARE(QString::fromStdString(p.items[2].path), h.p(".fugue/qt/pager-guest"));
         QCOMPARE(QString::fromStdString(p.items[3].path), h.p(".fugue/rsc"));
-        QCOMPARE(p.items[3].files, uint64_t(4));   // three resources + the names log
+        QCOMPARE(p.items[3].files, uint64_t(4));  // three resources + the names log
         QCOMPARE(p.items[3].bytes, uint64_t(1000 + 24 + 2048 + 18));
         QCOMPARE(QString::fromStdString(p.items[4].path), h.p(".fugue/cauth.txt"));
         QCOMPARE(QString::fromStdString(p.items[4].what), QString("Saved server login keys"));
@@ -94,14 +96,55 @@ private slots:
         QVERIFY2(err.empty(), err.c_str());
         QCOMPARE(done.files(), p.files());
         QCOMPARE(done.bytes(), p.bytes());
-        for (auto rel : {".fugue/identity-other", ".fugue/identity-somekey", ".fugue/qt/pager-guest", ".fugue/rsc/ab/abcdef01",
-                         ".fugue/rsc/ab/abcdef02", ".fugue/rsc/0c/0c000001", ".fugue/rsc/names", ".fugue/rsc/0c", ".fugue/cauth.txt"})
+        for (auto rel : {".fugue/identity-other", ".fugue/identity-somekey", ".fugue/qt/pager-guest",
+                         ".fugue/rsc/ab/abcdef01", ".fugue/rsc/ab/abcdef02", ".fugue/rsc/0c/0c000001",
+                         ".fugue/rsc/names", ".fugue/rsc/0c", ".fugue/cauth.txt"})
             QVERIFY2(!h.has(rel), rel);
-        for (auto rel : {".fugue/pager.json", ".fugue/byond-sid", ".fugue/sid", ".fugue/client.log", ".fugue/qt/other-setting",
-                         ".fugue/macros.dmf", ".byond/cfg/key.txt", ".fugue/rsc/ab/not-a-resource", ".fugue/identity"})
+        for (auto rel :
+             {".fugue/pager.json", ".fugue/byond-sid", ".fugue/sid", ".fugue/client.log", ".fugue/qt/other-setting",
+              ".fugue/macros.dmf", ".byond/cfg/key.txt", ".fugue/rsc/ab/not-a-resource", ".fugue/identity"})
             QVERIFY2(h.has(rel), rel);
         QVERIFY(!guestRemembered());
         QVERIFY(planClearCache().empty());
+    }
+    // The webview profile's storage goes too; the dir, the sid and the identities' rules are untouched.
+    void clearsWebStorageButNotSidOrLockedProfile() {
+        Home h;
+        QVERIFY(account::saveAccount("Some Key", account::Account{Bytes(21, 1), 1, 2}));
+        h.put(".fugue/sid", "0123456789abcdef01234567");
+        h.put(".fugue/web/Local Storage/leveldb/000003.log", QByteArray(500, 'l'));
+        h.put(".fugue/web/IndexedDB/x/db", QByteArray(100, 'i'));
+        h.put(".fugue/web/cache/Cache/data_0", QByteArray(50, 'c'));
+        CachePlan p = planClearCache();
+        bool seen = false;
+        for (auto& i : p.items)
+            if (QString::fromStdString(i.path) == h.p(".fugue/web")) {
+                seen = true;
+                QCOMPARE(i.files, uint64_t(3));
+                QCOMPARE(i.bytes, uint64_t(650));
+            }
+        QVERIFY(seen);
+        QVERIFY(QString::fromStdString(describeClearCache(p)).contains("Web page storage"));
+
+        // A live client (this process's pid) holds the profile: refused, nothing deleted.
+        h.put(".fugue/web/.lock", QByteArray::number(qint64(QCoreApplication::applicationPid())) + "\nfugue\nhost\n");
+        std::string err;
+        clearCache(&err);
+        QVERIFY2(err.find("in use") != std::string::npos, err.c_str());
+        QVERIFY(h.has(".fugue/web/IndexedDB/x/db"));
+        QVERIFY(!h.has(".fugue/identity-somekey"));  // the rest still cleared
+
+        // Stale lock (dead pid): wiped, lock file and dir stay.
+        h.put(".fugue/web/.lock", "2147483646\nfugue\nhost\n");
+        err.clear();
+        CachePlan done = clearCache(&err);
+        QVERIFY2(err.empty(), err.c_str());
+        QVERIFY(!h.has(".fugue/web/Local Storage"));
+        QVERIFY(!h.has(".fugue/web/IndexedDB"));
+        QVERIFY(!h.has(".fugue/web/cache"));
+        QVERIFY(h.has(".fugue/sid"));
+        QVERIFY(planClearCache().empty());
+        QCOMPARE(done.files(), uint64_t(3));
     }
     // An explicit $FUGUE_IDENTITY is a file someone pointed us at, not our cache: never listed, never removed.
     void explicitIdentityOverrideIsNotOurs() {

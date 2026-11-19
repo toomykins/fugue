@@ -2,28 +2,10 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstring>
 
 namespace fugue::model {
 
 namespace {
-
-struct Rd {
-    ByteSpan b;
-    size_t p = 0;
-    bool ok = true;
-    bool need(size_t n) { if (b.size() - p < n) ok = false; return ok; }
-    uint8_t u8() { if (!need(1)) return 0; return b[p++]; }
-    uint16_t u16() { if (!need(2)) return 0; uint16_t v = uint16_t(b[p] | b[p + 1] << 8); p += 2; return v; }
-    uint32_t u32() { if (!need(4)) return 0; uint32_t v = uint32_t(b[p]) | uint32_t(b[p + 1]) << 8 | uint32_t(b[p + 2]) << 16 | uint32_t(b[p + 3]) << 24; p += 4; return v; }
-    float f32() { uint32_t u = u32(); float f; std::memcpy(&f, &u, 4); return f; }
-    std::string cstr() {
-        std::string s;
-        while (need(1) && b[p] != 0) s.push_back(char(b[p++]));
-        if (need(1)) p++;
-        return s;
-    }
-};
 
 float randFloat(std::mt19937& rng) { return float(rng() >> 8) * (1.0f / 16777216.0f); }
 
@@ -80,10 +62,10 @@ float squareRand(float u, float lo, float hi) {
 }
 float distribute(uint8_t rand, float u, float lo, float hi) {
     switch (rand) {
-    case 1: return normalRand(u);
-    case 2: return linearRand(u, lo, hi);
-    case 3: return squareRand(u, lo, hi);
-    default: return u;
+        case 1: return normalRand(u);
+        case 2: return linearRand(u, lo, hi);
+        case 3: return squareRand(u, lo, hi);
+        default: return u;
     }
 }
 
@@ -95,7 +77,10 @@ float maxAbs3(const std::vector<float>& v) {
 float at(const std::vector<float>& v, size_t i) { return i < v.size() ? v[i] : 0.0f; }
 
 uint32_t packRgba(float r, float g, float b, float a) {
-    auto c = [](float v) { int x = int(v * 255.0f + 0.5f); return uint32_t(std::clamp(x, 0, 255)); };
+    auto c = [](float v) {
+        int x = int(v * 255.0f + 0.5f);
+        return uint32_t(std::clamp(x, 0, 255));
+    };
     return c(r) | c(g) << 8 | c(b) << 16 | c(a) << 24;
 }
 uint32_t lerpColor(uint32_t x, uint32_t y, float t) {
@@ -117,13 +102,23 @@ uint32_t parseColor(const std::string& s) {
         return -1;
     };
     std::vector<int> d;
-    for (size_t i = 1; i < s.size(); i++) { int n = nib(s[i]); if (n < 0) return 0; d.push_back(n); }
+    for (size_t i = 1; i < s.size(); i++) {
+        int n = nib(s[i]);
+        if (n < 0) return 0;
+        d.push_back(n);
+    }
     uint32_t r, g, b, a = 255;
-    if (d.size() == 3) { r = uint32_t(d[0] * 17); g = uint32_t(d[1] * 17); b = uint32_t(d[2] * 17); }
-    else if (d.size() == 6 || d.size() == 8) {
-        r = uint32_t(d[0] << 4 | d[1]); g = uint32_t(d[2] << 4 | d[3]); b = uint32_t(d[4] << 4 | d[5]);
+    if (d.size() == 3) {
+        r = uint32_t(d[0] * 17);
+        g = uint32_t(d[1] * 17);
+        b = uint32_t(d[2] * 17);
+    } else if (d.size() == 6 || d.size() == 8) {
+        r = uint32_t(d[0] << 4 | d[1]);
+        g = uint32_t(d[2] << 4 | d[3]);
+        b = uint32_t(d[4] << 4 | d[5]);
         if (d.size() == 8) a = uint32_t(d[6] << 4 | d[7]);
-    } else return 0;
+    } else
+        return 0;
     return r | g << 8 | b << 16 | a << 24;
 }
 
@@ -146,151 +141,59 @@ const ParticleGen* opOperand(const ParticleGen& g) { return g.kids.empty() ? nul
 
 int particleSlotForKey(uint16_t key) {
     switch (key) {
-    case 0x145: return PLifespan;
-    case 0x146: return PFade;
-    case 0x15a: return PFadein;
-    case 0x147: return PPosition;
-    case 0x148: return PVelocity;
-    case 0xf2: return PColor;
-    case 0x14a: return PColorChange;
-    case 0x131: return PUnknown131;
-    case 0x14b: return PFriction;
-    case 0x14c: return PDrift;
-    case 0x14d: return PScale;
-    case 0x159: return PGrow;
-    case 0x14e: return PRotation;
-    case 0x14f: return PSpin;
-    case 0x2b: return PIcon;
-    case 0x2c: return PIconState;
-    default: return -1;
+        case 0x145: return PLifespan;
+        case 0x146: return PFade;
+        case 0x15a: return PFadein;
+        case 0x147: return PPosition;
+        case 0x148: return PVelocity;
+        case 0xf2: return PColor;
+        case 0x14a: return PColorChange;
+        case 0x131: return PUnknown131;
+        case 0x14b: return PFriction;
+        case 0x14c: return PDrift;
+        case 0x14d: return PScale;
+        case 0x159: return PGrow;
+        case 0x14e: return PRotation;
+        case 0x14f: return PSpin;
+        case 0x2b: return PIcon;
+        case 0x2c: return PIconState;
+        default: return -1;
     }
 }
 
-static bool parseGen(Rd& r, uint8_t type, size_t end, ParticleGen& g);
-
-static bool readNested(Rd& r, ParticleGen& g) {
-    uint8_t t = r.u8();
-    if (!r.ok) return false;
-    if (t == 0xff) { g = ParticleGen{}; return true; }
-    size_t len = r.u16();
-    if (!r.need(len)) return false;
-    return parseGen(r, t, r.p + len, g);
-}
-
-static bool parseGen(Rd& r, uint8_t type, size_t end, ParticleGen& g) {
-    g = ParticleGen{};
-    g.type = type;
-    g.rand = r.u8();
-    bool constant = type & 0x80;
-    auto floats = [&](std::vector<float>& v, int n) { for (int i = 0; i < n; i++) v.push_back(r.f32()); };
-    switch (type & 0x7f) {
-    case 0: case 2:
-        if ((type & 0x7f) == 2) {
-            g.colors.push_back(r.u32());
-            if (!constant) g.colors.push_back(r.u32());
-        } else {
-            floats(g.a, 1);
-            if (!constant) floats(g.b, 1);
-        }
-        break;
-    case 0x21:
-        g.sub = r.u16();
-        floats(g.a, 1);
-        if (!constant) floats(g.b, 1);
-        break;
-    case 1: case 0x20:
-        floats(g.a, 3);
-        if (!constant) floats(g.b, 3);
-        break;
-    case 3:
-        floats(g.a, 20);
-        if (!constant) floats(g.b, 20);
-        break;
-    case 4:
-        g.sub = r.u16();
-        g.kids.resize(2);
-        if (!readNested(r, g.kids[0]) || !readNested(r, g.kids[1])) return false;
-        break;
-    case 5:
-        for (unsigned n = r.u16(); n > 0 && r.ok; n--) {
-            uint32_t id = r.u32();
-            float w = r.f32();
-            g.ids.push_back({id, w});
-        }
-        break;
-    case 6:
-        for (unsigned n = r.u16(); n > 0 && r.ok; n--) {
-            std::string s = r.cstr();
-            float w = r.f32();
-            g.strs.push_back({std::move(s), w});
-        }
-        break;
-    default:   // an unknown kind: stock skips its payload and keeps no generator
-        g = ParticleGen{};
-        r.p = end;
-        return r.ok;
-    }
-    if (!r.ok || r.p > end) return false;
-    r.p = end;
-    return true;
-}
-
-bool parseParticleGen(uint8_t type, ByteSpan payload, ParticleGen& out) {
-    if (type == 0xff) { out = ParticleGen{}; return true; }
-    Rd r{payload};
-    return parseGen(r, type, payload.size(), out);
-}
-
-// The fixed block: [w u16][h u16][count u16][spawning f32][bound1 3f][bound2 3f][gravity 3f], the transform as
-// [n u8][n f32] filled into a row-vector 4x4 two (n <= 6), three (n <= 12) or four cells a row (a /matrix's six cells
-// a,d,b,e,c,f land in the x, y and z rows: its translation multiplies z, so a 2D set ignores it), and the gradient as
-// [n u16][n x (pos f32, rgba u32)][loop u8][space u8].
-bool applyParticleBlock(ParticleSet& s, ByteSpan fixed, const std::vector<std::pair<uint16_t, Bytes>>& gens) {
-    Rd r{fixed};
-    ParticleSet t = s;
-    t.width = r.u16();
-    t.height = r.u16();
-    t.count = r.u16();
-    t.spawning = r.f32();
-    for (float& v : t.bound1) v = r.f32();
-    for (float& v : t.bound2) v = r.f32();
-    for (float& v : t.gravity) v = r.f32();
-    unsigned n = r.u8();
-    t.hasTransform = n > 0;
-    t.transform = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
+void applyParticleBlock(ParticleSet& s, const proto::ParticleDef& d) {
+    s.width = d.width;
+    s.height = d.height;
+    s.count = d.count;
+    s.spawning = d.spawning;
+    s.bound1 = d.bound1;
+    s.bound2 = d.bound2;
+    s.gravity = d.gravity;
+    const size_t n = d.transform.size();
+    s.hasTransform = n > 0;
+    s.transform = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
     if (n > 0) {
-        unsigned perRow = n < 7 ? 2 : (n > 12 ? 4 : 3);
-        unsigned left = n;
-        for (unsigned row = 0; row < 4 && left > 0; row++)
-            for (unsigned c = 0; c < perRow && left > 0; c++, left--) t.transform[row * 4 + c] = r.f32();
-        for (; left > 0; left--) r.f32();
+        size_t perRow = n < 7 ? 2 : (n > 12 ? 4 : 3), k = 0;
+        for (size_t row = 0; row < 4 && k < n; row++)
+            for (size_t c = 0; c < perRow && k < n; c++) s.transform[row * 4 + c] = d.transform[k++];
     }
-    t.gradient.clear();
-    unsigned stops = r.u16();
-    if (stops > 0) {
-        for (unsigned i = 0; i < stops && r.ok; i++) {
-            float p = r.f32();
-            uint32_t c = r.u32();
-            t.gradient.push_back({p, c});
-        }
-        std::stable_sort(t.gradient.begin(), t.gradient.end(), [](const ParticleSet::Stop& a, const ParticleSet::Stop& b) { return a.pos < b.pos; });
-        t.gradientLoop = r.u8() != 0;
-        t.gradientSpace = r.u8();
+    s.gradient.clear();
+    for (const proto::ParticleDef::Stop& st : d.gradient) s.gradient.push_back({st.pos, st.rgba});
+    if (!d.gradient.empty()) {
+        std::stable_sort(s.gradient.begin(), s.gradient.end(),
+                         [](const ParticleSet::Stop& x, const ParticleSet::Stop& y) { return x.pos < y.pos; });
+        s.gradientLoop = d.gradientLoop;
+        s.gradientSpace = d.gradientSpace;
     }
-    if (!r.ok) return false;
-    for (const auto& [key, payload] : gens) {
+    for (const auto& [key, gen] : d.gens) {
         int slot = particleSlotForKey(key);
-        if (payload.empty()) return false;
-        ParticleGen g;
-        if (!parseParticleGen(payload[0], ByteSpan(payload).subspan(1), g)) return false;
         if (slot < 0) continue;
+        ParticleGen g = gen;
         // icon must be an icon list and icon_state a string list; anything else leaves the slot empty
         if (slot == PIcon && (g.type & 0x7f) != 5) g = ParticleGen{};
         if (slot == PIconState && (g.type & 0x7f) != 6) g = ParticleGen{};
-        t.gen[size_t(slot)] = std::move(g);
+        s.gen[size_t(slot)] = std::move(g);
     }
-    s = std::move(t);
-    return true;
 }
 
 // ---- sampling (number, vector, colour) -------------------------------------------------------------------------------
@@ -298,12 +201,24 @@ bool applyParticleBlock(ParticleSet& s, ByteSpan fixed, const std::vector<std::p
 float particleGenNum(const ParticleGen& g, std::mt19937& rng) {
     float lo = 0, hi = 1;
     switch (g.type) {
-    case 0x80: return at(g.a, 0);
-    case 0x81: return maxAbs3(g.a);
-    case 0: case 0x21: lo = at(g.a, 0); hi = at(g.b, 0); break;
-    case 1: case 0x20: lo = maxAbs3(g.a); hi = maxAbs3(g.b); break;
-    case 4: case 0x84: { const ParticleGen* k = opOperand(g); return k ? particleGenNum(*k, rng) : 0.0f; }
-    default: break;
+        case 0x80: return at(g.a, 0);
+        case 0x81: return maxAbs3(g.a);
+        case 0:
+        case 0x21:
+            lo = at(g.a, 0);
+            hi = at(g.b, 0);
+            break;
+        case 1:
+        case 0x20:
+            lo = maxAbs3(g.a);
+            hi = maxAbs3(g.b);
+            break;
+        case 4:
+        case 0x84: {
+            const ParticleGen* k = opOperand(g);
+            return k ? particleGenNum(*k, rng) : 0.0f;
+        }
+        default: break;
     }
     float u = distribute(g.rand, randFloat(rng), lo, hi);
     return (hi - lo) * u + lo;
@@ -311,80 +226,123 @@ float particleGenNum(const ParticleGen& g, std::mt19937& rng) {
 
 std::array<float, 3> particleGenVec(const ParticleGen& g, std::mt19937& rng) {
     switch (g.type) {
-    case 0: { float x = particleGenNum(g, rng), y = particleGenNum(g, rng), z = particleGenNum(g, rng); return {x, y, z}; }
-    case 0x80: { float v = at(g.a, 0); return {v, v, v}; }
-    case 0x81: return {at(g.a, 0), at(g.a, 1), at(g.a, 2)};
-    case 1: {
-        float u = randFloat(rng);
-        u = distribute(g.rand, u, maxAbs3(g.a), maxAbs3(g.b));
-        return {at(g.a, 0) + (at(g.b, 0) - at(g.a, 0)) * u, at(g.a, 1) + (at(g.b, 1) - at(g.a, 1)) * u,
-                at(g.a, 2) + (at(g.b, 2) - at(g.a, 2)) * u};
-    }
-    case 0x20: {
-        std::array<float, 3> out{};
-        for (size_t i = 0; i < 3; i++) {
-            float lo = at(g.a, i), hi = at(g.b, i);
-            float u = lo == hi ? 0.0f : randFloat(rng);
-            if (lo != hi) u = distribute(g.rand, u, lo, hi);
-            out[i] = (hi - lo) * u + lo;
+        case 0: {
+            float x = particleGenNum(g, rng), y = particleGenNum(g, rng), z = particleGenNum(g, rng);
+            return {x, y, z};
         }
-        return out;
-    }
-    case 0x21: {
-        float r = at(g.a, 0);
-        if (at(g.a, 0) != at(g.b, 0)) {
-            float lo = at(g.a, 0), hi = at(g.b, 0);
-            r = (hi - lo) * distribute(g.rand, randFloat(rng), lo, hi) + lo;
+        case 0x80: {
+            float v = at(g.a, 0);
+            return {v, v, v};
         }
-        switch (g.sub) {
-        case 1: {   // sphere: a point in the unit ball, pushed out to radius r
-            float x = randFloat(rng) * 2 - 1, y = randFloat(rng) * 2 - 1, z, len;
-            for (;;) {
-                z = randFloat(rng) * 2 - 1;
-                len = std::sqrt(x * x + y * y + z * z);
-                if (len >= 0.0001f && len <= 1) break;
-                x = y; y = z;
+        case 0x81: return {at(g.a, 0), at(g.a, 1), at(g.a, 2)};
+        case 1: {
+            float u = randFloat(rng);
+            u = distribute(g.rand, u, maxAbs3(g.a), maxAbs3(g.b));
+            return {at(g.a, 0) + (at(g.b, 0) - at(g.a, 0)) * u, at(g.a, 1) + (at(g.b, 1) - at(g.a, 1)) * u,
+                    at(g.a, 2) + (at(g.b, 2) - at(g.a, 2)) * u};
+        }
+        case 0x20: {
+            std::array<float, 3> out{};
+            for (size_t i = 0; i < 3; i++) {
+                float lo = at(g.a, i), hi = at(g.b, i);
+                float u = lo == hi ? 0.0f : randFloat(rng);
+                if (lo != hi) u = distribute(g.rand, u, lo, hi);
+                out[i] = (hi - lo) * u + lo;
             }
-            return {x * r / len, y * r / len, z * r / len};
+            return out;
         }
-        case 2: {   // square: a point on the perimeter of the square of half-size r
-            float s = randFloat(rng) * 8, x, y;
-            if (s < 2) { x = s - 1; y = -1; }
-            else if (s < 4) { x = 3 - s; y = 1; }
-            else if (s < 6) { x = 1; y = s - 5; }
-            else { x = -1; y = 7 - s; }
-            return {x * r, y * r, 0};
-        }
-        case 3: {   // cube: a point on the surface of the cube of half-size r
-            float s = randFloat(rng) * 12, w = randFloat(rng) * 2 - 1, x, y, z;
-            if (s <= 8) {
-                if (s <= 4) {
-                    if (s <= 2) { z = 1; x = s - 1; y = w; }
-                    else { z = -1; x = 3 - s; y = -w; }
-                } else if (s <= 6) { x = s - 5; z = w; y = 1; }
-                else { x = 7 - s; z = -w; y = -1; }
-            } else if (s <= 10) { x = 1; z = s - 9; y = w; }
-            else { x = -1; z = 11 - s; y = -w; }
-            return {x * r, y * r, z * r};
-        }
-        default: {   // circle
-            float x = randFloat(rng) * 2 - 1, y, len;
-            for (;;) {
-                y = randFloat(rng) * 2 - 1;
-                len = std::sqrt(x * x + y * y);
-                if (len >= 0.0001f && len <= 1) break;
-                x = y;
+        case 0x21: {
+            float r = at(g.a, 0);
+            if (at(g.a, 0) != at(g.b, 0)) {
+                float lo = at(g.a, 0), hi = at(g.b, 0);
+                r = (hi - lo) * distribute(g.rand, randFloat(rng), lo, hi) + lo;
             }
-            return {x * r / len, y * r / len, 0};
+            switch (g.sub) {
+                case 1: {  // sphere: a point in the unit ball, pushed out to radius r
+                    float x = randFloat(rng) * 2 - 1, y = randFloat(rng) * 2 - 1, z, len;
+                    for (;;) {
+                        z = randFloat(rng) * 2 - 1;
+                        len = std::sqrt(x * x + y * y + z * z);
+                        if (len >= 0.0001f && len <= 1) break;
+                        x = y;
+                        y = z;
+                    }
+                    return {x * r / len, y * r / len, z * r / len};
+                }
+                case 2: {  // square: a point on the perimeter of the square of half-size r
+                    float s = randFloat(rng) * 8, x, y;
+                    if (s < 2) {
+                        x = s - 1;
+                        y = -1;
+                    } else if (s < 4) {
+                        x = 3 - s;
+                        y = 1;
+                    } else if (s < 6) {
+                        x = 1;
+                        y = s - 5;
+                    } else {
+                        x = -1;
+                        y = 7 - s;
+                    }
+                    return {x * r, y * r, 0};
+                }
+                case 3: {  // cube: a point on the surface of the cube of half-size r
+                    float s = randFloat(rng) * 12, w = randFloat(rng) * 2 - 1, x, y, z;
+                    if (s <= 8) {
+                        if (s <= 4) {
+                            if (s <= 2) {
+                                z = 1;
+                                x = s - 1;
+                                y = w;
+                            } else {
+                                z = -1;
+                                x = 3 - s;
+                                y = -w;
+                            }
+                        } else if (s <= 6) {
+                            x = s - 5;
+                            z = w;
+                            y = 1;
+                        } else {
+                            x = 7 - s;
+                            z = -w;
+                            y = -1;
+                        }
+                    } else if (s <= 10) {
+                        x = 1;
+                        z = s - 9;
+                        y = w;
+                    } else {
+                        x = -1;
+                        z = 11 - s;
+                        y = -w;
+                    }
+                    return {x * r, y * r, z * r};
+                }
+                default: {  // circle
+                    float x = randFloat(rng) * 2 - 1, y, len;
+                    for (;;) {
+                        y = randFloat(rng) * 2 - 1;
+                        len = std::sqrt(x * x + y * y);
+                        if (len >= 0.0001f && len <= 1) break;
+                        x = y;
+                    }
+                    return {x * r / len, y * r / len, 0};
+                }
+            }
         }
+        case 2:
+        case 6:
+        case 0x82: {
+            uint32_t c = particleGenColor(g, rng);
+            return {float(c & 0xff) / 255.0f, float(c >> 8 & 0xff) / 255.0f, float(c >> 16 & 0xff) / 255.0f};
         }
-    }
-    case 2: case 6: case 0x82: {
-        uint32_t c = particleGenColor(g, rng);
-        return {float(c & 0xff) / 255.0f, float(c >> 8 & 0xff) / 255.0f, float(c >> 16 & 0xff) / 255.0f};
-    }
-    case 4: case 0x84: { const ParticleGen* k = opOperand(g); return k ? particleGenVec(*k, rng) : std::array<float, 3>{}; }
-    default: return {};
+        case 4:
+        case 0x84: {
+            const ParticleGen* k = opOperand(g);
+            return k ? particleGenVec(*k, rng) : std::array<float, 3>{};
+        }
+        default: return {};
     }
 }
 
@@ -392,29 +350,41 @@ uint32_t particleGenColor(const ParticleGen& g, std::mt19937& rng) {
     uint8_t kind = g.type & 0x7f;
     if (kind == 0x20 || kind == 0x21) kind = 1;
     switch (kind) {
-    case 0: { float v = particleGenNum(g, rng); return packRgba(v, v, v, 1); }
-    case 1: { auto v = particleGenVec(g, rng); return packRgba(v[0], v[1], v[2], 1); }
-    case 2: {
-        if (g.colors.empty()) return 0;
-        if (g.type & 0x80 || g.colors.size() < 2) return g.colors[0];
-        float u = randFloat(rng);
-        if (g.rand >= 1 && g.rand <= 3) u = distribute(g.rand, u, 0, 1);
-        return lerpColor(g.colors[0], g.colors[1], u);
-    }
-    case 3: {   // a colour matrix: each channel is the column sum of the sampled 5x4 matrix
-        std::vector<float> m = g.a;
-        if (!(g.type & 0x80) && g.b.size() == m.size()) {
-            float u = randFloat(rng);
-            for (size_t i = 0; i < m.size(); i++) m[i] += (g.b[i] - m[i]) * u;
+        case 0: {
+            float v = particleGenNum(g, rng);
+            return packRgba(v, v, v, 1);
         }
-        float ch[4] = {};
-        for (size_t c = 0; c < 4; c++)
-            for (size_t row = 0; row < 5; row++) ch[c] += at(m, row * 4 + c);
-        return packRgba(ch[0], ch[1], ch[2], ch[3]);
-    }
-    case 4: { const ParticleGen* k = opOperand(g); return k ? particleGenColor(*k, rng) : 0; }
-    case 6: { const std::string* s = weighted(g.strs, rng); return s ? parseColor(*s) : 0; }
-    default: return 0;
+        case 1: {
+            auto v = particleGenVec(g, rng);
+            return packRgba(v[0], v[1], v[2], 1);
+        }
+        case 2: {
+            if (g.colors.empty()) return 0;
+            if (g.type & 0x80 || g.colors.size() < 2) return g.colors[0];
+            float u = randFloat(rng);
+            if (g.rand >= 1 && g.rand <= 3) u = distribute(g.rand, u, 0, 1);
+            return lerpColor(g.colors[0], g.colors[1], u);
+        }
+        case 3: {  // a colour matrix: each channel is the column sum of the sampled 5x4 matrix
+            std::vector<float> m = g.a;
+            if (!(g.type & 0x80) && g.b.size() == m.size()) {
+                float u = randFloat(rng);
+                for (size_t i = 0; i < m.size(); i++) m[i] += (g.b[i] - m[i]) * u;
+            }
+            float ch[4] = {};
+            for (size_t c = 0; c < 4; c++)
+                for (size_t row = 0; row < 5; row++) ch[c] += at(m, row * 4 + c);
+            return packRgba(ch[0], ch[1], ch[2], ch[3]);
+        }
+        case 4: {
+            const ParticleGen* k = opOperand(g);
+            return k ? particleGenColor(*k, rng) : 0;
+        }
+        case 6: {
+            const std::string* s = weighted(g.strs, rng);
+            return s ? parseColor(*s) : 0;
+        }
+        default: return 0;
     }
 }
 
@@ -442,7 +412,7 @@ uint32_t particleGradient(const ParticleSet& s, float x) {
 
 namespace {
 
-constexpr double kMaxCatchUpTicks = 600;   // a set not drawn for longer restarts from this far back
+constexpr double kMaxCatchUpTicks = 600;  // a set not drawn for longer restarts from this far back
 
 // A new particle, born `age` ticks before now.
 void spawn(ParticleSet& s, Particle& p, double now, double age) {
@@ -464,8 +434,14 @@ void spawn(ParticleSet& s, Particle& p, double now, double age) {
     }
     if (g[PUnknown131].present()) p.unknown131 = particleGenNum(g[PUnknown131], rng);
     if (g[PFriction].present()) p.friction = std::clamp(particleGenNum(g[PFriction], rng), 0.0f, 1.0f);
-    if (g[PScale].present()) { auto v = particleGenVec(g[PScale], rng); p.scale = {v[0], v[1]}; }
-    if (g[PGrow].present()) { auto v = particleGenVec(g[PGrow], rng); p.grow = {v[0], v[1]}; }
+    if (g[PScale].present()) {
+        auto v = particleGenVec(g[PScale], rng);
+        p.scale = {v[0], v[1]};
+    }
+    if (g[PGrow].present()) {
+        auto v = particleGenVec(g[PGrow], rng);
+        p.grow = {v[0], v[1]};
+    }
     if (g[PRotation].present()) p.rotation = particleGenNum(g[PRotation], rng);
     if (g[PSpin].present()) p.spin = particleGenNum(g[PSpin], rng);
     if (g[PIcon].present()) {
@@ -510,7 +486,10 @@ bool step(ParticleSet& s, Particle& p, double now) {
             float h = t > 4 ? t * 0.5f : std::min(t, 1.0f);
             if (p.friction != 0) {
                 float k = float(std::pow(double(1 - p.friction), double(h)));
-                for (size_t i = 0; i < 3; i++) { p.vel[i] *= k; p.acc[i] *= k; }
+                for (size_t i = 0; i < 3; i++) {
+                    p.vel[i] *= k;
+                    p.acc[i] *= k;
+                }
             }
             if (drift.present()) {
                 auto d = particleGenVec(drift, s.rng);
@@ -554,7 +533,7 @@ void advanceParticles(ParticleSet& s, int64_t clockNs, int64_t frameNs, uint32_t
         s.started = true;
         s.rng.seed(seed);
         s.epochNs = q;
-        s.last = -frameTicks;   // the first step covers one frame
+        s.last = -frameTicks;  // the first step covers one frame
     }
     double now = double(q - s.epochNs) / 1e8;
     if (now < s.last) s.last = now - frameTicks;

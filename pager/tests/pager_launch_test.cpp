@@ -21,11 +21,11 @@ private slots:
         QCOMPARE(pager::guestChoicePath(), (home.path() + "/.fugue/qt/pager-guest").toStdString());
         QVERIFY(!pager::guestRemembered());
         std::string e;
-        QVERIFY2(pager::rememberGuest(false, &e), e.c_str());   // forgetting nothing is not an error
+        QVERIFY2(pager::rememberGuest(false, &e), e.c_str());  // forgetting nothing is not an error
         QVERIFY2(pager::rememberGuest(true, &e), e.c_str());
         QVERIFY(pager::guestRemembered());
         QVERIFY(isPrivateFile(pager::guestChoicePath()));
-        QVERIFY(!QFile::exists(home.path() + "/.fugue/pager.json"));   // pager.json is not written
+        QVERIFY(!QFile::exists(home.path() + "/.fugue/pager.json"));  // pager.json is not written
         QVERIFY2(pager::rememberGuest(false, &e), e.c_str());
         QVERIFY(!pager::guestRemembered());
     }
@@ -36,16 +36,16 @@ private slots:
         qputenv("HOME", home.path().toUtf8());
         qunsetenv("FUGUE_PAGER_CONFIG");
         QCOMPARE(pager::autoSignInOffPath(), (home.path() + "/.fugue/qt/pager-no-autosignin").toStdString());
-        QVERIFY(pager::autoSignIn());   // default on
+        QVERIFY(pager::autoSignIn());  // default on
         std::string e;
-        QVERIFY2(pager::setAutoSignIn(true, &e), e.c_str());   // turning on what is on is not an error
+        QVERIFY2(pager::setAutoSignIn(true, &e), e.c_str());  // turning on what is on is not an error
         QVERIFY2(pager::setAutoSignIn(false, &e), e.c_str());
         QVERIFY(!pager::autoSignIn());
         QVERIFY(!QFile::exists(home.path() + "/.fugue/pager.json"));
         pager::CachePlan plan = pager::planClearCache();
         for (auto& i : plan.items) QVERIFY2(i.path != pager::autoSignInOffPath(), i.path.c_str());
         pager::clearCache();
-        QVERIFY(!pager::autoSignIn());   // survived Clear cache
+        QVERIFY(!pager::autoSignIn());  // survived Clear cache
         QVERIFY2(pager::setAutoSignIn(true, &e), e.c_str());
         QVERIFY(pager::autoSignIn());
     }
@@ -58,14 +58,15 @@ private slots:
         QCOMPARE(pager::displaySettingsPath(""), (home.path() + "/.fugue/display.ini").toStdString());
         QCOMPARE(pager::clientStateDir({"--no-pacing", "--state-dir", "/a", "--state-dir=/b"}), std::string("/b"));
         QCOMPARE(pager::clientStateDir({"--state-dir", "/a", "--", "--state-dir=/b"}), std::string("/b"));
-        QCOMPARE(pager::clientStateDir({"--state-dir="}), std::string());   // empty: the client uses its default too
-        const std::string ini = pager::displaySettingsPath(pager::clientStateDir({"--state-dir", (home.path() + "/alt").toStdString()}));
+        QCOMPARE(pager::clientStateDir({"--state-dir="}), std::string());  // empty: the client uses its default too
+        const std::string ini =
+            pager::displaySettingsPath(pager::clientStateDir({"--state-dir", (home.path() + "/alt").toStdString()}));
         QCOMPARE(ini, (home.path() + "/alt/display.ini").toStdString());
-        QVERIFY(!pager::savedRendererGpu(ini));   // no file: CPU
+        QVERIFY(!pager::savedRendererGpu(ini));  // no file: CPU
         {
             QSettings c(QString::fromStdString(ini), QSettings::IniFormat);
             c.setValue("performanceOverlay", true);
-            c.setValue("renderer", "GPU");   // not the client's spelling: CPU
+            c.setValue("renderer", "GPU");  // not the client's spelling: CPU
         }
         QVERIFY(!pager::savedRendererGpu(ini));
         std::string e;
@@ -77,7 +78,7 @@ private slots:
         QVERIFY2(pager::setSavedRenderer(ini, false, &e), e.c_str());
         c.sync();
         QCOMPARE(c.value("renderer").toString(), QString("cpu"));
-        QVERIFY(!QFile::exists(home.path() + "/.fugue/display.ini"));   // the default dir was not touched
+        QVERIFY(!QFile::exists(home.path() + "/.fugue/display.ini"));  // the default dir was not touched
     }
     void buildArgsNeverCarriesASecret() {
         QTemporaryDir home;
@@ -88,19 +89,26 @@ private slots:
         account::Config cfg;
         cfg.account = "SomeKey";
         account::Server srv;
-        srv.name = "vg"; srv.addr = "game.example:7777"; srv.hub = true; srv.flags = {"--size", "800x600"};
-        account::Account a; a.installId = 0x262781; a.innerKey = 7;
+        srv.name = "vg";
+        srv.addr = "game.example:7777";
+        srv.hub = true;
+        srv.flags = {"--size", "800x600"};
+        account::Account a;
+        a.installId = 0x262781;
+        a.innerKey = 7;
         a.identity = {'S', 'o', 'm', 'e', 'K', 'e', 'y', 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13};
         std::string e;
         QVERIFY2(account::saveAccount("SomeKey", a, &e), e.c_str());
         auto args = pager::buildArgs(cfg, srv);
         std::string idp = account::identityPath("SomeKey", &e);
         QVERIFY(!idp.empty());
-        std::vector<std::string> want{"--connect", "game.example:7777", "--account", "SomeKey", "--hub", "--identity-file", idp, "--size", "800x600"};
+        std::vector<std::string> want{"--connect", "game.example:7777", "--account", "SomeKey",
+                                      "--hub",     "--identity-file",   idp,         "--size",
+                                      "800x600"};
         QCOMPARE(args, want);
         std::string joined = pager::displayCommand(args);
         QVERIFY(joined.find(pw) == std::string::npos);
-        QVERIFY(joined.find("010203") == std::string::npos);   // no identity hex either
+        QVERIFY(joined.find("010203") == std::string::npos);  // no identity hex either
         // the identity file is what the path points at, 0600
         QVERIFY(isPrivateFile(idp));
         // a full command: prefix + args + passthrough, still no secret
@@ -115,45 +123,53 @@ private slots:
     void guestAndNonHub() {
         QTemporaryDir home;
         qputenv("HOME", home.path().toUtf8());
-        account::Server s; s.addr = "127.0.0.1:6000";
+        account::Server s;
+        s.addr = "127.0.0.1:6000";
         QCOMPARE(pager::buildArgs(account::Config{}, s), (std::vector<std::string>{"--connect", "127.0.0.1:6000"}));
-        account::Config c; c.account = "K";
+        account::Config c;
+        c.account = "K";
         auto a = pager::buildArgs(c, s);
-        QVERIFY(std::find(a.begin(), a.end(), "--hub") == a.end());   // a bare server never gets --hub
+        QVERIFY(std::find(a.begin(), a.end(), "--hub") == a.end());  // a bare server never gets --hub
     }
     void childEnvironmentDropsEveryPasswordVariable() {
         qputenv("FUGUE_BYOND_PASSWORD", "x1");
         qputenv("HARMLESS_VAR", "keep");
         auto env = pager::childEnvironment();
         QVERIFY(!env.contains("FUGUE_BYOND_PASSWORD"));
-        QCOMPARE(env.value("HARMLESS_VAR"), QString("keep"));   // control: it copies the rest
-        qunsetenv("FUGUE_BYOND_PASSWORD"); qunsetenv("HARMLESS_VAR");
+        QCOMPARE(env.value("HARMLESS_VAR"), QString("keep"));  // control: it copies the rest
+        qunsetenv("FUGUE_BYOND_PASSWORD");
+        qunsetenv("HARMLESS_VAR");
     }
     void desktopQuoting() {
         QCOMPARE(pager::desktopQuote("/opt/fugue/fugue-qt"), std::string("/opt/fugue/fugue-qt"));
         QCOMPARE(pager::desktopQuote("/home/a b/f"), std::string("\"/home/a b/f\""));
         QCOMPARE(pager::desktopQuote("/h/$x`y\\z\"q%"), std::string("\"/h/\\$x\\`y\\\\z\\\"q%%\""));
         QCOMPARE(pager::desktopEntry("/home/a b/fugue-qt"),
-                 std::string("[Desktop Entry]\nType=Application\nName=Fugue\nComment=Join Space Station 13 servers\nExec=\"/home/a b/fugue-qt\" pager %u\n"
-                             "Icon=io.github.toomykins.Fugue\nTerminal=false\nCategories=Game;\nMimeType=x-scheme-handler/byond;\nStartupWMClass=fugue-qt\n"));
+                 std::string("[Desktop Entry]\nType=Application\nName=Fugue\nComment=Join Space Station 13 "
+                             "servers\nExec=\"/home/a b/fugue-qt\" pager %u\n"
+                             "Icon=io.github.toomykins.Fugue\nTerminal=false\nCategories=Game;\nMimeType=x-scheme-"
+                             "handler/byond;\nStartupWMClass=fugue-qt\n"));
     }
     // The Windows handler passes the link as `pager --url "%1"`; a link that could have been split into more arguments
     // is refused, never parsed as pager flags.
     void urlHandlerTakesOneLinkOnly() {
-        QCOMPARE(pager::urlHandlerCommand("C:\\Fugue\\fugue-qt.exe"), std::string("\"C:\\Fugue\\fugue-qt.exe\" pager --url \"%1\""));
+        QCOMPARE(pager::urlHandlerCommand("C:\\Fugue\\fugue-qt.exe"),
+                 std::string("\"C:\\Fugue\\fugue-qt.exe\" pager --url \"%1\""));
         std::string e;
-        QCOMPARE(pager::handlerUrl({"--url", "byond://127.0.0.1:6000"}, &e).value_or(""), std::string("byond://127.0.0.1:6000"));
-        QCOMPARE(pager::handlerUrl({"--url", "byond://host:1/?a=%22b"}, &e).value_or(""), std::string("byond://host:1/?a=%22b"));
-        for (const std::vector<std::string>& bad : std::vector<std::vector<std::string>>{
-                 {"--url"},
-                 {"--url", ""},
-                 {"--url", "byond://h:1", "-keytxt", "\\\\host\\share\\key.txt"},
-                 {"--url", "byond://h:1\" -keytxt \\\\host\\share\\key.txt"},
-                 {"--url", "byond://h:1 -keytxt x"},
-                 {"--url", "byond://h:1\t"},
-                 {"--url", "byond://h:1\n-login"},
-                 {"-keytxt", "x", "--url", "byond://h:1"},
-                 {"--url=byond://h:1"}}) {
+        QCOMPARE(pager::handlerUrl({"--url", "byond://127.0.0.1:6000"}, &e).value_or(""),
+                 std::string("byond://127.0.0.1:6000"));
+        QCOMPARE(pager::handlerUrl({"--url", "byond://host:1/?a=%22b"}, &e).value_or(""),
+                 std::string("byond://host:1/?a=%22b"));
+        for (const std::vector<std::string>& bad :
+             std::vector<std::vector<std::string>>{{"--url"},
+                                                   {"--url", ""},
+                                                   {"--url", "byond://h:1", "-keytxt", "\\\\host\\share\\key.txt"},
+                                                   {"--url", "byond://h:1\" -keytxt \\\\host\\share\\key.txt"},
+                                                   {"--url", "byond://h:1 -keytxt x"},
+                                                   {"--url", "byond://h:1\t"},
+                                                   {"--url", "byond://h:1\n-login"},
+                                                   {"-keytxt", "x", "--url", "byond://h:1"},
+                                                   {"--url=byond://h:1"}}) {
             e.clear();
             QVERIFY(!pager::handlerUrl(bad, &e));
             QVERIFY(!e.empty());
@@ -171,7 +187,8 @@ private slots:
         QVERIFY(QDir().mkpath(xdg + "/applications"));
         QFile legacy(xdg + "/applications/fugue.desktop");
         QVERIFY(legacy.open(QIODevice::WriteOnly));
-        legacy.write(QByteArray::fromStdString(pager::desktopEntry("/old/fugue-qt")).replace("Icon=io.github.toomykins.Fugue\n", ""));
+        legacy.write(QByteArray::fromStdString(pager::desktopEntry("/old/fugue-qt"))
+                         .replace("Icon=io.github.toomykins.Fugue\n", ""));
         legacy.close();
         auto r = pager::installDesktop("/x/fugue-qt", {{16, QByteArray("png16")}, {256, QByteArray("png256")}});
         QVERIFY2(r.ok, r.err.c_str());
@@ -188,7 +205,7 @@ private slots:
         other.write("[Desktop Entry]\nType=Application\nName=Something else\n");
         other.close();
         QVERIFY(pager::installDesktop("/x/fugue-qt").ok);
-        QVERIFY(QFile::exists(xdg + "/applications/fugue.desktop"));   // not ours: kept
+        QVERIFY(QFile::exists(xdg + "/applications/fugue.desktop"));  // not ours: kept
         QDir h(home.path());
         QCOMPARE(h.entryList(QDir::AllEntries | QDir::NoDotAndDotDot), QStringList{"data"});
         QVERIFY(r.desktopPath.rfind(xdg.toStdString(), 0) == 0);

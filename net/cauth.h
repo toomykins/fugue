@@ -1,7 +1,7 @@
 // The login-certificate cache, kept at <stateDir>/cauth.txt in the stock client's cfg/cauth.txt format (config set 10).
 // One line per endpoint: <ckey>@<host>:<port> key=<%x>;pwd=03<24 hex>;ctime=<%llx>
 // `key` is the client-minted u32 that login records carry; `pwd` is the certStr minted with it.
-// The cache is engaged only when the server's 0x0001 reply sends flag B = 1.
+// The cache is engaged only when the server's Handshake reply sends flag B = 1.
 #pragma once
 #include <cstdint>
 #include <string>
@@ -11,8 +11,8 @@ namespace fugue::net {
 
 struct CauthEntry {
     uint32_t key = 0;
-    std::string pwd;       // the certStr ("03" + 24 hex) minted with the key
-    uint64_t ctime = 0;    // seconds since the epoch at the last write
+    std::string pwd;     // the certStr ("03" + 24 hex) minted with the key
+    uint64_t ctime = 0;  // seconds since the epoch at the last write
 };
 
 // <stateDir>/cauth.txt
@@ -27,11 +27,11 @@ std::string cauthEntryName(std::string_view account, std::string_view host, uint
 class CauthCache {
 public:
     CauthCache(std::string stateDir, std::string name, uint64_t now = 0);
-    // The 0x1a key. engaged = the server's 0x0001 reply flag B.
+    // The Login key. engaged = the server's Handshake reply flag B.
     uint32_t loginKey(bool engaged, std::string* err = nullptr);
-    // The 0x001c hub request's cauthKey and certStr.
+    // The cauthKey and certStr of the hub request that answers a CertChallenge.
     void certRequest(uint32_t* key, std::string* certStr, std::string* err = nullptr);
-    // The certStr the 0x0036 ack re-keys with.
+    // The certStr the CertAck re-keys with.
     const std::string& certStr() const { return pwd_; }
     uint32_t key() const { return key_; }
 
@@ -44,11 +44,12 @@ private:
     bool minted_ = false;
 };
 
-// The 0x1a key with the cache engaged.
-uint32_t cauthKeyFor(const std::string& stateDir, const std::string& name, std::string* err = nullptr, uint64_t now = 0);
+// The Login key with the cache engaged.
+uint32_t cauthKeyFor(const std::string& stateDir, const std::string& name, std::string* err = nullptr,
+                     uint64_t now = 0);
 // Read-only lookup (tests, diagnostics). false when absent.
 bool cauthLookup(const std::string& stateDir, const std::string& name, CauthEntry* out);
 
-constexpr uint64_t kCauthMaxAge = 0x278d00;   // 30 days in seconds: the prune bound
+constexpr uint64_t kCauthMaxAge = 0x278d00;  // 30 days in seconds: the prune bound
 
 }  // namespace fugue::net

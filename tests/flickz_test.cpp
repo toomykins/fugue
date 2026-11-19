@@ -27,7 +27,10 @@ std::string slurp(const std::string& p) {
 constexpr int64_t kT0 = 1'000'000'000'000'000'000;
 constexpr int64_t kDs = 100'000'000;
 constexpr uint32_t kRes = 0xeda1cadb;
-struct Rgb { uint8_t r, g, b; bool operator==(const Rgb& o) const { return r == o.r && g == o.g && b == o.b; } };
+struct Rgb {
+    uint8_t r, g, b;
+    bool operator==(const Rgb& o) const { return r == o.r && g == o.g && b == o.b; }
+};
 constexpr Rgb kFloor{40, 40, 40}, kObj{0, 160, 0}, kFlOz1{255, 0, 255};
 }  // namespace
 
@@ -54,7 +57,10 @@ class Flickz : public QObject {
         render::DrawList dl;
         render::SceneStats st;
         std::string err;
-        if (!render::assembleMapControl(s, res_, clockNs, dl, st, &err)) { qWarning("assemble: %s", err.c_str()); return {}; }
+        if (!render::assembleMapControl(s, res_, clockNs, dl, st, &err)) {
+            qWarning("assemble: %s", err.c_str());
+            return {};
+        }
         render::RgbaImage f = render::execute(dl);
         int px = (x - 5) * 32 + in, py = (11 - y) * 32 + in;
         if (px < 0 || py < 0 || px >= f.w || py >= f.h) return {};
@@ -72,12 +78,13 @@ private slots:
         while (std::getline(f, line)) {
             QVERIFY(line.rfind("0x", 0) == 0);
             size_t sp = line.find(' ', line.find("len="));
-            frames_.push_back({uint16_t(std::stoul(line.substr(2, 4), nullptr, 16)), sp == std::string::npos ? Bytes{} : unhex(line.substr(sp + 1))});
+            frames_.push_back({uint16_t(std::stoul(line.substr(2, 4), nullptr, 16)),
+                               sp == std::string::npos ? Bytes{} : unhex(line.substr(sp + 1))});
         }
         QCOMPARE(int(frames_.size()), 128);
-        for (size_t l : {33, 38, 44, 50, 72}) QCOMPARE(frames_[l - 2].first, uint16_t(0x006c));
-        for (size_t l : {39, 45, 51}) QCOMPARE(frames_[l - 2].first, uint16_t(0x0008));
-        QCOMPARE(frames_[71 - 2].first, uint16_t(0x00c7));
+        for (size_t l : {33, 38, 44, 50, 72}) QCOMPARE(frames_[l - 2].first, uint16_t(S2C::FlickState));
+        for (size_t l : {39, 45, 51}) QCOMPARE(frames_[l - 2].first, uint16_t(S2C::InView));
+        QCOMPARE(frames_[71 - 2].first, uint16_t(S2C::FlickTarget));
         std::string b = slurp(dir_ + "/res/eda1cadb");
         uint32_t want = kRes;
         std::string err;
@@ -88,18 +95,21 @@ private slots:
     void ownZFlickDraws() {
         model::Session s = start(35, kT0);
         QVERIFY(at(s, kT0 + 5 * kDs, 9, 8) == kFlOz1);
-        QVERIFY(at(s, kT0 + 50 * kDs, 9, 8, 16) == kObj);   // played out: the obj again
+        QVERIFY(at(s, kT0 + 50 * kDs, 9, 8, 16) == kObj);  // played out: the obj again
     }
 
     // An obj on z2 or z3 that DD placed for its flick does not draw on the z1 map, neither the obj nor its flick.
     void otherZFlickDoesNotDraw() {
-        struct Case { size_t line; int x, y; } cases[] = {{39, 10, 8}, {45, 8, 8}, {51, 10, 9}};
+        struct Case {
+            size_t line;
+            int x, y;
+        } cases[] = {{39, 10, 8}, {45, 8, 8}, {51, 10, 9}};
         for (const Case& c : cases) {
             model::Session s = start(c.line, kT0);
             QVERIFY(s.world().atoms.count(c.line == 39 ? 1u : c.line == 45 ? 2u : 3u));
             Rgb p = at(s, kT0 + 5 * kDs, c.x, c.y);
             QVERIFY2(p == kFloor, qPrintable(QString("line %1: %2,%3,%4").arg(c.line).arg(p.r).arg(p.g).arg(p.b)));
-            if (c.line != 45) QVERIFY(at(s, kT0 + 5 * kDs, c.x, c.y, 16) == kFloor);   // nor the obj itself
+            if (c.line != 45) QVERIFY(at(s, kT0 + 5 * kDs, c.x, c.y, 16) == kFloor);  // nor the obj itself
         }
     }
 

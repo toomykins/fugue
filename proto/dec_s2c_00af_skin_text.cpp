@@ -1,27 +1,37 @@
-// s2c 0x00af: the world's .dmf interface as literal source text.
+// S2C::SkinText: the world's .dmf interface as literal source text.
 #include "proto/registry.h"
 
 namespace fugue::proto {
-namespace {
 
 // Layout [skin cstring][hub cstring]? [flags u16]?; the last two are length-guarded, and an empty body
 //   means no skin.
-canon::Json decode(State&, ByteSpan body) {
-    std::string dmf, hub;
-    uint16_t flags = 0;
-    bool hasHub = false, hasFlags = false;
-    if (!body.empty()) {
-        Reader r(body);
-        dmf = r.cstr();
-        if (r.remaining()) { hub = r.cstr(); hasHub = true; }
-        if (r.remaining()) { flags = r.u16(); hasFlags = true; }
-        r.expectEnd();
+SkinText decodeSkinText(ByteSpan body) {
+    SkinText m;
+    if (body.empty()) return m;
+    Reader r(body);
+    m.dmf = r.cstr();
+    if (r.more()) {
+        m.hub = r.cstr();
+        m.hasHub = true;
     }
-    return canon::Object().str("dmf", dmf).str("hub", hub).boolean("hasHub", hasHub)
-        .u("flags", flags).boolean("hasFlags", hasFlags).build();
+    if (r.more()) {
+        m.flags = r.u16();
+        m.hasFlags = true;
+    }
+    r.expectEnd();
+    return m;
 }
 
-FUGUE_REGISTER_DECODER(Dir::S2C, 0x00af, "cpp:stock-dd-wire", decode);
+canon::Json toJson(const SkinText& m) {
+    return canon::Object()
+        .str("dmf", m.dmf)
+        .str("hub", m.hub)
+        .boolean("hasHub", m.hasHub)
+        .u("flags", m.flags)
+        .boolean("hasFlags", m.hasFlags)
+        .build();
+}
 
-}  // namespace
+FUGUE_REGISTER_DECODER(Dir::S2C, S2C::SkinText, "cpp:stock-dd-wire", jsonOf<decodeSkinText>);
+
 }  // namespace fugue::proto

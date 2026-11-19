@@ -16,7 +16,10 @@
 using namespace fugue;
 
 namespace {
-struct Row { std::string label, obj, iconX, iconY, screenLoc; int x, y; };
+struct Row {
+    std::string label, obj, iconX, iconY, screenLoc;
+    int x, y;
+};
 
 std::string dir() { return std::string(FUGUE_TEST_DATA_DIR) + "/hudhits-world"; }
 
@@ -82,7 +85,10 @@ class HudHits : public QObject {
         }
         render::SceneStats st;
         std::string err;
-        if (!render::assembleMapControl(w.sess, w.res, 0, w.dl, st, &err, true)) { qWarning("assemble: %s", err.c_str()); return false; }
+        if (!render::assembleMapControl(w.sess, w.res, 0, w.dl, st, &err, true)) {
+            qWarning("assemble: %s", err.c_str());
+            return false;
+        }
         return w.dl.hit != nullptr;
     }
 
@@ -102,13 +108,21 @@ class HudHits : public QObject {
         for (const Row& r : rows_) {
             int px = r.x, py = sc.pixH() - 1 - r.y;
             render::Naming n;
-            if (!render::nameMouse(sc, px, py, n)) { qWarning("%s: we name nothing; DS named %s", r.label.c_str(), r.obj.c_str()); continue; }
+            if (!render::nameMouse(sc, px, py, n)) {
+                qWarning("%s: we name nothing; DS named %s", r.label.c_str(), r.obj.c_str());
+                continue;
+            }
             proto::enc::ClickCmd c = render::clickCmdFrom(n, 1, {}, "mapwindow.map");
-            std::string obj = n.hit.kind == render::kAtomTurf ? "turf " + std::to_string(n.overX) + "," + std::to_string(n.overY) : n.hit.name;
+            std::string obj = n.hit.kind == render::kAtomTurf
+                                  ? "turf " + std::to_string(n.overX) + "," + std::to_string(n.overY)
+                                  : n.hit.name;
             std::string sl = screenLocOf(proto::enc::clickParams(c));
-            if (obj == r.obj && std::to_string(n.iconX) == r.iconX && std::to_string(n.iconY) == r.iconY && sl == r.screenLoc) agree++;
-            else qWarning("%s: DS %s %s,%s %s | ours %s %d,%d %s", r.label.c_str(), r.obj.c_str(), r.iconX.c_str(), r.iconY.c_str(),
-                          r.screenLoc.c_str(), obj.c_str(), n.iconX, n.iconY, sl.c_str());
+            if (obj == r.obj && std::to_string(n.iconX) == r.iconX && std::to_string(n.iconY) == r.iconY &&
+                sl == r.screenLoc)
+                agree++;
+            else
+                qWarning("%s: DS %s %s,%s %s | ours %s %d,%d %s", r.label.c_str(), r.obj.c_str(), r.iconX.c_str(),
+                         r.iconY.c_str(), r.screenLoc.c_str(), obj.c_str(), n.iconX, n.iconY, sl.c_str());
         }
         QCOMPARE(agree, int(rows_.size()));
     }

@@ -21,26 +21,27 @@
 namespace fugue::pager {
 
 struct DsArgv {
-    std::string target;        // raw for a bare argument, byond://-prefixed for +connect; "" = none
-    int targetArg = -1;        // index in args of that bare argument or of its +connect
-    bool trace = false;        // -trace
-    bool pager = false;        // -pager
-    int security = -1;         // -trusted 0 / -safe 1 / -ultrasafe 2; -1 = not given; the last one wins
-    bool isServer = false;     // -isserver / -is-server (sets the skin parameter IsServer)
-    bool debug = false;        // -debug (case-sensitive)
-    std::vector<std::string> dropped;   // what DreamSeeker would read and ignore, in order (reported, never acted on)
-    std::vector<std::string> fugue;     // Fugue's own --options (and their values), in order, for its own parser
+    std::string target;                // raw for a bare argument, byond://-prefixed for +connect; "" = none
+    int targetArg = -1;                // index in args of that bare argument or of its +connect
+    bool trace = false;                // -trace
+    bool pager = false;                // -pager
+    int security = -1;                 // -trusted 0 / -safe 1 / -ultrasafe 2; -1 = not given; the last one wins
+    bool isServer = false;             // -isserver / -is-server (sets the skin parameter IsServer)
+    bool debug = false;                // -debug (case-sensitive)
+    std::vector<std::string> dropped;  // what DreamSeeker would read and ignore, in order (reported, never acted on)
+    std::vector<std::string> fugue;    // Fugue's own --options (and their values), in order, for its own parser
 };
 
 struct FugueOptions {
-    std::set<std::string> value;     // names (without "--") of Fugue's options that take a value
-    std::set<std::string> flag;      // names of Fugue's options that take none
-    bool keepUnknown = true;         // an unknown --word goes to Fugue's parser (false = dropped, as DreamSeeker drops it)
+    std::set<std::string> value;  // names (without "--") of Fugue's options that take a value
+    std::set<std::string> flag;   // names of Fugue's options that take none
+    bool keepUnknown = true;      // an unknown --word goes to Fugue's parser (false = dropped, as DreamSeeker drops it)
 };
 
 // args = argv[1..] (argv[0] excluded) as DreamSeeker would see them. hostTaken[j] = args[j] was consumed by Qt before Fugue
 // saw argv: it counts toward DS's argc and indices and is never a target, a flag or a +word's value. Shorter = not taken.
-DsArgv parseDsArgv(const std::vector<std::string>& args, const FugueOptions& fugueOpts, const std::vector<bool>& hostTaken = {});
+DsArgv parseDsArgv(const std::vector<std::string>& args, const FugueOptions& fugueOpts,
+                   const std::vector<bool>& hostTaken = {});
 
 // hostTaken for parseDsArgv, from the argv[1..] pointers before and after QApplication ran. Matched by POINTER IDENTITY, never
 // by text: Qt compacts argv in place, so a kept argument keeps its char* and a removed one's pointer is gone. Equal strings are
@@ -56,8 +57,8 @@ bool invokedAsDreamSeeker(const std::string& argv0);
 // and a development build the client. Invoked as DreamSeeker the mode is ALWAYS the client and no subcommand is read: a bare
 // `pager` is a target to DreamSeeker, and is one here too.
 struct Mode {
-    std::string mode;                 // "pager" | "client" | "version"
-    std::vector<std::string> rest;    // args with the subcommand removed
+    std::string mode;               // "pager" | "client" | "version"
+    std::vector<std::string> rest;  // args with the subcommand removed
     bool asDreamSeeker = false;
 };
 Mode chooseMode(const std::string& argv0, const std::vector<std::string>& args, bool release);
@@ -67,6 +68,7 @@ Mode chooseMode(const std::string& argv0, const std::vector<std::string>& args, 
 // `+connect h:p`) open no window and exit. Fugue's own --options with no target are not a DreamSeeker command line: usage
 // line, exit 2.
 enum class NoTarget { OpenLocation, QuietExit, Usage };
-NoTarget noTargetAction(size_t dsArgc, const DsArgv& d);   // dsArgc = DreamSeeker's argc (argv[0] counted, Qt's args too)
+NoTarget noTargetAction(size_t dsArgc,
+                        const DsArgv& d);  // dsArgc = DreamSeeker's argc (argv[0] counted, Qt's args too)
 
 }  // namespace fugue::pager

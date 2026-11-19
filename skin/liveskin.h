@@ -45,27 +45,32 @@ namespace fugue::skin {
 // One consistent copy of everything a painter needs.
 struct SkinSnapshot {
     std::shared_ptr<const File> file;
-    uint64_t fileId = 0;          // bumps on every load(): a different id means "rebuild the widgets"
-    uint64_t generation = 0;      // bumps on every state change
+    uint64_t fileId = 0;      // bumps on every load(): a different id means "rebuild the widgets"
+    uint64_t generation = 0;  // bumps on every state change
     Rect client;
     Tree tree;
     PropStore props;
-    MacroTable macros;            // with the macros a winset created or changed
-    uint64_t macroGen = 0;        // bumps when a winset changes a macro set's bindings
-    std::string macro;            // the active macro set name
-    std::string focus;            // last control a winset focused ("window.name" or as addressed), "" = none
-    uint64_t focusSeq = 0;        // bumps each time a winset sets focus (even to the same control)
-    Menu menu;                    // with the live is-disabled overlay applied
-    std::string mainWindow;       // the main window's block name
+    MacroTable macros;       // with the macros a winset created or changed
+    uint64_t macroGen = 0;   // bumps when a winset changes a macro set's bindings
+    std::string macro;       // the active macro set name
+    std::string focus;       // last control a winset focused ("window.name" or as addressed), "" = none
+    uint64_t focusSeq = 0;   // bumps each time a winset sets focus (even to the same control)
+    Menu menu;               // with the live is-disabled overlay applied
+    std::string mainWindow;  // the main window's block name
     // The controls a winset `parent=` created (LiveSkin::runtime_), in creation order: name, parent window (a skin window's
     // block name or a browse() popup's name), type (upper-case, "" until a `type=` arrives). Their pos / size / is-visible
-    // are in `props` under `name`. shell/skinwindow builds a MAP one inside its popup (vg's camera console, tgui ByondUi).
-    struct RuntimeControl { std::string name, parent, type; };
+    // are in `props` under `name`. shell/skinwindow builds a MAP one inside its popup (vg's camera console, tgui ByondUi)
+    // and a BROWSER one inside its skin window (vg's tooltips, in mapwindow).
+    struct RuntimeControl {
+        std::string name, parent, type;
+    };
     std::vector<RuntimeControl> runtime;
 };
 
 struct WinsetResult {
     std::vector<std::string> applied, unhandled;
+    // winset(src, null, "command=..."): commands for the client to run as if typed, in order. The caller runs them.
+    std::vector<std::string> commands;
 };
 
 class LiveSkin {
@@ -74,13 +79,13 @@ public:
     // skin stays). Buffered pre-skin winsets are replayed.
     std::string load(const std::string& dmf);
     bool loaded() const;
-    bool loadedFrom(const std::string& dmf) const;   // the loaded skin was parsed from exactly this text
+    bool loadedFrom(const std::string& dmf) const;  // the loaded skin was parsed from exactly this text
     // True once a skin AND a real client size are known: the point at which a winget can be answered from a
     // laid-out tree rather than held ("not yet" is not "no").
     bool ready() const;
     void setClient(int w, int h);
 
-    // urlEncoded: a WORLD winset (0x00a8, skin/skinfeed), whose values DreamSeeker url-decodes (skin/winset.h splitWinset).
+    // urlEncoded: a WORLD winset (S2C::Winset), whose values DreamSeeker url-decodes (skin/winset.h splitWinset).
     WinsetResult winset(const std::string& control, const std::string& props, bool urlEncoded = false);
     // A skin-initiated `.winset "..."` body (button / macro / menu command): the same as winset("", body), except
     // that DreamSeeker's conditional form (`cond ? a b : c`, skin/winset.h parseClientWinset) is EVALUATED against
@@ -110,6 +115,8 @@ public:
     // The MAP controls a winset `parent=` created (SkinSnapshot::runtime), by name: the secondary maps the session thread
     // assembles a scene for (render/scene.h assembleSecondaryMap).
     std::vector<std::string> runtimeMaps() const;
+    // The control a winset `parent=` created under this name ("name" or "parent.name", case-insensitive); false if none.
+    bool runtimeControl(const std::string& name, SkinSnapshot::RuntimeControl& out) const;
     // The default MAP control's "window.elem": the is-default one, else the first; "" with no skin or no map.
     std::string defaultMapId() const;
     // Every MAP control but the default one, by the name a screen_loc prefix uses: the .dmf's other MAPs (their elem
@@ -147,6 +154,9 @@ public:
     void setGuiFocus(const std::string& id);
     // The GUI's half of an INPUT's text: what the player has typed. winget answers it, and a winset replaces it.
     void setInputText(const std::string& id, const std::string& text);
+    // The GUI's half of a MAP control's `view-size`: the size of the picture inside the control, letterbox excluded.
+    // `id` is the control's "window.elem". Refused until the GUI publishes it. No change notification.
+    void setViewSize(const std::string& id, int w, int h);
     // The GUI really has content for this pane window now (the map has its first frame, or the statpanels their
     // first tab: a statpanel or a verb panel). Stock runs a pane's on-show when it shows the pane, and only that
     // fills a split side the skin leaves empty (skin/layout.h inferSlots). The on-show runs here through the same
@@ -167,14 +177,14 @@ public:
     void setPopupShown(const std::string& name, bool shown);
     bool isPopup(const std::string& name) const;
 
-    // winclone(src, "window", name) (s2c 0x00b1): a blank window the world fills. Stock DreamSeeker answers winexists
-    // "MAIN" and is-visible "false" until a winshow / is-visible winset, takes size, on-close and title like a popup, and
-    // destroys it on `parent=none`. Its page is what output() sends to one of its controls (vg's html_interface builds
-    // "browser_<ref>.browser" in one). A clone from a skin window or pane is not modelled.
+    // winclone(src, "window", name) (S2C::WinClone): a blank window the world fills. Stock DreamSeeker answers
+    // winexists "MAIN" and is-visible "false" until a winshow / is-visible winset, takes size, on-close and title like
+    // a popup, and destroys it on `parent=none`. Its page is what output() sends to one of its controls (vg's
+    // html_interface builds "browser_<ref>.browser" in one). A clone from a skin window or pane is not modelled.
     struct CloneWindow {
-        std::string name, html, size, pos;   // size / pos: what the world set, "" when it set none
+        std::string name, html, size, pos;  // size / pos: what the world set, "" when it set none
         bool hasHtml = false, shown = false;
-        uint64_t pageSeq = 0;                // bumps on every page
+        uint64_t pageSeq = 0;  // bumps on every page
     };
     void cloneWindow(const std::string& name);
     // output(html, "<clone>.<control>"): false when `control` is not inside a clone.
@@ -182,7 +192,10 @@ public:
     std::vector<CloneWindow> cloneWindows() const;
     // What the GUI must do for the clones now: open (or reload) a shown clone that holds a page it was not last sent,
     // close one that is hidden, closed by the player or destroyed. `open` maps a clone to the page seq the GUI holds.
-    struct CloneAction { bool open; std::string name, params, html; };
+    struct CloneAction {
+        bool open;
+        std::string name, params, html;
+    };
     std::vector<CloneAction> cloneActions(std::map<std::string, uint64_t>& open) const;
 
     SkinSnapshot snapshot() const;
@@ -193,12 +206,18 @@ public:
     // The MAIN window's `icon` as it stands: a winset's value, else the .dmf's (unquoted by the parser); "" = none.
     // skin/winicon.h parseIconRef reads it.
     std::string mainIcon() const;
-    std::string onSizeCommand() const;     // MAIN on-size verbatim ("" none)
+    std::string onSizeCommand() const;  // MAIN on-size verbatim ("" none)
     // Called (outside the lock, from whichever thread mutated) after any state change. Safe to (re)set at any time.
-    void setOnChange(std::function<void()> cb) { std::lock_guard<std::mutex> g(cbMu_); onChange_ = std::move(cb); }
+    void setOnChange(std::function<void()> cb) {
+        std::lock_guard<std::mutex> g(cbMu_);
+        onChange_ = std::move(cb);
+    }
 
     // Gap accounting (winsets applied and winsets unhandled).
-    struct Stats { uint64_t applied = 0; std::vector<std::string> unhandled; };
+    struct Stats {
+        uint64_t applied = 0;
+        std::vector<std::string> unhandled;
+    };
     Stats stats() const;
 
 private:
@@ -215,6 +234,8 @@ private:
     void uncheckSiblingsLocked(const std::string& target);
     bool wingetLocked(const std::string& control, const std::string& param, std::string& out) const;
     std::string defaultMapIdLocked() const;
+    // ":map", ":input": the default control of that type as "window.elem" (DM reference, winget), "" when none.
+    std::string typeSelectorLocked(const std::string& id) const;
     bool controlFocusLocked(const std::string& id, const std::string& param, std::string& out) const;
     bool buttonUncheckedLocked(const std::string& id, const std::string& param, std::string& out) const;
     Menu menuLocked() const;
@@ -232,49 +253,60 @@ private:
     std::string windowListLocked(bool panes) const;
     void useMacroLocked(const std::string& set);
     // Runtime-created controls (winset `parent=`): see runtime_.
-    struct RuntimeCtl { std::string name, parent, type; };
+    struct RuntimeCtl {
+        std::string name, parent, type;
+    };
     const RuntimeCtl* runtimeLocked(const std::string& name) const;
     std::string typeLocked(const std::string& control) const;
     bool applyParentLocked(const WinsetPair& p);
     std::string parentWindowLocked(const std::string& v) const;
     bool runtimeWingetLocked(const RuntimeCtl& r, const std::string& param, std::string& out) const;
-    WinsetResult clientWinsetLocked(const std::string& body);   // clientWinset, caller holds mu_
+    WinsetResult clientWinsetLocked(const std::string& body);  // clientWinset, caller holds mu_
     // Macro elements: see usedMacros_.
     const MacroSet* builtMacroSetLocked(const std::string& name) const;
     const MacroSet* macroElemLocked(const std::string& name, size_t& index) const;
     bool applyMacroPairLocked(const WinsetPair& p);
-    bool createMacroLocked(const std::vector<WinsetPair>& pairs, size_t parent, std::vector<bool>& consumed, WinsetResult& r);
+    bool createMacroLocked(const std::vector<WinsetPair>& pairs, size_t parent, std::vector<bool>& consumed,
+                           WinsetResult& r);
 
     mutable std::mutex mu_;
     std::shared_ptr<const File> file_;
-    std::string text_;   // the .dmf text file_ was parsed from
+    std::string text_;  // the .dmf text file_ was parsed from
     uint64_t fileId_ = 0, gen_ = 0;
     Rect client_;
     bool clientSet_ = false;
     Tree tree_;
     PropStore props_;
     std::map<std::string, double> splits_;
-    std::map<std::string, float> splitPct_;   // "window.elem" -> the splitter value as winset/a drag stored it (winget)
+    std::map<std::string, float> splitPct_;  // "window.elem" -> the splitter value as winset/a drag stored it (winget)
     MacroTable macros_;
     std::string macro_, focus_;
     uint64_t focusSeq_ = 0;
-    std::set<std::string> popups_;          // open in the model now
-    std::set<std::string> knownPopups_;     // ever browse()d this session (DreamSeeker hides, never destroys, a popup)
-    std::set<std::string> hiddenPopups_;    // the player closed it and the world has not re-browsed it
-    struct Clone { std::string name, html; bool hasHtml = false; uint64_t pageSeq = 0; };
-    std::vector<Clone> clones_;             // winclone()d windows, also in knownPopups_; visibility is the `is-visible` prop
+    std::set<std::string> popups_;        // open in the model now
+    std::set<std::string> knownPopups_;   // ever browse()d this session (DreamSeeker hides, never destroys, a popup)
+    std::set<std::string> hiddenPopups_;  // the player closed it and the world has not re-browsed it
+    struct Clone {
+        std::string name, html;
+        bool hasHtml = false;
+        uint64_t pageSeq = 0;
+    };
+    std::vector<Clone> clones_;  // winclone()d windows, also in knownPopups_; visibility is the `is-visible` prop
     Clone* cloneLocked(const std::string& name);
     bool destroyCloneLocked(const std::string& name);
     bool knownPopupLocked(const std::string& name) const;
-    struct PendingWinset { std::string control, props; bool urlEncoded; };
-    std::vector<PendingWinset> pending_;   // winsets that arrived before the skin, replayed on load (E4)
-    std::map<std::string, std::string> env_;   // setClientEnv
-    unsigned browserOptions_ = 0;              // winset(null, "browser-options=..."): devtools 1, find 2, ... (applyPairLocked)
+    struct PendingWinset {
+        std::string control, props;
+        bool urlEncoded;
+    };
+    std::vector<PendingWinset> pending_;      // winsets that arrived before the skin, replayed on load (E4)
+    std::map<std::string, std::string> env_;  // setClientEnv
+    unsigned browserOptions_ = 0;  // winset(null, "browser-options=..."): devtools 1, find 2, ... (applyPairLocked)
     // The first 8 text bytes of the heap block DreamSeeker builds each global-winget name in, as the names, control
     // wingets and lone answers this client has seen wrote them (liveskin.cpp nameBlockWrite). Zero = never used.
     mutable char nameBlock_[8] = {};
-    std::map<std::string, std::pair<int, int>> screenPos_;   // setWindowPos, keyed lower-case ("" = the main window)
-    std::string guiFocus_;                     // setGuiFocus
+    std::map<std::string, std::pair<int, int>> screenPos_;  // setWindowPos, keyed lower-case ("" = the main window)
+    std::string guiFocus_;                                  // setGuiFocus
+    std::map<std::string, std::string> viewSize_;           // setViewSize, keyed lower-case "window.elem"
     bool guiFocusSet_ = false;
     // Stock DreamSeeker 516 creates a control for `winset(src, "rtlab", "parent=extrawin;type=label;...")`: winexists
     // answers its type, "extrawin.*" lists it after the window's file controls as `extrawin.rtlab.*`, and a direct winget
@@ -284,7 +316,7 @@ private:
     // map inside its window; `parent=` removes it. Kept in creation order; winget and winexists answer them, and a MAP
     // one is built as a widget (SkinSnapshot::runtime).
     std::vector<RuntimeCtl> runtime_;
-    std::set<std::string> shownPanes_;         // setPaneShown (lower-case)
+    std::set<std::string> shownPanes_;  // setPaneShown (lower-case)
     // The menus and macro sets stock DreamSeeker has built, in build order. winget(null,"macro") and "menu" list only the
     // sets some window has named, and a "<set>.*" wildcard enumerates nothing before that. Seeded at load from every
     // window's `menu` / `macro`, grown by a `macro` winset (this client does not consume a `menu` winset).
@@ -295,7 +327,7 @@ private:
     std::vector<std::string> usedMenus_, usedMacros_;
     uint64_t macroGen_ = 0;
     Stats stats_;
-    std::mutex cbMu_;                       // guards onChange_ only (set from the GUI thread, read from any mutating thread)
+    std::mutex cbMu_;  // guards onChange_ only (set from the GUI thread, read from any mutating thread)
     std::function<void()> onChange_;
     void notify() const;
 };

@@ -7,6 +7,7 @@
 #include "net/bytes.h"
 #include "net/resource.h"
 #include "net/respump.h"
+#include "proto/msg.h"
 #include "skin/winicon.h"
 
 using namespace fugue;
@@ -20,10 +21,23 @@ struct Fake {
     int reads = 0;
     IconResolver::Env env() {
         return {
-            [this](uint32_t ord, uint32_t& id) { if (ord >= list.size()) return false; id = list[ord]; return true; },
+            [this](uint32_t ord, uint32_t& id) {
+                if (ord >= list.size()) return false;
+                id = list[ord];
+                return true;
+            },
             [this](uint32_t id) { return store.count(id) != 0; },
-            [this](uint32_t id, std::string& b) { reads++; auto it = store.find(id); if (it == store.end()) return false; b = it->second; return true; },
-            [this](uint32_t id) { auto it = names.find(id); return it == names.end() ? std::string() : it->second; },
+            [this](uint32_t id, std::string& b) {
+                reads++;
+                auto it = store.find(id);
+                if (it == store.end()) return false;
+                b = it->second;
+                return true;
+            },
+            [this](uint32_t id) {
+                auto it = names.find(id);
+                return it == names.end() ? std::string() : it->second;
+            },
         };
     }
 };
@@ -77,7 +91,7 @@ private slots:
         QVERIFY(r.update("icons\\ss13_64.png", o));
         QCOMPARE(o.bytes, std::string("right"));
         QCOMPARE(r.idFor(parseIconRef("ss13_64.png")), 0x51u);  // the basename key keeps the first file seen
-        QCOMPARE(r.idFor(parseIconRef("x.dm")), 0u);  // only image files are indexed
+        QCOMPARE(r.idFor(parseIconRef("x.dm")), 0u);            // only image files are indexed
     }
     // `[0xc0000NN]`: NN is the 0-based ordinal, so [0xc000003] is the list's 4th entry.
     void ordinalIsZeroBased() {
@@ -147,8 +161,13 @@ private slots:
     void wantedIdJumpsTheRealQueue() {
         QTemporaryDir td;
         std::vector<std::pair<uint16_t, Bytes>> sent;
-        net::ResourcePump p(td.path().toStdString() + "/rsc", [&](uint16_t t, ByteSpan b) { sent.push_back({t, Bytes(b.begin(), b.end())}); return true; },
-                            [](const std::string&) {});
+        net::ResourcePump p(
+            td.path().toStdString() + "/rsc",
+            [&](uint16_t t, ByteSpan b) {
+                sent.push_back({t, Bytes(b.begin(), b.end())});
+                return true;
+            },
+            [](const std::string&) {});
         std::vector<Bytes> files;
         std::vector<uint32_t> ids;
         Bytes list;
@@ -162,9 +181,18 @@ private slots:
         }
         p.onResList(list);
         IconResolver r(IconResolver::Env{
-            [&](uint32_t ord, uint32_t& id) { if (ord >= ids.size()) return false; id = ids[ord]; return true; },
+            [&](uint32_t ord, uint32_t& id) {
+                if (ord >= ids.size()) return false;
+                id = ids[ord];
+                return true;
+            },
             [&](uint32_t id) { return p.storedThisRun().count(id) != 0; },
-            [&](uint32_t id, std::string& out) { Bytes b; if (!p.readStored(id, b)) return false; out.assign(b.begin(), b.end()); return true; },
+            [&](uint32_t id, std::string& out) {
+                Bytes b;
+                if (!p.readStored(id, b)) return false;
+                out.assign(b.begin(), b.end());
+                return true;
+            },
             nullptr,
         });
         IconResolver::Out o;
@@ -174,21 +202,33 @@ private slots:
         auto serve = [&](const Bytes& f, const std::string& name) {
             uint32_t id = net::resId(f);
             Bytes of;
-            putLe32(of, id); putLe32(of, 0xffffffffu); putLe32(of, 0); putLe32(of, 2);
-            of.push_back(1); putLe32(of, uint32_t(f.size())); of.push_back(2);
-            of.insert(of.end(), name.begin(), name.end()); of.push_back(0);
+            putLe32(of, id);
+            putLe32(of, 0xffffffffu);
+            putLe32(of, 0);
+            putLe32(of, 2);
+            of.push_back(1);
+            putLe32(of, uint32_t(f.size()));
+            of.push_back(2);
+            of.insert(of.end(), name.begin(), name.end());
+            of.push_back(0);
             const std::string prm = "##action=load_rsc";
-            of.insert(of.end(), prm.begin(), prm.end()); of.push_back(0);
+            of.insert(of.end(), prm.begin(), prm.end());
+            of.push_back(0);
             p.onFrame(of);
             Bytes d;
-            putLe32(d, id); putLe32(d, 0xffffffffu); putLe32(d, 1); putLe32(d, 2); putLe32(d, 0);
+            putLe32(d, id);
+            putLe32(d, 0xffffffffu);
+            putLe32(d, 1);
+            putLe32(d, 2);
+            putLe32(d, 0);
             Bytes enc = net::encodeResource(f, id);
             d.insert(d.end(), enc.begin(), enc.end());
             p.onFrame(d);
         };
         // Declared at once, before any transfer completes (its own urgent batch).
         Bytes last;
-        for (auto& s : sent) if (s.first == 0x003c) last = s.second;
+        for (auto& s : sent)
+            if (s.first == C2S::ResourceDeclare) last = s.second;
         Bytes ord199;
         putLe32(ord199, 199);
         QCOMPARE(last, ord199);

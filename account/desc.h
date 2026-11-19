@@ -5,7 +5,6 @@
 #include <string_view>
 #include "net/bytes.h"
 
-
 namespace fugue::account {
 using fugue::Bytes;
 using fugue::ByteSpan;

@@ -1,22 +1,28 @@
-// s2c 0x00fe: browse_rsc batch - a REPEATING [ordinal u32][cstring] loop.
+// S2C::BrowseRsc: browse_rsc batch - a REPEATING [ordinal u32][cstring] loop.
 #include "proto/registry.h"
 
 namespace fugue::proto {
-namespace {
 
 // A repeating [ordinal u32][cstring] loop, run to the end of the body. An empty body means no records.
-canon::Json decode(State&, ByteSpan body) {
+BrowseRsc decodeBrowseRsc(ByteSpan body) {
     Reader r(body);
-    std::vector<canon::Json> recs;
-    while (r.remaining()) {
-        uint32_t id = r.u32();
-        std::string name = r.cstr();
-        recs.push_back(canon::Object().u("resID", id).str("name", name).build());
+    BrowseRsc m;
+    while (r.more()) {
+        BrowseRsc::Record rec;
+        rec.resID = r.u32();
+        rec.name = r.cstr();
+        m.records.push_back(std::move(rec));
     }
+    return m;
+}
+
+canon::Json toJson(const BrowseRsc& m) {
+    std::vector<canon::Json> recs;
+    for (const auto& rec : m.records)
+        recs.push_back(canon::Object().u("resID", rec.resID).str("name", rec.name).build());
     return canon::Object().set("records", canon::array(recs)).build();
 }
 
-FUGUE_REGISTER_DECODER(Dir::S2C, 0x00fe, "cpp:stock-dd-wire", decode);
+FUGUE_REGISTER_DECODER(Dir::S2C, S2C::BrowseRsc, "cpp:stock-dd-wire", jsonOf<decodeBrowseRsc>);
 
-}  // namespace
 }  // namespace fugue::proto

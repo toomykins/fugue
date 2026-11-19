@@ -11,7 +11,8 @@ namespace fugue::pager {
 // args, hostTaken: as for parseDsArgv. Returns the arguments after argv[0], led by the `client` subcommand unless
 // asDreamSeeker. nullopt with *err when url is not a host:port address (parseTarget refuses hub world names) or the
 // new run would not play as this one does.
-std::optional<std::vector<std::string>> worldLinkArgs(const std::vector<std::string>& args, const std::vector<bool>& hostTaken,
-                                                      bool asDreamSeeker, const std::string& url, std::string* err = nullptr);
+std::optional<std::vector<std::string>> worldLinkArgs(const std::vector<std::string>& args,
+                                                      const std::vector<bool>& hostTaken, bool asDreamSeeker,
+                                                      const std::string& url, std::string* err = nullptr);
 
 }  // namespace fugue::pager

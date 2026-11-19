@@ -44,7 +44,7 @@ struct MacroEntry {
     std::string id, spec, command;
     MacroKey key;
     bool rep = false, disabled = false;
-    bool runtime = false;   // created by a winset `parent=<set>`
+    bool runtime = false;  // created by a winset `parent=<set>`
 };
 
 struct MacroSet {
@@ -57,13 +57,16 @@ struct MacroSet {
     const MacroEntry* find(const MacroKey& k, bool repeat) const;
     // The Any binding that answers k (held modifiers in k's ctrl/shift/alt), disabled or not.
     const MacroEntry* findAny(const MacroKey& k, bool repeat) const;
-    void reindex();   // rebuild byKey from entries; of two entries with one combination the later wins
+    void reindex();  // rebuild byKey from entries; of two entries with one combination the later wins
 };
 
 std::vector<MacroKey> heldCombos(const MacroKey& k);
 // At each combination the first of `layers` to bind it owns it, even with a disabled binding.
-struct HeldMatch { const MacroEntry* press = nullptr; const MacroEntry* rep = nullptr; };
-HeldMatch matchHeld(std::initializer_list<const MacroSet*> layers, const MacroKey& k);   // the combination that claims k
+struct HeldMatch {
+    const MacroEntry* press = nullptr;
+    const MacroEntry* rep = nullptr;
+};
+HeldMatch matchHeld(std::initializer_list<const MacroSet*> layers, const MacroKey& k);  // the combination that claims k
 const MacroEntry* lookupHeld(std::initializer_list<const MacroSet*> layers, const MacroKey& k, bool repeat);
 // Stock's listing order for a set's macros (a `<set>.*` winget): by key code, then by modifiers.
 bool listedBefore(const MacroEntry& a, const MacroEntry& b);

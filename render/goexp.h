@@ -21,7 +21,7 @@ inline bool useFma() {
 #if defined(_MSC_VER) && (defined(_M_X64) || defined(_M_IX86))
         int regs[4];
         __cpuid(regs, 1);
-        constexpr int required = (1 << 12) | (1 << 27) | (1 << 28); // FMA, OSXSAVE, AVX
+        constexpr int required = (1 << 12) | (1 << 27) | (1 << 28);  // FMA, OSXSAVE, AVX
         return (regs[2] & required) == required && (_xgetbv(0) & 6) == 6;
 #elif defined(__x86_64__) || defined(__i386__)
         return __builtin_cpu_supports("avx") && __builtin_cpu_supports("fma");
@@ -31,11 +31,18 @@ inline bool useFma() {
     }();
     return v;
 }
-inline double bitsToDouble(uint64_t b) { double d; std::memcpy(&d, &b, 8); return d; }
+inline double bitsToDouble(uint64_t b) {
+    double d;
+    std::memcpy(&d, &b, 8);
+    return d;
+}
 }  // namespace detail
 
 // Test-only hook: -1 (the shipped behaviour) picks the body by CPU feature; 0 forces the non-FMA body, 1 the FMA body.
-inline int& expForce() { static int f = -1; return f; }
+inline int& expForce() {
+    static int f = -1;
+    return f;
+}
 
 inline double exp(double x) {
     constexpr double LOG2E = 1.4426950408889634073599246810018920;
@@ -48,14 +55,14 @@ inline double exp(double x) {
     uint64_t bits;
     std::memcpy(&bits, &x, 8);
     constexpr uint64_t PosInf = 0x7FF0000000000000ull, NegInf = 0xFFF0000000000000ull;
-    if ((bits & ~(1ull << 63)) >= PosInf) {            // not finite
+    if ((bits & ~(1ull << 63)) >= PosInf) {  // not finite
         if (bits == NegInf) return 0;
-        return x;                                       // NaN or +Inf
+        return x;  // NaN or +Inf
     }
     if (x > Overflow) return detail::bitsToDouble(PosInf);
     double x0 = x;
     double x1 = LOG2E * x0;
-    int32_t bx = int32_t(std::nearbyint(x1));          // round to nearest even
+    int32_t bx = int32_t(std::nearbyint(x1));  // round to nearest even
     x1 = double(bx);
     bool fma = expForce() < 0 ? detail::useFma() : expForce() == 1;
     if (fma) {
@@ -71,9 +78,12 @@ inline double exp(double x) {
         x1 = std::fma(x1, x0, c0);
         x1 = std::fma(x1, x0, c8);
         x0 = x0 * x1;
-        x1 = x0 + c16; x0 = x0 * x1;
-        x1 = x0 + c16; x0 = x0 * x1;
-        x1 = x0 + c16; x0 = x0 * x1;
+        x1 = x0 + c16;
+        x0 = x0 * x1;
+        x1 = x0 + c16;
+        x0 = x0 * x1;
+        x1 = x0 + c16;
+        x0 = x0 * x1;
         x1 = x0 + c16;
         x0 = std::fma(x0, x1, c8);
     } else {
@@ -81,20 +91,30 @@ inline double exp(double x) {
         x0 = x0 - x1 * LN2L;
         x0 *= 0.0625;
         x1 = c64;
-        x1 = x1 * x0; x1 = x1 + c56;
-        x1 = x1 * x0; x1 = x1 + c48;
-        x1 = x1 * x0; x1 = x1 + c40;
-        x1 = x1 * x0; x1 = x1 + c32;
-        x1 = x1 * x0; x1 = x1 + c24;
-        x1 = x1 * x0; x1 = x1 + c0;
-        x1 = x1 * x0; x1 = x1 + c8;
+        x1 = x1 * x0;
+        x1 = x1 + c56;
+        x1 = x1 * x0;
+        x1 = x1 + c48;
+        x1 = x1 * x0;
+        x1 = x1 + c40;
+        x1 = x1 * x0;
+        x1 = x1 + c32;
+        x1 = x1 * x0;
+        x1 = x1 + c24;
+        x1 = x1 * x0;
+        x1 = x1 + c0;
+        x1 = x1 * x0;
+        x1 = x1 + c8;
         x0 = x1 * x0;
-        for (int k = 0; k < 4; k++) { x1 = c16 + x0; x0 = x0 * x1; }
+        for (int k = 0; k < 4; k++) {
+            x1 = c16 + x0;
+            x0 = x0 * x1;
+        }
         x0 = x0 + c8;
     }
     // ldexp
     int32_t b = bx + 0x3FF;
-    if (b <= 0) {                                       // denormal
+    if (b <= 0) {  // denormal
         if (b < -52) return 0;
         b += 0x3FE;
         x0 = x0 * detail::bitsToDouble(uint64_t(uint32_t(b)) << 52);

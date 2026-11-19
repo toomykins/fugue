@@ -53,13 +53,16 @@ class Mixer {
 public:
     explicit Mixer(int rate = 44100) : rate_(rate > 0 ? rate : 44100) {}
     int rate() const { return rate_; }
-    void apply(const Cmd& c);                     // thread-safe
-    void render(float* out, size_t frames);       // thread-safe; overwrites `out` (2*frames floats), clipped to [-1,1]
+    void apply(const Cmd& c);                // thread-safe
+    void render(float* out, size_t frames);  // thread-safe; overwrites `out` (2*frames floats), clipped to [-1,1]
     void stopAll();
     size_t active() const;
-    std::vector<int> channels() const;            // live channel ids, sorted
-    struct Stats { int started = 0, stopped = 0, stolen = 0, dropped = 0; };
+    std::vector<int> channels() const;  // live channel ids, sorted
+    struct Stats {
+        int started = 0, stopped = 0, stolen = 0, dropped = 0;
+    };
     Stats stats() const;
+
 private:
     struct Voice {
         Cmd cmd;
@@ -67,7 +70,7 @@ private:
         bool back = false, paused = false, muted = false, done = false;
         std::vector<Cmd> queue;
         uint64_t seq = 0;
-        std::shared_ptr<Stream> stream;   // a module's own sequencer (clip->streamed()); null for sampled clips
+        std::shared_ptr<Stream> stream;  // a module's own sequencer (clip->streamed()); null for sampled clips
         std::vector<float> sbuf;
     };
     void start(Voice& v, const Cmd& c);

@@ -3,6 +3,8 @@
 //   ~/.fugue/identity-*        every cached sign-in (account/store.h identityPath)
 //   ~/.fugue/qt/pager-guest    the remembered "Play as guest" choice (launch.h guestChoicePath)
 //   ~/.fugue/rsc               the shared resource cache, by RscStore::clear's rule (the client's default cache)
+//   ~/.fugue/web               the webview profile's storage (localStorage/IndexedDB/cache); its contents, not the dir.
+//                              Refused (with an error) while a live client holds <web>/.lock.
 //   ~/.fugue/cauth.txt         the login-certificate cache (net/cauth.h); the next login mints a fresh key
 // Kept: pager.json, pager-no-autosignin, byond-sid and sid (the computer_id source), client.log, macros, everything
 // else under ~/.fugue, and ~/.byond. An explicit $FUGUE_IDENTITY is not scanned: it is not our cache.
@@ -15,13 +17,14 @@
 namespace fugue::pager {
 
 struct CacheItem {
-    std::string what;      // text shown in the Clear cache confirmation
-    std::string path;      // the file, or the rsc dir
-    uint64_t files = 0;    // 1 for a single file
+    std::string what;    // text shown in the Clear cache confirmation
+    std::string path;    // the file, or the rsc dir
+    uint64_t files = 0;  // 1 for a single file
     uint64_t bytes = 0;
 };
 struct CachePlan {
-    std::vector<CacheItem> items;   // identity files (sorted by name), the guest flag, the rsc cache, the cauth cache; absent ones omitted
+    std::vector<CacheItem>
+        items;  // identity files (sorted by name), the guest flag, the rsc cache, the cauth cache; absent ones omitted
     uint64_t files() const;
     uint64_t bytes() const;
     bool empty() const { return items.empty(); }

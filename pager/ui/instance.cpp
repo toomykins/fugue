@@ -11,7 +11,9 @@ namespace fugue::pager {
 
 QString instanceName() {
     const QByteArray home = QByteArray::fromStdString(account::fugueDir());
-    const QString name = "fugue-pager-" + QString::fromLatin1(QCryptographicHash::hash(home, QCryptographicHash::Sha256).toHex().left(16));
+    const QString name =
+        "fugue-pager-" +
+        QString::fromLatin1(QCryptographicHash::hash(home, QCryptographicHash::Sha256).toHex().left(16));
 #ifdef Q_OS_LINUX
     QString dir = QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
     const QString app = qEnvironmentVariable("FLATPAK_ID");
@@ -41,7 +43,10 @@ InstanceServer::InstanceServer(std::function<void(const QString&)> onRequest, QO
             connect(c, &QLocalSocket::readyRead, this, [this, c] {
                 if (!c->canReadLine()) return;
                 const QString line = QString::fromUtf8(c->readLine()).trimmed();
-                if (line != "show" && !line.startsWith("open ")) { c->disconnectFromServer(); return; }
+                if (line != "show" && !line.startsWith("open ")) {
+                    c->disconnectFromServer();
+                    return;
+                }
                 c->write("ok\n");
                 c->flush();
                 const QString link = line == "show" ? QString() : line.mid(5);
@@ -52,7 +57,7 @@ InstanceServer::InstanceServer(std::function<void(const QString&)> onRequest, QO
 }
 
 bool InstanceServer::listen(const QString& name) {
-    QLocalSocket probe;   // listen() would take the name over even from a live pager
+    QLocalSocket probe;  // listen() would take the name over even from a live pager
     probe.connectToServer(name);
     if (probe.waitForConnected(1000)) return false;
     QLocalServer::removeServer(name);

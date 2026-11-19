@@ -13,7 +13,11 @@ using namespace fugue;
 using namespace fugue::model;
 
 namespace {
-struct Frame { int64_t ms; uint16_t type; Bytes body; };
+struct Frame {
+    int64_t ms;
+    uint16_t type;
+    Bytes body;
+};
 
 std::vector<Frame> loadFrames(const char* fixture = "glide-world") {
     std::ifstream in(std::string(FUGUE_TEST_DATA_DIR) + "/" + fixture + "/frames.txt");
@@ -26,14 +30,17 @@ std::vector<Frame> loadFrames(const char* fixture = "glide-world") {
         std::string typ, hex;
         ss >> f.ms >> typ >> hex;
         f.type = uint16_t(std::stoul(typ, nullptr, 16));
-        for (size_t i = 0; i + 1 < hex.size(); i += 2) f.body.push_back(uint8_t(std::stoul(hex.substr(i, 2), nullptr, 16)));
+        for (size_t i = 0; i + 1 < hex.size(); i += 2)
+            f.body.push_back(uint8_t(std::stoul(hex.substr(i, 2), nullptr, 16)));
         out.push_back(std::move(f));
     }
     return out;
 }
 
 // The map's drawn position (image px: +x right, +y down) and the player's sprite relative to it, sampled every ms.
-struct Sample { double mapX, mapY, spriteX, spriteY; };
+struct Sample {
+    double mapX, mapY, spriteX, spriteY;
+};
 
 std::vector<Sample> replay(const std::vector<Frame>& frames) {
     constexpr int64_t base = 1'700'000'000'000'000'000;
@@ -67,7 +74,10 @@ std::vector<Sample> replay(const std::vector<Frame>& frames) {
 
 // glidenpc-world's two movers, every ms: how far each is drawn from its tile (tiles), and the ms of each leg's first
 // step and of its last frame drawn off its tile.
-struct NpcTrace { double worst[2] = {0, 0}; std::vector<int64_t> legStart[2], legSettle[2]; };
+struct NpcTrace {
+    double worst[2] = {0, 0};
+    std::vector<int64_t> legStart[2], legSettle[2];
+};
 
 NpcTrace replayNpcs(const std::vector<Frame>& frames) {
     constexpr int64_t base = 1'700'000'000'000'000'000;
@@ -84,10 +94,16 @@ NpcTrace replayNpcs(const std::vector<Frame>& frames) {
         }
         const World& w = s.world();
         int64_t now = base + t * 1'000'000;
-        for (const auto& [id, a] : w.atoms) {   // red starts on (14,14), blue on (14,25)
+        for (const auto& [id, a] : w.atoms) {  // red starts on (14,14), blue on (14,25)
             if (!a.hasPos || a.x != 14 || ids[0] == id || ids[1] == id) continue;
-            if (a.y == 14 && !ids[0]) { ids[0] = id; lastX[0] = 14; }
-            if (a.y == 25 && !ids[1]) { ids[1] = id; lastX[1] = 14; }
+            if (a.y == 14 && !ids[0]) {
+                ids[0] = id;
+                lastX[0] = 14;
+            }
+            if (a.y == 25 && !ids[1]) {
+                ids[1] = id;
+                lastX[1] = 14;
+            }
         }
         for (int i = 0; i < 2; i++) {
             auto it = w.atoms.find(ids[i]);
@@ -95,11 +111,16 @@ NpcTrace replayNpcs(const std::vector<Frame>& frames) {
             const Atom& a = it->second;
             double left = a.gliding ? glideLeft(a.glide, now) : 0;
             double off = std::hypot(a.glide.sx * left, a.glide.sy * left);
-            out.worst[i] = std::max(out.worst[i], std::fmax(std::fabs(a.glide.sx * left), std::fabs(a.glide.sy * left)));
+            out.worst[i] =
+                std::max(out.worst[i], std::fmax(std::fabs(a.glide.sx * left), std::fabs(a.glide.sy * left)));
             bool turned = (a.x - lastX[i]) * (out.legStart[i].size() % 2 ? 1 : -1) < 0;
-            if (a.x != lastX[i] && (out.legStart[i].empty() || turned)) { out.legStart[i].push_back(t); out.legSettle[i].push_back(t); }
+            if (a.x != lastX[i] && (out.legStart[i].empty() || turned)) {
+                out.legStart[i].push_back(t);
+                out.legSettle[i].push_back(t);
+            }
             lastX[i] = a.x;
-            if (off * 46.4 >= 1 && !out.legSettle[i].empty()) out.legSettle[i].back() = t;   // a screen px at the oracle's zoom
+            if (off * 46.4 >= 1 && !out.legSettle[i].empty())
+                out.legSettle[i].back() = t;  // a screen px at the oracle's zoom
         }
     }
     return out;
@@ -109,7 +130,7 @@ double largestMapStep(const std::vector<Sample>& v) {
     double worst = 0;
     for (size_t i = 1; i < v.size(); i++) {
         double d = std::hypot(v[i].mapX - v[i - 1].mapX, v[i].mapY - v[i - 1].mapY);
-        if (d < 32) worst = std::max(worst, d);   // a whole-tile step is the view origin moving under a finished scroll
+        if (d < 32) worst = std::max(worst, d);  // a whole-tile step is the view origin moving under a finished scroll
     }
     return worst;
 }
@@ -126,12 +147,13 @@ private slots:
         for (bool catchUp : {false, true}) {
             GlideMotion card = glideMotion(-1, 0, 32.f / 3, 32, tick, false, 1, catchUp);
             QCOMPARE(card.durNs, glideDurationNs(1, 0, 32.f / 3, 32, tick, false));
-            QCOMPARE(glideMotion(-1, -1, 32.f / 3, 32, tick, false, 1, catchUp).durNs, glideDurationNs(1, 1, 32.f / 3, 32, tick, false));
+            QCOMPARE(glideMotion(-1, -1, 32.f / 3, 32, tick, false, 1, catchUp).durNs,
+                     glideDurationNs(1, 1, 32.f / 3, 32, tick, false));
             QCOMPARE(glideMotion(-1, -1, 32.f / 3, 32, tick, true, 1, catchUp).durNs, card.durNs);
         }
         GlideMotion card = glideMotion(-1, 0, 32.f / 3, 32, tick, false, 1, true);
         GlideMotion atom = glideMotion(-1.6, 0, 32.f / 3, 32, tick, false, 1, false);
-        QVERIFY(std::llabs(atom.durNs - int64_t(1.6 * 3 * double(tick))) < 1000);   // glide_size is a float
+        QVERIFY(std::llabs(atom.durNs - int64_t(1.6 * 3 * double(tick))) < 1000);  // glide_size is a float
         QVERIFY(std::fabs(glideLeft(atom, 1 + atom.durNs / 2) - 0.5) < 1e-6);
         GlideMotion behind = glideMotion(-1.6, 0, 32.f / 3, 32, tick, false, 1, true);
         QVERIFY(behind.durNs > card.durNs && behind.durNs < atom.durNs);
@@ -152,7 +174,7 @@ private slots:
         auto v = replay(frames);
         QVERIFY(v.size() > 500);
         QVERIFY2(largestMapStep(v) < 2, qPrintable(QString("largest step %1 px").arg(largestMapStep(v))));
-        setModelMutation(30);   // control: re-arm from the tile, dropping what was left
+        setModelMutation(30);  // control: re-arm from the tile, dropping what was left
         double dropped = largestMapStep(replay(frames));
         QVERIFY2(dropped > 8, qPrintable(QString("control's largest step %1 px").arg(dropped)));
     }
@@ -172,19 +194,29 @@ private slots:
     void reArmRules() {
         World w;
         GlideMotion g = glideMotion(-1, 0, 4, 32, 100'000'000, false, 1, true);
-        int64_t at = 1 + g.durNs / 4;   // a quarter of the way: 0.75 tile left
-        auto arm = [&](int mx, int my, uint8_t last, double& sx, double& sy) { return armGlideOffset(w, &g, at, mx, my, last, sx, sy); };
+        int64_t at = 1 + g.durNs / 4;  // a quarter of the way: 0.75 tile left
+        auto arm = [&](int mx, int my, uint8_t last, double& sx, double& sy) {
+            return armGlideOffset(w, &g, at, mx, my, last, sx, sy);
+        };
         double sx, sy;
-        QVERIFY(arm(-1, 0, 4, sx, sy)); QCOMPARE(sx, -1.0);                       // EAST again
-        QVERIFY(arm(1, 0, 4, sx, sy)); QVERIFY(std::fabs(sx - 0.25) < 1e-9);       // WEST: reversal
-        QVERIFY(arm(0, -1, 4, sx, sy)); QCOMPARE(sx, 0.0); QCOMPARE(sy, -1.0);     // NORTH: a turn
+        QVERIFY(arm(-1, 0, 4, sx, sy));
+        QCOMPARE(sx, -1.0);  // EAST again
+        QVERIFY(arm(1, 0, 4, sx, sy));
+        QVERIFY(std::fabs(sx - 0.25) < 1e-9);  // WEST: reversal
+        QVERIFY(arm(0, -1, 4, sx, sy));
+        QCOMPARE(sx, 0.0);
+        QCOMPARE(sy, -1.0);  // NORTH: a turn
         w.movementMode = 2;
-        QVERIFY(arm(-1, 0, 4, sx, sy)); QVERIFY(std::fabs(sx + 1.75) < 1e-9);
-        QVERIFY(arm(0, -1, 4, sx, sy)); QVERIFY(std::fabs(sx + 0.75) < 1e-9); QCOMPARE(sy, -1.0);
+        QVERIFY(arm(-1, 0, 4, sx, sy));
+        QVERIFY(std::fabs(sx + 1.75) < 1e-9);
+        QVERIFY(arm(0, -1, 4, sx, sy));
+        QVERIFY(std::fabs(sx + 0.75) < 1e-9);
+        QCOMPARE(sy, -1.0);
         g = glideMotion(-1.8, -0.9, 4, 32, 100'000'000, false, 1, true);
         uint8_t last = 4;
         QVERIFY(armGlideOffset(w, &g, 1, -1, 0, last, sx, sy));
-        QCOMPARE(sx, -kGlideMaxTiles); QVERIFY(std::fabs(sy + 0.9 * 2 / 2.8) < 1e-9);
+        QCOMPARE(sx, -kGlideMaxTiles);
+        QVERIFY(std::fabs(sy + 0.9 * 2 / 2.8) < 1e-9);
     }
 
     // Non-player mobs that fall behind their steps (glidenpc-world, PIXEL_MOVEMENT_MODE) stay within two tiles, and each
@@ -196,15 +228,17 @@ private slots:
         NpcTrace tr = replayNpcs(frames);
         const int64_t ds[2] = {715, 935};
         for (int i = 0; i < 2; i++) {
-            QVERIFY2(tr.worst[i] <= kGlideMaxTiles + 1e-9, qPrintable(QString("mover %1 trailed %2 tiles").arg(i).arg(tr.worst[i])));
+            QVERIFY2(tr.worst[i] <= kGlideMaxTiles + 1e-9,
+                     qPrintable(QString("mover %1 trailed %2 tiles").arg(i).arg(tr.worst[i])));
             QCOMPARE(int(tr.legStart[i].size()), 2);
             for (size_t l = 0; l < 2; l++) {
                 int64_t took = tr.legSettle[i][l] - tr.legStart[i][l];
-                QVERIFY2(std::llabs(took - ds[i]) <= 30, qPrintable(QString("mover %1 leg %2 settled after %3 ms").arg(i).arg(l).arg(took)));
+                QVERIFY2(std::llabs(took - ds[i]) <= 30,
+                         qPrintable(QString("mover %1 leg %2 settled after %3 ms").arg(i).arg(l).arg(took)));
             }
         }
-        QVERIFY(tr.worst[1] > 1.9);   // the slow mover reaches the bound
-        setModelMutation(31);   // control: the move only adds, never catches up or is bounded
+        QVERIFY(tr.worst[1] > 1.9);  // the slow mover reaches the bound
+        setModelMutation(31);        // control: the move only adds, never catches up or is bounded
         NpcTrace ctl = replayNpcs(frames);
         QVERIFY2(ctl.worst[1] > 3, qPrintable(QString("control trailed %1 tiles").arg(ctl.worst[1])));
     }

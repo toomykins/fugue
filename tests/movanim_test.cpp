@@ -25,7 +25,7 @@ std::string slurp(const std::string& p) {
 constexpr int64_t kT0 = 1'000'000'000'000'000'000;
 constexpr int64_t kTick = 100'000'000;
 constexpr uint32_t kRes = 0x9fdb5839;
-constexpr double kStart = 11;   // the tick the suite's chains arrive on
+constexpr double kStart = 11;  // the tick the suite's chains arrive on
 int64_t at(double tick) { return kT0 + int64_t(tick * double(kTick)); }
 // Slot i's colour (mkdmi.py), slot 6 is "white", and the image is "img".
 uint32_t slotColour(int i) {
@@ -39,11 +39,15 @@ QPoint slotTile(int i) {
     if (i < 0) i = 12;
     return {(xs[i % 4] - 5) * 32, (17 - ys[i / 4]) * 32};
 }
-}
+}  // namespace
 
 class MovAnim : public QObject {
     Q_OBJECT
-    struct Frame { uint16_t typ; Bytes body; int tick; };
+    struct Frame {
+        uint16_t typ;
+        Bytes body;
+        int tick;
+    };
     std::vector<Frame> frames_;
     std::string resBytes_;
     render::ResStore res_;
@@ -81,7 +85,11 @@ class MovAnim : public QObject {
         int x0 = INT_MAX, y0 = INT_MAX, x1 = -1;
         for (int y = 0; y < img.h; y++)
             for (int x = 0; x < img.w; x++)
-                if (rgb(img, x, y) == slotColour(i)) { x0 = std::min(x0, x); y0 = std::min(y0, y); x1 = std::max(x1, x); }
+                if (rgb(img, x, y) == slotColour(i)) {
+                    x0 = std::min(x0, x);
+                    y0 = std::min(y0, y);
+                    x1 = std::max(x1, x);
+                }
         if (x1 < 0) return {9999, 9999};
         QPoint tile = slotTile(i);
         return width ? QPoint(x0 - tile.x(), x1 - x0 + 1) : QPoint(x0 - tile.x(), tile.y() - y0);
@@ -99,13 +107,15 @@ private slots:
         std::ifstream f(dir + "/frames.txt");
         QVERIFY(f);
         std::string line;
-        std::getline(f, line);   // header
+        std::getline(f, line);  // header
         int tick = 0;
         while (std::getline(f, line)) {
             QVERIFY(line.rfind("0x", 0) == 0);
             size_t sp = line.find(' ', line.find("len="));
-            Frame fr{uint16_t(std::stoul(line.substr(2, 4), nullptr, 16)), sp == std::string::npos ? Bytes{} : unhex(line.substr(sp + 1)), 0};
-            if (fr.typ == 0x0027 && fr.body.size() > 1 && fr.body[0] == '@') tick = std::stoi(std::string(fr.body.begin() + 1, fr.body.end()));
+            Frame fr{uint16_t(std::stoul(line.substr(2, 4), nullptr, 16)),
+                     sp == std::string::npos ? Bytes{} : unhex(line.substr(sp + 1)), 0};
+            if (fr.typ == S2C::Text && fr.body.size() > 1 && fr.body[0] == '@')
+                tick = std::stoi(std::string(fr.body.begin() + 1, fr.body.end()));
             fr.tick = tick;
             frames_.push_back(std::move(fr));
         }
@@ -212,12 +222,15 @@ private slots:
     // 1 s, only the floor at 1.5 s. Transform: scale 2 over 10 ticks, pixel_x 32 PARALLEL from 0.5 s.
     void colourAlphaTransform() {
         uint32_t c = centre(6, 1.0);
-        QVERIFY2(std::abs(int(c >> 16) - 48) <= 3 && std::abs(int(c & 0xff) - 168) <= 6, qPrintable(QString::number(c, 16)));
+        QVERIFY2(std::abs(int(c >> 16) - 48) <= 3 && std::abs(int(c & 0xff) - 168) <= 6,
+                 qPrintable(QString::number(c, 16)));
         QCOMPARE(centre(6, 1.5), 0x606060u);
         QPoint w = offset(7, 0.5, true);
-        QVERIFY2(std::abs(w.x() + w.y() / 2 - 16) <= 1 && std::abs(w.y() - 48) <= 3, qPrintable(QString("%1,w%2").arg(w.x()).arg(w.y())));
+        QVERIFY2(std::abs(w.x() + w.y() / 2 - 16) <= 1 && std::abs(w.y() - 48) <= 3,
+                 qPrintable(QString("%1,w%2").arg(w.x()).arg(w.y())));
         w = offset(7, 1.0, true);
-        QVERIFY2(std::abs(w.x() + w.y() / 2 - 32) <= 1 && std::abs(w.y() - 64) <= 3, qPrintable(QString("%1,w%2").arg(w.x()).arg(w.y())));
+        QVERIFY2(std::abs(w.x() + w.y() / 2 - 32) <= 1 && std::abs(w.y() - 64) <= 3,
+                 qPrintable(QString("%1,w%2").arg(w.x()).arg(w.y())));
     }
 };
 

@@ -18,7 +18,7 @@ namespace fugue::render {
 namespace {
 
 constexpr size_t kMaxDescription = 16u << 20;  // cap on the inflated zTXt Description
-constexpr uint32_t kMaxImageDim = 1u << 15;  // IHDR width/height cap
+constexpr uint32_t kMaxImageDim = 1u << 15;    // IHDR width/height cap
 constexpr int64_t kMaxCellDim = 8192;
 constexpr int64_t kDefaultCellDim = 32;  // cell size when the metadata omits width/height
 constexpr int64_t kMaxDirs = 8;
@@ -33,7 +33,9 @@ ParseResult fail(const char* cls, std::string detail) {
     return r;
 }
 
-uint32_t be32(const uint8_t* p) { return (uint32_t(p[0]) << 24) | (uint32_t(p[1]) << 16) | (uint32_t(p[2]) << 8) | p[3]; }
+uint32_t be32(const uint8_t* p) {
+    return (uint32_t(p[0]) << 24) | (uint32_t(p[1]) << 16) | (uint32_t(p[2]) << 8) | p[3];
+}
 
 bool isSpace(char c) { return c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r'; }
 std::string trim(std::string_view s) {
@@ -57,8 +59,11 @@ int64_t goAtoi(const std::string& s, bool* ok = nullptr) {
     for (; i < s.size(); i++) {
         if (s[i] < '0' || s[i] > '9') return 0;
         unsigned digit = unsigned(s[i] - '0');
-        if (v > (limit - digit) / 10) { range = true; v = limit; }
-        else if (!range) v = v * 10 + digit;
+        if (v > (limit - digit) / 10) {
+            range = true;
+            v = limit;
+        } else if (!range)
+            v = v * 10 + digit;
     }
     if (ok) *ok = !range;
     if (neg && v == uint64_t(INT64_MAX) + 1) return INT64_MIN;
@@ -71,24 +76,33 @@ bool goParseFloat(const std::string& s, double& out) {
     size_t i = 0;
     if (i < s.size() && (s[i] == '+' || s[i] == '-')) i++;
     size_t digits = 0;
-    while (i < s.size() && s[i] >= '0' && s[i] <= '9') { i++; digits++; }
+    while (i < s.size() && s[i] >= '0' && s[i] <= '9') {
+        i++;
+        digits++;
+    }
     if (i < s.size() && s[i] == '.') {
         i++;
-        while (i < s.size() && s[i] >= '0' && s[i] <= '9') { i++; digits++; }
+        while (i < s.size() && s[i] >= '0' && s[i] <= '9') {
+            i++;
+            digits++;
+        }
     }
     if (!digits) return false;
     if (i < s.size() && (s[i] == 'e' || s[i] == 'E')) {
         i++;
         if (i < s.size() && (s[i] == '+' || s[i] == '-')) i++;
         size_t ed = 0;
-        while (i < s.size() && s[i] >= '0' && s[i] <= '9') { i++; ed++; }
+        while (i < s.size() && s[i] >= '0' && s[i] <= '9') {
+            i++;
+            ed++;
+        }
         if (!ed) return false;
     }
     if (i != s.size()) return false;
     const char* b = s.data();
     if (*b == '+') b++;
     auto r = parseDouble(b, s.data() + s.size(), out);
-    if (r.ec == std::errc::result_out_of_range) return false;   // ±Inf with an error -> skipped
+    if (r.ec == std::errc::result_out_of_range) return false;  // ±Inf with an error -> skipped
     return r.ec == std::errc() && r.ptr == s.data() + s.size();
 }
 
@@ -119,7 +133,7 @@ const char* parseMetadata(const std::string& text, Icon& icon, std::string& deta
         std::string_view raw(text.data() + pos, (nl == std::string::npos ? text.size() : nl) - pos);
         bool last = nl == std::string::npos;
         pos = last ? text.size() + 1 : nl + 1;
-        if (last && raw.empty()) break;   // a trailing newline does not make an extra line
+        if (last && raw.empty()) break;  // a trailing newline does not make an extra line
         std::string line = trim(raw);
         if (line.empty()) continue;
         if (line[0] == '#') {
@@ -137,13 +151,18 @@ const char* parseMetadata(const std::string& text, Icon& icon, std::string& deta
             continue;
         }
         if (!cur) {
-            if (key == "version") icon.version = val;
-            else if (key == "width") icon.width = int(goAtoi(val));
-            else if (key == "height") icon.height = int(goAtoi(val));
+            if (key == "version")
+                icon.version = val;
+            else if (key == "width")
+                icon.width = int(goAtoi(val));
+            else if (key == "height")
+                icon.height = int(goAtoi(val));
             continue;
         }
-        if (key == "dirs") cur->dirs = goAtoi(val);
-        else if (key == "frames") cur->frames = goAtoi(val);
+        if (key == "dirs")
+            cur->dirs = goAtoi(val);
+        else if (key == "frames")
+            cur->frames = goAtoi(val);
         else if (key == "delay") {
             std::vector<double> v;
             for (auto& part : splitComma(val)) {
@@ -152,9 +171,12 @@ const char* parseMetadata(const std::string& text, Icon& icon, std::string& deta
             }
             cur->hasDelays = !v.empty();
             cur->delays = std::move(v);
-        } else if (key == "movement") cur->movement = val == "1";
-        else if (key == "rewind") cur->rewind = val == "1";
-        else if (key == "loop") cur->loop = goAtoi(val);
+        } else if (key == "movement")
+            cur->movement = val == "1";
+        else if (key == "rewind")
+            cur->rewind = val == "1";
+        else if (key == "loop")
+            cur->loop = goAtoi(val);
         else if (key == "hotspot") {
             std::vector<int64_t> v;
             for (auto& part : splitComma(val)) {
@@ -166,13 +188,22 @@ const char* parseMetadata(const std::string& text, Icon& icon, std::string& deta
             cur->hotspot = std::move(v);
         }
     }
-    if (!seenBegin) { detail = "no BEGIN DMI"; return "no_metadata"; }
+    if (!seenBegin) {
+        detail = "no BEGIN DMI";
+        return "no_metadata";
+    }
     int64_t cell = 0;
     for (auto& s : icon.states) {
         if (s.dirs <= 0) s.dirs = 1;
         if (s.frames <= 0) s.frames = 1;
-        if (s.dirs > kMaxDirs) { detail = "dirs exceeds cap"; return "dirs_cap"; }
-        if (s.frames > kMaxFrames) { detail = "frames exceeds cap"; return "frames_cap"; }
+        if (s.dirs > kMaxDirs) {
+            detail = "dirs exceeds cap";
+            return "dirs_cap";
+        }
+        if (s.frames > kMaxFrames) {
+            detail = "frames exceeds cap";
+            return "frames_cap";
+        }
         s.firstCell = cell;
         cell += s.dirs * s.frames;
     }
@@ -183,13 +214,19 @@ const char* parseMetadata(const std::string& text, Icon& icon, std::string& deta
 // Returns nullptr and sets `text`, or an error class.
 const char* extractDescription(const uint8_t* d, size_t n, std::string& text, std::string& detail) {
     static const uint8_t sig[8] = {0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'};
-    if (n < 8 || std::memcmp(d, sig, 8) != 0) { detail = "not a PNG file"; return "not_png"; }
+    if (n < 8 || std::memcmp(d, sig, 8) != 0) {
+        detail = "not a PNG file";
+        return "not_png";
+    }
     size_t p = 8;
     while (p + 8 <= n) {
         size_t length = be32(d + p);
         const char* type = reinterpret_cast<const char*>(d + p + 4);
         size_t start = p + 8;
-        if (start + length + 4 > n) { detail = "truncated PNG chunk"; return "truncated_chunk"; }
+        if (start + length + 4 > n) {
+            detail = "truncated PNG chunk";
+            return "truncated_chunk";
+        }
         const uint8_t* chunk = d + start;
         bool isZ = std::memcmp(type, "zTXt", 4) == 0, isT = std::memcmp(type, "tEXt", 4) == 0;
         if (isZ || isT) {
@@ -199,12 +236,24 @@ const char* extractDescription(const uint8_t* d, size_t n, std::string& text, st
                 if (kl == 11 && std::memcmp(chunk, "Description", 11) == 0) {
                     const uint8_t* rest = chunk + kl + 1;
                     size_t rl = length - kl - 1;
-                    if (isT) { text.assign(reinterpret_cast<const char*>(rest), rl); return nullptr; }
-                    if (rl < 1) { detail = "malformed zTXt chunk"; return "malformed_ztxt"; }
+                    if (isT) {
+                        text.assign(reinterpret_cast<const char*>(rest), rl);
+                        return nullptr;
+                    }
+                    if (rl < 1) {
+                        detail = "malformed zTXt chunk";
+                        return "malformed_ztxt";
+                    }
                     std::vector<uint8_t> out;
                     ZStatus z = zlibInflate(rest + 1, rl - 1, out, kMaxDescription);
-                    if (z == ZStatus::Limit) { detail = "Description exceeds cap"; return "description_cap"; }
-                    if (z != ZStatus::Ok) { detail = "zTXt zlib/inflate failed"; return "bad_zlib"; }
+                    if (z == ZStatus::Limit) {
+                        detail = "Description exceeds cap";
+                        return "description_cap";
+                    }
+                    if (z != ZStatus::Ok) {
+                        detail = "zTXt zlib/inflate failed";
+                        return "bad_zlib";
+                    }
                     text.assign(out.begin(), out.end());
                     return nullptr;
                 }
@@ -229,7 +278,7 @@ std::unique_ptr<Icon> plainIcon(RgbaImage&& img, const char* version) {
     ic->width = img.w;
     ic->height = img.h;
     ic->plainImage = true;
-    ic->states.emplace_back();   // the unnamed default state, 1 dir, 1 frame
+    ic->states.emplace_back();  // the unnamed default state, 1 dir, 1 frame
     ic->sheet = std::move(img);
     ic->sheetCols = 1;
     return ic;
@@ -241,17 +290,44 @@ struct LegacyReader {
     const uint8_t* d;
     size_t n, o = 0;
     bool err = false;
-    bool need(size_t k) { if (err || o + k > n) { err = true; return false; } return true; }
-    uint32_t u8() { if (!need(1)) return 0; return d[o++]; }
-    uint32_t u16() { if (!need(2)) return 0; uint32_t v = d[o] | (d[o + 1] << 8); o += 2; return v; }
-    uint32_t u32() { if (!need(4)) return 0; uint32_t v = d[o] | (d[o + 1] << 8) | (d[o + 2] << 16) | (uint32_t(d[o + 3]) << 24); o += 4; return v; }
-    const uint8_t* bytes(size_t k) { if (!need(k)) return nullptr; const uint8_t* p = d + o; o += k; return p; }
+    bool need(size_t k) {
+        if (err || o + k > n) {
+            err = true;
+            return false;
+        }
+        return true;
+    }
+    uint32_t u8() {
+        if (!need(1)) return 0;
+        return d[o++];
+    }
+    uint32_t u16() {
+        if (!need(2)) return 0;
+        uint32_t v = d[o] | (d[o + 1] << 8);
+        o += 2;
+        return v;
+    }
+    uint32_t u32() {
+        if (!need(4)) return 0;
+        uint32_t v = d[o] | (d[o + 1] << 8) | (d[o + 2] << 16) | (uint32_t(d[o + 3]) << 24);
+        o += 4;
+        return v;
+    }
+    const uint8_t* bytes(size_t k) {
+        if (!need(k)) return nullptr;
+        const uint8_t* p = d + o;
+        o += k;
+        return p;
+    }
 };
 
 int legacyBits(int ncolors) {
     if (ncolors <= 1) return 0;
     int b = 0, v = 1;
-    while (v < ncolors) { v += v; b++; }
+    while (v < ncolors) {
+        v += v;
+        b++;
+    }
     return b;
 }
 
@@ -290,7 +366,8 @@ bool readLegacyImage(LegacyReader& r, int bits, int ncolors, std::vector<int>& i
         const uint8_t* raw = r.bytes(nb);
         if (r.err) return false;
         idx = unpackIndices(raw, nb, bits, kLegacyPixels);
-        for (int v : idx) if (v >= ncolors) return false;
+        for (int v : idx)
+            if (v >= ncolors) return false;
         return true;
     }
     const uint8_t* lens = r.bytes(size_t(nruns));
@@ -309,7 +386,7 @@ bool readLegacyImage(LegacyReader& r, int bits, int ncolors, std::vector<int>& i
         if (cols[size_t(i)] >= ncolors) return false;
         for (int k = 0; k < lens[i]; k++) idx.push_back(cols[size_t(i)]);
     }
-    while (idx.size() < size_t(kLegacyPixels)) idx.push_back(0);   // a short cell is transparent to the end
+    while (idx.size() < size_t(kLegacyPixels)) idx.push_back(0);  // a short cell is transparent to the end
     return true;
 }
 
@@ -318,7 +395,7 @@ ParseResult parseLegacy(const uint8_t* data, size_t n) {
     uint32_t version = r.u8();
     r.bytes(3);
     if (version != 4) return fail("legacy_version", "legacy container version is not 4");
-    r.u8();   // icon-level default dir count
+    r.u8();  // icon-level default dir count
     int ncolors = int(r.u16());
     if (r.err) return fail("legacy_malformed", "truncated");
     if (ncolors > 256) return fail("legacy_malformed", "palette > 256");
@@ -327,7 +404,7 @@ ParseResult parseLegacy(const uint8_t* data, size_t n) {
     for (int i = 0; i < ncolors; i++) {
         const uint8_t* b = r.bytes(3);
         if (r.err) return fail("legacy_malformed", "truncated palette");
-        pal[size_t(i)] = {b[0], b[2], b[1], uint8_t(i == 0 ? 0 : 255)};   // stored R,B,G; entry 0 is the transparent key
+        pal[size_t(i)] = {b[0], b[2], b[1], uint8_t(i == 0 ? 0 : 255)};  // stored R,B,G; entry 0 is the transparent key
     }
     int bits = legacyBits(ncolors);
     int nstates = int(r.u16());
@@ -338,7 +415,7 @@ ParseResult parseLegacy(const uint8_t* data, size_t n) {
     icon->width = icon->height = kLegacyDim;
     std::vector<LegacyImage> flat;
     flat.reserve(64);
-    std::vector<std::pair<size_t, size_t>> stateImgs;   // (first flat index, count)
+    std::vector<std::pair<size_t, size_t>> stateImgs;  // (first flat index, count)
     int64_t total = 0;
     for (int si = 0; si < nstates; si++) {
         int dirs = int(r.u16()), frameCount = int(r.u16()), delay = int(r.u16());
@@ -377,7 +454,7 @@ ParseResult parseLegacy(const uint8_t* data, size_t n) {
         st.dirs = dirs;
         st.frames = frameCount;
         st.hasDelays = true;
-        st.delays.assign(size_t(frameCount), double(delay < 1 ? 1 : delay));   // max(delay, 1)
+        st.delays.assign(size_t(frameCount), double(delay < 1 ? 1 : delay));  // max(delay, 1)
         st.firstCell = total - cells;
         icon->states.push_back(std::move(st));
     }
@@ -386,12 +463,16 @@ ParseResult parseLegacy(const uint8_t* data, size_t n) {
         if (flat[i].has) continue;
         const LegacyImage* src = nullptr;
         for (size_t j = 0; j < i; j++)
-            if (flat[j].high == 0 && flat[j].low == flat[i].low && flat[j].has) { src = &flat[j]; break; }
+            if (flat[j].high == 0 && flat[j].low == flat[i].low && flat[j].has) {
+                src = &flat[j];
+                break;
+            }
         if (!src) return fail("legacy_transform", "back-reference to a missing image");
         if (flat[i].high != 4) return fail("legacy_transform", "unverified transform code");
         std::vector<int> o(src->idx.size());
         for (int y = 0; y < kLegacyDim; y++)
-            std::copy(src->idx.begin() + (kLegacyDim - 1 - y) * kLegacyDim, src->idx.begin() + (kLegacyDim - y) * kLegacyDim, o.begin() + y * kLegacyDim);
+            std::copy(src->idx.begin() + (kLegacyDim - 1 - y) * kLegacyDim,
+                      src->idx.begin() + (kLegacyDim - y) * kLegacyDim, o.begin() + y * kLegacyDim);
         flat[i].idx = std::move(o);
         flat[i].has = true;
     }
@@ -415,14 +496,18 @@ ParseResult parseLegacy(const uint8_t* data, size_t n) {
                 for (int y = 0; y < kLegacyDim; y++)
                     for (int x = 0; x < kLegacyDim; x++) {
                         const auto& c = pal[size_t(im.idx[size_t(y * kLegacyDim + x)])];
-                        std::memcpy(&icon->sheet.px[(size_t(y0 + y) * size_t(icon->sheet.w) + size_t(x0 + x)) * 4], c.data(), 4);
+                        std::memcpy(&icon->sheet.px[(size_t(y0 + y) * size_t(icon->sheet.w) + size_t(x0 + x)) * 4],
+                                    c.data(), 4);
                     }
             }
     }
     // trailer: a flag byte then, if set, one [u16][u8] per image; consumed for framing only
     if (r.o < r.n) {
         if (r.u8() > 0)
-            for (size_t i = 0; i < flat.size(); i++) { r.u16(); r.u8(); }
+            for (size_t i = 0; i < flat.size(); i++) {
+                r.u16();
+                r.u8();
+            }
     }
     if (r.err) return fail("legacy_malformed", "truncated trailer");
     ParseResult ok;
@@ -440,12 +525,19 @@ int Icon::stateIndex(const std::string& name) const {
 
 bool Icon::frame(const IconState& s, int64_t dirSlot, int64_t fr, std::vector<uint8_t>& out, std::string* err) const {
     int64_t cell = s.cellIndex(dirSlot, fr);
-    if (cell < 0) { if (err) *err = "dir/frame out of range"; return false; }
+    if (cell < 0) {
+        if (err) *err = "dir/frame out of range";
+        return false;
+    }
     int64_t x0 = (cell % sheetCols) * width, y0 = (cell / sheetCols) * height;
-    if (x0 + width > sheet.w || y0 + height > sheet.h) { if (err) *err = "cell outside sheet"; return false; }
+    if (x0 + width > sheet.w || y0 + height > sheet.h) {
+        if (err) *err = "cell outside sheet";
+        return false;
+    }
     out.resize(size_t(width) * size_t(height) * 4);
     for (int y = 0; y < height; y++)
-        std::memcpy(&out[size_t(y) * size_t(width) * 4], &sheet.px[(size_t(y0 + y) * size_t(sheet.w) + size_t(x0)) * 4], size_t(width) * 4);
+        std::memcpy(&out[size_t(y) * size_t(width) * 4], &sheet.px[(size_t(y0 + y) * size_t(sheet.w) + size_t(x0)) * 4],
+                    size_t(width) * 4);
     return true;
 }
 
@@ -460,7 +552,8 @@ ParseResult parseIcon(const uint8_t* d, size_t n) {
         // A GIF the animator refuses (for example, its frames would exceed kMaxGifAnimBytes) still draws its first frame.
         const bool animated = decodeGifAnimation(d, n, anim, why, kMaxGifAnimBytes);
         if (animated && anim.frames > 1) {
-            if (anim.w > kMaxCellDim || anim.h > kMaxCellDim || anim.frames > kMaxFrames) return fail("plain_cap", "plain image size");
+            if (anim.w > kMaxCellDim || anim.h > kMaxCellDim || anim.frames > kMaxFrames)
+                return fail("plain_cap", "plain image size");
             auto ic = std::make_unique<Icon>();
             ic->version = "gif";
             ic->width = anim.w;
@@ -472,7 +565,7 @@ ParseResult parseIcon(const uint8_t* d, size_t n) {
             st.delays = std::move(anim.delays);
             st.loop = anim.loop;
             ic->states.push_back(std::move(st));
-            ic->sheet = std::move(anim.strip);   // frames stacked vertically: cell i at row i*height
+            ic->sheet = std::move(anim.strip);  // frames stacked vertically: cell i at row i*height
             ic->sheetCols = 1;
             ParseResult ok;
             ok.icon = std::move(ic);
@@ -480,7 +573,8 @@ ParseResult parseIcon(const uint8_t* d, size_t n) {
         }
         RgbaImage img;
         if (!decodeGifFirstFrame(d, n, img, why)) return fail("gif_decode", why);
-        if (img.w <= 0 || img.h <= 0 || img.w > kMaxCellDim || img.h > kMaxCellDim) return fail("plain_cap", "plain image size");
+        if (img.w <= 0 || img.h <= 0 || img.w > kMaxCellDim || img.h > kMaxCellDim)
+            return fail("plain_cap", "plain image size");
         ParseResult ok;
         ok.icon = plainIcon(std::move(img), "gif");
         return ok;
@@ -505,7 +599,8 @@ ParseResult parseIcon(const uint8_t* d, size_t n) {
             // A PNG with no DMI Description is a plain image.
             RgbaImage img;
             std::string why;
-            if (!dimsTooBig(d, n) && decodePng(d, n, img, why) == PngStatus::Ok && img.w > 0 && img.h > 0 && img.w <= kMaxCellDim && img.h <= kMaxCellDim) {
+            if (!dimsTooBig(d, n) && decodePng(d, n, img, why) == PngStatus::Ok && img.w > 0 && img.h > 0 &&
+                img.w <= kMaxCellDim && img.h <= kMaxCellDim) {
                 ParseResult ok;
                 ok.icon = plainIcon(std::move(img), "png");
                 return ok;
@@ -536,7 +631,10 @@ ParseResult parseIcon(const uint8_t* d, size_t n) {
 // 0..n-1 then back down to 1; loop n holds the last frame after n plays.
 int frameAtTime(const IconState& st, double elapsed) {
     if (st.frames <= 1) return 0;
-    struct Step { int frame; double delay; };
+    struct Step {
+        int frame;
+        double delay;
+    };
     std::vector<Step> steps;
     auto delay = [&](int64_t i) { return (i >= 0 && size_t(i) < st.delays.size()) ? st.delays[size_t(i)] : 1.0; };
     for (int64_t i = 0; i < st.frames; i++) steps.push_back({int(i), delay(i)});
@@ -566,8 +664,12 @@ int dirIndex(int dirs, int byondDir) {
             switch (byondDir) {
                 case S: return 0;
                 case N: return 1;
-                case E: case N | E: case S | E: return 2;   // diagonals collapse to their horizontal component
-                case W: case N | W: case S | W: return 3;
+                case E:
+                case N | E:
+                case S | E: return 2;  // diagonals collapse to their horizontal component
+                case W:
+                case N | W:
+                case S | W: return 3;
                 default: return 0;
             }
         case 8:

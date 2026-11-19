@@ -26,14 +26,14 @@ class MacroEditDialog : public QDialog {
     Q_OBJECT
 public:
     MacroEditDialog(const QString& title, const skin::MacroEntry* e, QWidget* parent = nullptr);
-    QString spec() const;      // "" when the Key field is blank, which deletes the macro
+    QString spec() const;  // "" when the Key field is blank, which deletes the macro
     QString command() const;
     QString id() const;
     // Fills key and modifiers from a spec such as "CTRL+F8+REP".
     void setSpec(const QString& spec);
     QLineEdit* keyEdit() const { return key_; }
     QLineEdit* commandEdit() const { return cmd_; }
-    QCheckBox* box(const char* name) const;   // "alt", "ctrl", "shift", "rep" or "up"
+    QCheckBox* box(const char* name) const;  // "alt", "ctrl", "shift", "rep" or "up"
 private:
     QLineEdit *key_, *cmd_, *id_;
     QCheckBox *alt_, *ctrl_, *shift_, *rep_, *up_;
@@ -43,7 +43,8 @@ class MacroDialog : public QDialog {
     Q_OBJECT
 public:
     // gameAvailable=false greys "Apply only to this game" and shows the global list.
-    MacroDialog(const skin::MacroSet& global, const skin::MacroSet& game, bool gameAvailable, QWidget* parent = nullptr);
+    MacroDialog(const skin::MacroSet& global, const skin::MacroSet& game, bool gameAvailable,
+                QWidget* parent = nullptr);
     const skin::MacroSet& globalSet() const { return global_; }
     const skin::MacroSet& gameSet() const { return game_; }
     bool gameScope() const;
@@ -53,8 +54,10 @@ public:
     bool commit(const QString& oldSpec, const QString& spec, const QString& command, const QString& id = QString());
     // Opens the entry editor for a row (-1 is New Macro...). Non-blocking; the result is committed when accepted.
     MacroEditDialog* openEditor(int row);
+
 protected:
     bool eventFilter(QObject* o, QEvent* e) override;
+
 private:
     skin::MacroSet& current();
     void refill();
@@ -66,7 +69,8 @@ private:
 // The stock Client menu, reduced to the items this client implements: Screenshot..., Reconnect, Macros..., Quit. Each
 // runs its client command (`.screenshot`, `.reconnect`, `.macros`, `.quit`) through `run`. A GPU build adds `display`'s
 // renderer and performance-metrics entries before Quit.
-void addClientMenuItems(QMenu* client, const std::function<void(const QString&)>& run, DisplaySettings* display = nullptr);
+void addClientMenuItems(QMenu* client, const std::function<void(const QString&)>& run,
+                        DisplaySettings* display = nullptr);
 // The entries the game window's system menu gets: "Options & Messages" (`.options`) and the Client menu.
 void addSystemMenuItems(QMenu* m, const std::function<void(const QString&)>& run, DisplaySettings* display = nullptr);
 
@@ -77,7 +81,7 @@ public:
     explicit OptionsWindow(QWidget* parent = nullptr, DisplaySettings* display = nullptr);
     QMenuBar* menuBar() const { return bar_; }
 signals:
-    void command(const QString& cmd);   // ".macros" or ".quit", routed like a menu item's command
+    void command(const QString& cmd);  // ".macros" or ".quit", routed like a menu item's command
 private:
     QMenuBar* bar_;
 };

@@ -65,7 +65,10 @@ bool load(const std::string& c, const std::string& resID, Scene& s) {
     if (!s.res.add(b, &claimed, &err)) return false;
     s.sess.noteResource(claimed, b, "");
     render::SceneStats st;
-    if (!render::assembleMapControl(s.sess, s.res, 0, s.dl, st, &err, true)) { qWarning("assemble: %s", err.c_str()); return false; }
+    if (!render::assembleMapControl(s.sess, s.res, 0, s.dl, st, &err, true)) {
+        qWarning("assemble: %s", err.c_str());
+        return false;
+    }
     return s.dl.hit != nullptr;
 }
 
@@ -83,8 +86,10 @@ int pixelsAgree(const std::string& c, const std::string& resID, int& total) {
         const uint8_t* p = &img.px[(size_t(img.h - 1 - y) * size_t(img.w) + size_t(x)) * 4];
         char got[8];
         std::snprintf(got, sizeof got, "%02x%02x%02x", p[0], p[1], p[2]);
-        if (r[3] == got) agree++;
-        else qWarning("%s %s: DS %s | ours %s", c.c_str(), r[0].c_str(), r[3].c_str(), got);
+        if (r[3] == got)
+            agree++;
+        else
+            qWarning("%s %s: DS %s | ours %s", c.c_str(), r[0].c_str(), r[3].c_str(), got);
     }
     return agree;
 }
@@ -99,9 +104,12 @@ int menusAgree(const std::string& c, const std::string& resID, int& total) {
     for (const auto& r : tsv(dir(c) + "/dreamseeker-menus.tsv")) {
         total++;
         std::string got;
-        for (const render::Hit& h : render::hitStack(sc, std::stoi(r[1]), sc.pixH() - 1 - std::stoi(r[2]))) got += (got.empty() ? "" : "|") + h.name;
-        if (got == r[3]) agree++;
-        else qWarning("%s %s: DS %s | ours %s", c.c_str(), r[0].c_str(), r[3].c_str(), got.c_str());
+        for (const render::Hit& h : render::hitStack(sc, std::stoi(r[1]), sc.pixH() - 1 - std::stoi(r[2])))
+            got += (got.empty() ? "" : "|") + h.name;
+        if (got == r[3])
+            agree++;
+        else
+            qWarning("%s %s: DS %s | ours %s", c.c_str(), r[0].c_str(), r[3].c_str(), got.c_str());
     }
     return agree;
 }
@@ -123,7 +131,9 @@ private slots:
         QTest::newRow("cellsame") << "cellsame" << "6cd19be2" << 12;
     }
     void drawsAsDreamSeeker() {
-        QFETCH(QString, scene); QFETCH(QString, res); QFETCH(int, rows);
+        QFETCH(QString, scene);
+        QFETCH(QString, res);
+        QFETCH(int, rows);
         int total = 0;
         QCOMPARE(pixelsAgree(scene.toStdString(), res.toStdString(), total), rows);
         QCOMPARE(total, rows);
@@ -137,7 +147,8 @@ private slots:
         QTest::newRow("thresholds2") << "thresholds2" << 28;
     }
     void listsAsDreamSeeker() {
-        QFETCH(QString, scene); QFETCH(int, rows);
+        QFETCH(QString, scene);
+        QFETCH(int, rows);
         int total = 0;
         QCOMPARE(menusAgree(scene.toStdString(), "7706ec97", total), rows);
         QCOMPARE(total, rows);

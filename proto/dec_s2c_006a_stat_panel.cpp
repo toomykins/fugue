@@ -1,4 +1,4 @@
-// s2c 0x006a: statpanel (DreamSeeker's info control). flags is a BITMASK of independent sections.
+// S2C::StatPanel: statpanel (DreamSeeker's info control). flags is a BITMASK of independent sections.
 #include <cstring>
 
 #include "proto/registry.h"
@@ -13,71 +13,101 @@ namespace {
 //   0x0f u16 count + recursive values, depth cap 8; 0x2a float32 bits. A row surfaces head, cid, the 0x06 text and the
 //   0x2a number; the 0x02/0x03 u16, the 0x0c word and 0x0f's values are skipped. The flags&1 / flags&8 DMValues are
 //   read and discarded.
-struct Value { uint8_t kind = 0; std::string text; double num = 0; uint32_t appid = 0; bool hasAppid = false; uint32_t head = 0; };
-
-Value value(Reader& r, int depth) {
-    Value v;
+StatValue value(Reader& r, int depth) {
+    StatValue v;
     v.kind = r.u8();
     switch (v.kind) {
-    case 0x01: v.head = r.u32(); v.appid = r.u32(); v.hasAppid = true; break;
-    case 0x04: v.head = r.u32(); v.appid = r.u32(); v.hasAppid = true; break;
-    case 0x02: case 0x03: v.head = r.u32(); r.u16(); v.appid = r.u32(); v.hasAppid = true; break;
-    case 0x06: v.text = r.cstr(); break;
-    case 0x0c: r.u32(); break;
-    case 0x0f: {
-        if (depth > 8) throw DecodeError("statpanel DMValue list nested too deep");
-        uint16_t n = r.u16();
-        for (unsigned i = 0; i < n; i++) value(r, depth + 1);
-        break;
-    }
-    case 0x2a: {
-        uint32_t bits = r.u32();
-        float f; std::memcpy(&f, &bits, 4);
-        v.num = double(f);
-        break;
-    }
-    default: break;   // NULL arm: zero payload bytes
+        case 0x01:
+        case 0x04:
+            v.head = r.u32();
+            v.appid = r.u32();
+            v.hasAppid = true;
+            break;
+        case 0x02:
+        case 0x03:
+            v.head = r.u32();
+            r.u16();
+            v.appid = r.u32();
+            v.hasAppid = true;
+            break;
+        case 0x06: v.text = r.cstr(); break;
+        case 0x0c: r.u32(); break;
+        case 0x0f: {
+            if (depth > 8) throw DecodeError("statpanel DMValue list nested too deep");
+            for (unsigned n = r.u16(), i = 0; i < n; i++) value(r, depth + 1);
+            break;
+        }
+        case 0x2a: {
+            uint32_t bits = r.u32();
+            float f;
+            std::memcpy(&f, &bits, 4);
+            v.num = double(f);
+            break;
+        }
+        default: break;  // NULL arm: zero payload bytes
     }
     return v;
 }
 
-canon::Json valueJson(const Value& v) {
-    return canon::Object().u("kind", v.kind).str("text", v.text).set("num", canon::f64FromDouble(v.num))
-        .u("appid", v.appid).boolean("hasAppid", v.hasAppid).u("head", v.head).build();
-}
-
-canon::Json decode(State&, ByteSpan body) {
-    Reader r(body);
-    uint8_t flags = r.u8(), token = r.u8();
-    if (flags & 0x01) value(r, 0);
-    bool hasTabs = false, hasSelected = false;
-    std::vector<canon::Json> tabs;
-    uint16_t selected = 0;
-    if (flags & 0x02) {
-        uint16_t n = r.u16();
-        hasTabs = true;
-        for (unsigned i = 0; i < n; i++) tabs.push_back(canon::str(r.cstr()));
-    }
-    if (flags & 0x04) { selected = r.u16(); hasSelected = true; }
-    if (flags & 0x08) value(r, 0);
-    uint16_t nrows = r.u16();
-    std::vector<canon::Json> rows;
-    for (unsigned i = 0; i < nrows; i++) {
-        std::string name = r.cstr();
-        Value v = value(r, 0);
-        uint16_t ord = r.u16();
-        rows.push_back(canon::Object().str("name", name).set("value", valueJson(v)).u("ordinal", ord).build());
-    }
-    uint16_t nclear = r.u16();
-    std::vector<canon::Json> clears;
-    for (unsigned i = 0; i < nclear; i++) clears.push_back(canon::u(r.u16()));
-    r.expectEnd();
-    return canon::Object().u("flags", flags).u("token", token).boolean("hasTabs", hasTabs)
-        .set("tabs", canon::array(tabs)).boolean("hasSelected", hasSelected).u("selected", selected)
-        .set("rows", canon::array(rows)).set("clears", canon::array(clears)).build();
-}
-
-FUGUE_REGISTER_DECODER(Dir::S2C, 0x006a, "cpp:stock-dd-wire", decode);
-
 }  // namespace
+
+StatPanel decodeStatPanel(ByteSpan body) {
+    Reader r(body);
+    StatPanel m;
+    m.flags = r.u8();
+    m.token = r.u8();
+    if (m.flags & 0x01) value(r, 0);
+    if (m.flags & 0x02) {
+        m.hasTabs = true;
+        for (unsigned n = r.u16(), i = 0; i < n; i++) m.tabs.push_back(r.cstr());
+    }
+    if (m.flags & 0x04) {
+        m.hasSelected = true;
+        m.selected = r.u16();
+    }
+    if (m.flags & 0x08) value(r, 0);
+    for (unsigned n = r.u16(), i = 0; i < n; i++) {
+        StatPanel::Row row;
+        row.name = r.cstr();
+        row.value = value(r, 0);
+        row.ordinal = r.u16();
+        m.rows.push_back(std::move(row));
+    }
+    for (unsigned n = r.u16(), i = 0; i < n; i++) m.clears.push_back(r.u16());
+    r.expectEnd();
+    return m;
+}
+
+canon::Json toJson(const StatValue& v) {
+    return canon::Object()
+        .u("kind", v.kind)
+        .str("text", v.text)
+        .set("num", canon::f64FromDouble(v.num))
+        .u("appid", v.appid)
+        .boolean("hasAppid", v.hasAppid)
+        .u("head", v.head)
+        .build();
+}
+
+canon::Json toJson(const StatPanel& m) {
+    std::vector<canon::Json> tabs, rows, clears;
+    for (const std::string& t : m.tabs) tabs.push_back(canon::str(t));
+    for (const StatPanel::Row& row : m.rows)
+        rows.push_back(
+            canon::Object().str("name", row.name).set("value", toJson(row.value)).u("ordinal", row.ordinal).build());
+    for (uint16_t c : m.clears) clears.push_back(canon::u(c));
+    return canon::Object()
+        .u("flags", m.flags)
+        .u("token", m.token)
+        .boolean("hasTabs", m.hasTabs)
+        .set("tabs", canon::array(tabs))
+        .boolean("hasSelected", m.hasSelected)
+        .u("selected", m.selected)
+        .set("rows", canon::array(rows))
+        .set("clears", canon::array(clears))
+        .build();
+}
+
+FUGUE_REGISTER_DECODER(Dir::S2C, S2C::StatPanel, "cpp:stock-dd-wire", jsonOf<decodeStatPanel>);
+
 }  // namespace fugue::proto

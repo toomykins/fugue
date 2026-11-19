@@ -15,16 +15,25 @@ std::string path;
 
 bool setNoteFile(const std::string& p, std::string* err) {
     std::lock_guard<std::mutex> g(mu);
-    if (file) { std::fclose(file); file = nullptr; }
+    if (file) {
+        std::fclose(file);
+        file = nullptr;
+    }
     path.clear();
     if (p.empty()) return true;
     file = std::fopen(p.c_str(), "w");
-    if (!file) { if (err) *err = "open " + p + ": " + std::strerror(errno); return false; }
+    if (!file) {
+        if (err) *err = "open " + p + ": " + std::strerror(errno);
+        return false;
+    }
     path = p;
     return true;
 }
 
-std::string noteFile() { std::lock_guard<std::mutex> g(mu); return path; }
+std::string noteFile() {
+    std::lock_guard<std::mutex> g(mu);
+    return path;
+}
 
 void note(const std::string& line) {
     std::lock_guard<std::mutex> g(mu);

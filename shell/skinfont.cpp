@@ -21,13 +21,15 @@ namespace {
 // Metric-compatible stand-ins, in order of preference.
 QStringList twinsOf(const QString& lowerFamily) {
     if (lowerFamily == "arial") return {"Arial", "Liberation Sans", "Arimo", "Helvetica", "Nimbus Sans", "FreeSans"};
-    if (lowerFamily == "times new roman") return {"Times New Roman", "Liberation Serif", "Tinos", "Times", "Nimbus Roman"};
+    if (lowerFamily == "times new roman")
+        return {"Times New Roman", "Liberation Serif", "Tinos", "Times", "Nimbus Roman"};
     if (lowerFamily == "courier new") return {"Courier New", "Liberation Mono", "Cousine", "Courier", "Nimbus Mono PS"};
     return {};
 }
 
 bool isStockFace(const QString& l) {
-    return l.isEmpty() || l == "sans-serif" || l == "monospace" || l == "ms sans serif" || l == "courier" || l == "small fonts";
+    return l.isEmpty() || l == "sans-serif" || l == "monospace" || l == "ms sans serif" || l == "courier" ||
+           l == "small fonts";
 }
 
 bool available(const QString& family) {
@@ -45,8 +47,9 @@ Run runOf(const SkinFont& f, const QString& text) {
     Run r;
     const QFontMetrics m(f.font);
     for (int i = 0; i < text.size();) {
-        const char32_t cp = text.at(i).isHighSurrogate() && i + 1 < text.size() ? QChar::surrogateToUcs4(text[i], text[i + 1])
-                                                                                : char32_t(text[i].unicode());
+        const char32_t cp = text.at(i).isHighSurrogate() && i + 1 < text.size()
+                                ? QChar::surrogateToUcs4(text[i], text[i + 1])
+                                : char32_t(text[i].unicode());
         const int n = cp > 0xFFFF ? 2 : 1;
         const int a = f.bitmap.bitmap ? render::dsBitmapAdvancePx(f.bitmap, cp) : m.horizontalAdvance(text.mid(i, n));
         r.adv.push_back(a);
@@ -67,12 +70,16 @@ SkinFont skinControlFont(const std::string& family, const std::string& size, con
     QStringList listed;
     for (QString f : QString::fromStdString(family).split(',')) {
         f = f.trimmed();
-        if (f.size() >= 2 && (f.front() == '"' || f.front() == '\'') && f.back() == f.front()) f = f.mid(1, f.size() - 2).trimmed();
+        if (f.size() >= 2 && (f.front() == '"' || f.front() == '\'') && f.back() == f.front())
+            f = f.mid(1, f.size() - 2).trimmed();
         listed << f;
     }
     QString pick = listed.front();
     for (const QString& f : listed)
-        if (isStockFace(f.toLower()) || available(f)) { pick = f; break; }
+        if (isStockFace(f.toLower()) || available(f)) {
+            pick = f;
+            break;
+        }
     QString l = pick.toLower();
     if (l.isEmpty() || l == "sans-serif") l = "ms sans serif";
     if (l == "monospace") l = "courier";
@@ -80,11 +87,16 @@ SkinFont skinControlFont(const std::string& family, const std::string& size, con
     bool bold = false;
     SkinFont out;
     QFont& f = out.font;
-    for (const QString& t : QString::fromStdString(style).toLower().split(QRegularExpression("[\\s,;]+"), Qt::SkipEmptyParts)) {
-        if (t == "bold") bold = true;
-        else if (t == "italic") f.setItalic(true);
-        else if (t == "underline") f.setUnderline(true);
-        else if (t == "strike") f.setStrikeOut(true);
+    for (const QString& t :
+         QString::fromStdString(style).toLower().split(QRegularExpression("[\\s,;]+"), Qt::SkipEmptyParts)) {
+        if (t == "bold")
+            bold = true;
+        else if (t == "italic")
+            f.setItalic(true);
+        else if (t == "underline")
+            f.setUnderline(true);
+        else if (t == "strike")
+            f.setStrikeOut(true);
     }
     f.setBold(bold);
 
@@ -97,16 +109,20 @@ SkinFont skinControlFont(const std::string& family, const std::string& size, con
         out.bitmap = render::dsBitmapFace(l.toStdString(), em, bold);
         out.bitmap.italic = f.italic();
         // Microsoft Sans Serif, MS Sans Serif's TrueType successor, is not a stand-in: it is about 8% wider.
-        if (l == "courier") { fams = twinsOf("courier new"); hint = QFont::Monospace; }
-        else fams = sans;
+        if (l == "courier") {
+            fams = twinsOf("courier new");
+            hint = QFont::Monospace;
+        } else
+            fams = sans;
     } else {
         for (const QStringList& part : {QStringList{pick}, twinsOf(l), sans})
-            for (const QString& s : part) if (!fams.contains(s, Qt::CaseInsensitive)) fams << s;
+            for (const QString& s : part)
+                if (!fams.contains(s, Qt::CaseInsensitive)) fams << s;
     }
     f.setFamilies(fams);
     f.setStyleHint(hint);
     f.setPixelSize(px);
-    f.setKerning(false);   // GDI sums advances without kerning
+    f.setKerning(false);  // GDI sums advances without kerning
     return out;
 }
 
@@ -121,16 +137,19 @@ QString skinEllipsized(const SkinFont& f, const QString& text, int width) {
     return text.left(run.at[n]) + "...";
 }
 
-void drawSkinText(QPainter& p, const QRect& r, const SkinFont& f, const QString& text, bool ellipsis, Qt::Alignment align) {
+void drawSkinText(QPainter& p, const QRect& r, const SkinFont& f, const QString& text, bool ellipsis,
+                  Qt::Alignment align) {
     const QString s = ellipsis ? skinEllipsized(f, text, r.width()) : text;
     const Run run = runOf(f, s);
     const QFontMetrics m(f.font);
     const int height = f.bitmap.bitmap ? f.bitmap.height : m.height();
     const int ascent = f.bitmap.bitmap ? f.bitmap.ascent : m.ascent();
-    const int x0 = align & Qt::AlignLeft ? r.left() : align & Qt::AlignRight ? r.right() + 1 - run.width
-                                                                               : r.left() + (r.width() - run.width) / 2;
-    const int top = align & Qt::AlignTop ? r.top() : align & Qt::AlignBottom ? r.bottom() + 1 - height
-                                                                              : r.top() + (r.height() - height) / 2;
+    const int x0 = align & Qt::AlignLeft    ? r.left()
+                   : align & Qt::AlignRight ? r.right() + 1 - run.width
+                                            : r.left() + (r.width() - run.width) / 2;
+    const int top = align & Qt::AlignTop      ? r.top()
+                    : align & Qt::AlignBottom ? r.bottom() + 1 - height
+                                              : r.top() + (r.height() - height) / 2;
     const int base = top + ascent;
     p.save();
     p.setClipRect(r, Qt::IntersectClip);
@@ -149,8 +168,11 @@ void drawSkinText(QPainter& p, const QRect& r, const SkinFont& f, const QString&
         const QString ch = s.mid(from, n);
         if (ch != " ") {
             const QList<quint32> g = raw.isValid() ? raw.glyphIndexesForString(ch) : QList<quint32>();
-            if (g.size() == 1 && g[0]) { glyphs << g[0]; pos << QPointF(x, base); }
-            else p.drawText(QPoint(x, base), ch);
+            if (g.size() == 1 && g[0]) {
+                glyphs << g[0];
+                pos << QPointF(x, base);
+            } else
+                p.drawText(QPoint(x, base), ch);
         }
         x += run.adv[i];
     }
@@ -161,18 +183,24 @@ void drawSkinText(QPainter& p, const QRect& r, const SkinFont& f, const QString&
         gr.setPositions(pos);
         p.drawGlyphRun(QPointF(0, 0), gr);
     }
-    if (f.font.underline()) p.fillRect(x0, base + std::max(1, m.underlinePos()), run.width, std::max(1, m.lineWidth()), p.pen().color());
-    if (f.font.strikeOut()) p.fillRect(x0, base - m.strikeOutPos(), run.width, std::max(1, m.lineWidth()), p.pen().color());
+    if (f.font.underline())
+        p.fillRect(x0, base + std::max(1, m.underlinePos()), run.width, std::max(1, m.lineWidth()), p.pen().color());
+    if (f.font.strikeOut())
+        p.fillRect(x0, base - m.strikeOutPos(), run.width, std::max(1, m.lineWidth()), p.pen().color());
     p.restore();
 }
 
 Qt::Alignment skinLabelAlign(const std::string& v) {
     const QString a = QString::fromStdString(v).trimmed().toLower();
     Qt::Alignment h = Qt::AlignHCenter, vert = Qt::AlignVCenter;
-    if (a.contains("left")) h = Qt::AlignLeft;
-    else if (a.contains("right")) h = Qt::AlignRight;
-    if (a.contains("top")) vert = Qt::AlignTop;
-    else if (a.contains("bottom")) vert = Qt::AlignBottom;
+    if (a.contains("left"))
+        h = Qt::AlignLeft;
+    else if (a.contains("right"))
+        h = Qt::AlignRight;
+    if (a.contains("top"))
+        vert = Qt::AlignTop;
+    else if (a.contains("bottom"))
+        vert = Qt::AlignBottom;
     return h | vert;
 }
 

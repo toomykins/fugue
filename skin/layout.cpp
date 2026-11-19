@@ -1,7 +1,9 @@
 #include "skin/layout.h"
+#include "skin/winset.h"
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <set>
 
 namespace fugue::skin {
@@ -40,9 +42,14 @@ int anchorAxis(int64_t design, int64_t pct, bool ok, int designExtent, int actua
 void designSize(const Block& b, const Rect& box, int& dw, int& dh) {
     if (const Elem* m = b.main()) {
         int64_t w, h;
-        if (m->size("size", w, h) && w > 0 && h > 0) { dw = int(w); dh = int(h); return; }
+        if (m->size("size", w, h) && w > 0 && h > 0) {
+            dw = int(w);
+            dh = int(h);
+            return;
+        }
     }
-    dw = box.dx(); dh = box.dy();
+    dw = box.dx();
+    dh = box.dy();
 }
 
 struct GeomOverride {
@@ -52,10 +59,22 @@ struct GeomOverride {
 
 Rect anchorRect(const Elem& e, const GeomOverride& ov, int dw, int dh, const Rect& box) {
     int64_t px, py, sw, sh;
-    if (!e.point("pos", px, py)) { px = 0; py = 0; }
-    if (!e.size("size", sw, sh)) { sw = dw - px; sh = dh - py; }
-    if (ov.hasPos) { px = ov.px; py = ov.py; }
-    if (ov.hasSz) { sw = ov.sw; sh = ov.sh; }
+    if (!e.point("pos", px, py)) {
+        px = 0;
+        py = 0;
+    }
+    if (!e.size("size", sw, sh)) {
+        sw = dw - px;
+        sh = dh - py;
+    }
+    if (ov.hasPos) {
+        px = ov.px;
+        py = ov.py;
+    }
+    if (ov.hasSz) {
+        sw = ov.sw;
+        sh = ov.sh;
+    }
     // `size = 0x0` is BYOND's "fill the rest of the design box".
     if (sw <= 0) sw = dw - px;
     if (sh <= 0) sh = dh - py;
@@ -67,19 +86,79 @@ Rect anchorRect(const Elem& e, const GeomOverride& ov, int dw, int dh, const Rec
     int x2 = box.x0 + anchorAxis(px + sw, a2x, ok2, dw, box.dx());
     int y2 = box.y0 + anchorAxis(py + sh, a2y, ok2, dh, box.dy());
     // An anchor of `none` on ONE corner means "keep the size" (the corner pins, the far side follows).
-    if (ok1 && !ok2) { x2 = x1 + int(sw); y2 = y1 + int(sh); }
-    else if (!ok1 && ok2) { x1 = x2 - int(sw); y1 = y2 - int(sh); }
+    if (ok1 && !ok2) {
+        x2 = x1 + int(sw);
+        y2 = y1 + int(sh);
+    } else if (!ok1 && ok2) {
+        x1 = x2 - int(sw);
+        y1 = y2 - int(sh);
+    }
     // An inverted extent is a zero one (stock answers 82x0 for a button its strip has shrunk past), not a flipped rect.
     return Rect{x1, y1, std::max(x1, x2), std::max(y1, y2)};
 }
+
+bool pairOf(const std::string& v, const char* sep, int64_t& a, int64_t& b) {
+    long long x, y;
+    if (!parsePair(v, sep, x, y)) return false;
+    a = x;
+    b = y;
+    return true;
+}
+
+// "A,B" / "AxB" where A and B may be fractional (tgui and vg's tooltip.js send device pixels), divided by scale.
+bool scaledPair(const std::string& v, char sep, double scale, int64_t& a, int64_t& b) {
+    const char* s = v.c_str();
+    char* end = nullptr;
+    double x = std::strtod(s, &end);
+    if (end == s || *end != sep) return false;
+    const char* t = end + 1;
+    double y = std::strtod(t, &end);
+    if (end == t || *end) return false;
+    if (scale <= 0) scale = 1;
+    a = std::llround(x / scale);
+    b = std::llround(y / scale);
+    return true;
+}
+
+}  // namespace
+
+Rect runtimeRect(const File& f, const std::string& window, const Rect& box, const std::string& pos,
+                 const std::string& size, const std::string& anchor1, const std::string& anchor2, double scale) {
+    int dw = box.dx(), dh = box.dy();
+    if (const Block* b = f.window(window)) designSize(*b, box, dw, dh);
+    int64_t px = 0, py = 0, sw = 0, sh = 0;
+    if (!scaledPair(pos, ',', scale, px, py)) px = py = 0;
+    if (!scaledPair(size, 'x', scale, sw, sh)) sw = sh = 0;
+    if (sw <= 0) sw = dw - px;
+    if (sh <= 0) sh = dh - py;
+    int64_t a1x = 0, a1y = 0, a2x = 0, a2y = 0;
+    bool ok1 = pairOf(anchor1, ",", a1x, a1y), ok2 = pairOf(anchor2, ",", a2x, a2y);
+    int x1 = box.x0 + anchorAxis(px, a1x, ok1, dw, box.dx());
+    int y1 = box.y0 + anchorAxis(py, a1y, ok1, dh, box.dy());
+    int x2 = box.x0 + anchorAxis(px + sw, a2x, ok2, dw, box.dx());
+    int y2 = box.y0 + anchorAxis(py + sh, a2y, ok2, dh, box.dy());
+    if (ok1 != ok2) {  // one anchor: that corner pins and the control keeps its size (anchorRect)
+        if (ok1) {
+            x2 = x1 + int(sw);
+            y2 = y1 + int(sh);
+        } else {
+            x1 = x2 - int(sw);
+            y1 = y2 - int(sh);
+        }
+    }
+    return Rect{x1, y1, std::max(x1, x2), std::max(y1, y2)};
+}
+
+namespace {
 
 struct Ctx {
     const File& f;
     Tree& t;
     const std::map<std::string, double>& splits;
     const PropStore* props;
-    bool infer;   // the empty-slot rule (layout.h layoutSkin inferSlots)
+    bool infer;  // the empty-slot rule (layout.h layoutSkin inferSlots)
     std::set<std::string> seen;
+    std::string top;  // the floating window being laid out ("" = the main window)
 };
 
 bool contains(const std::vector<std::string>& v, const std::string& s) {
@@ -143,8 +222,8 @@ std::vector<std::string> slotClaimants(const File& f, const std::string& path, c
 
 void layoutWindow(Ctx& c, const Block& b, const Rect& box, const Rect& clip, int depth, const std::string& side);
 
-void fillSlot(Ctx& c, const std::string& path, const std::string& side, std::string window, const Rect& box, const Rect& clip,
-              int depth) {
+void fillSlot(Ctx& c, const std::string& path, const std::string& side, std::string window, const Rect& box,
+              const Rect& clip, int depth) {
     std::vector<std::string> cands = slotClaimants(c.f, path, side);
     if (window.empty()) {
         Slot sl{path + "." + side, box, cands, cands.empty() || !c.infer ? "" : cands[0]};
@@ -167,8 +246,14 @@ void layoutChild(Ctx& c, const Block& b, const Elem& e, const Rect& box, const R
     bool leftLive = false, rightLive = false;
     if (c.props) {
         std::string v;
-        if (c.props->controlProp(b.name, e.name, "left", v)) { left = v; leftLive = true; }
-        if (c.props->controlProp(b.name, e.name, "right", v)) { right = v; rightLive = true; }
+        if (c.props->controlProp(b.name, e.name, "left", v)) {
+            left = v;
+            leftLive = true;
+        }
+        if (c.props->controlProp(b.name, e.name, "right", v)) {
+            right = v;
+            rightLive = true;
+        }
     }
     // A side that names no window (tg's `left=null`) is hidden as an emptied one is.
     if (!left.empty() && !c.f.window(left)) left.clear();
@@ -208,7 +293,7 @@ void layoutChild(Ctx& c, const Block& b, const Elem& e, const Rect& box, const R
         sp = makeRect(box.x0, cut, box.x1, cut + sw);
         b2 = makeRect(box.x0, cut + sw, box.x1, box.y1);
     }
-    if (sw > 0) c.t.splitters.push_back(Splitter{path, sp.intersect(clip), vert, frac, box});
+    if (sw > 0) c.t.splitters.push_back(Splitter{path, sp.intersect(clip), vert, frac, box, c.top});
     fillSlot(c, path, "left", left, a, a.intersect(clip), depth + 1);
     fillSlot(c, path, "right", right, b2, b2.intersect(clip), depth + 1);
 }
@@ -221,7 +306,10 @@ void layoutWindow(Ctx& c, const Block& b, const Rect& box, const Rect& clip, int
     designSize(b, box, dw, dh);
     for (const Elem* e : b.controls()) {
         Control ctl;
-        ctl.window = b.name; ctl.name = e->name; ctl.type = e->type(); ctl.elem = e;
+        ctl.window = b.name;
+        ctl.name = e->name;
+        ctl.type = e->type();
+        ctl.elem = e;
         ctl.visible = e->boolv("is-visible", true);
         ctl.disabled = e->boolv("is-disabled", false);
         GeomOverride ov;
@@ -233,7 +321,9 @@ void layoutWindow(Ctx& c, const Block& b, const Rect& box, const Rect& clip, int
             ov.hasSz = c.props->controlSize(b.name, e->name, "size", ov.sw, ov.sh);
         }
         ctl.isDefault = e->boolv("is-default", false);
-        ctl.depth = depth; ctl.side = side;
+        ctl.depth = depth;
+        ctl.side = side;
+        ctl.top = c.top;
         ctl.full = anchorRect(*e, ov, dw, dh, box);
         ctl.rect = ctl.full.intersect(clip);  // empty -> the zero rect (see layout.h, Quirk)
         ctl.box = box;
@@ -254,7 +344,8 @@ const Block* findMainWindow(const File& f) {
         if (m && m->boolv("is-default", false)) return &b;
     }
     if (const Block* b = f.window("mainwindow")) return b;
-    for (const Block& b : f.blocks) if (b.kind == "window") return &b;
+    for (const Block& b : f.blocks)
+        if (b.kind == "window") return &b;
     return nullptr;
 }
 
@@ -262,14 +353,47 @@ Tree layoutSkin(const File& f, Rect client, const std::map<std::string, double>&
     return layoutSkin(f, client, splits, nullptr);
 }
 
-Tree layoutSkin(const File& f, Rect client, const std::map<std::string, double>& splits, const PropStore* props, bool inferSlots) {
+Tree layoutSkin(const File& f, Rect client, const std::map<std::string, double>& splits, const PropStore* props,
+                bool inferSlots) {
     Tree t;
     t.client = client;
     const Block* mw = findMainWindow(f);
     if (!mw) return t;
-    Ctx c{f, t, splits, props, inferSlots, {}};
+    Ctx c{f, t, splits, props, inferSlots, {}, {}};
     layoutWindow(c, *mw, client, client, 0, "");
+    for (const Block& b : f.blocks) {
+        if (b.kind != "window" || &b == mw || !isFloatingWindow(f, b) || c.seen.count(b.name)) continue;
+        const Elem* m = b.main();
+        int64_t dw = 0, dh = 0;
+        if (!m->size("size", dw, dh) || dw < 0 || dh < 0) dw = dh = 0;
+        long long sw, sh;
+        if (props && props->controlSize("", b.name, "size", sw, sh) && sw >= 0 && sh >= 0) {
+            dw = sw;
+            dh = sh;
+        }
+        bool vis = m->boolv("is-visible", true);
+        if (props) props->controlBool("", b.name, "is-visible", vis);
+        Rect box{0, 0, int(dw), int(dh)};
+        t.floats.push_back(Floating{b.name, box, vis});
+        c.top = b.name;
+        layoutWindow(c, b, box, box, 0, "");
+    }
     return t;
+}
+
+bool isFloatingWindow(const File& f, const Block& b) {
+    const Elem* m = b.main();
+    if (!m || findMainWindow(f) == &b || m->boolv("is-pane", false)) return false;
+    for (const Block& o : f.blocks)  // a window a CHILD names is hosted there, is-pane or not
+        for (const Elem& e : o.elems)
+            if (e.type() == "CHILD" && (e.str("left", "") == b.name || e.str("right", "") == b.name)) return false;
+    return true;
+}
+
+const Floating* Tree::floating(const std::string& window) const {
+    for (const Floating& fl : floats)
+        if (lowerAscii(fl.window) == lowerAscii(window)) return &fl;
+    return nullptr;
 }
 
 std::string onSize(const File& f) {

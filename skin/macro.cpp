@@ -43,19 +43,34 @@ bool parseMacroName(const std::string& spec, MacroKey& k, bool& rep) {
         pos = pl == std::string::npos ? spec.size() + 1 : pl + 1;
         std::string t = upperAscii(trimSpace(tok));
         if (t.empty()) continue;
-        if (t == "CTRL" || t == "CONTROL") { mods.push_back("CTRL"); k.ctrl = true; }
-        else if (t == "SHIFT") { mods.push_back("SHIFT"); k.shift = true; }
-        else if (t == "ALT") { mods.push_back("ALT"); k.alt = true; }
-        else if (t == "REP") rep = true;
-        else if (t == "UP") k.up = true;
-        else if (key.empty()) key = canonKeyName(t);  // a second key token is dropped
+        if (t == "CTRL" || t == "CONTROL") {
+            mods.push_back("CTRL");
+            k.ctrl = true;
+        } else if (t == "SHIFT") {
+            mods.push_back("SHIFT");
+            k.shift = true;
+        } else if (t == "ALT") {
+            mods.push_back("ALT");
+            k.alt = true;
+        } else if (t == "REP")
+            rep = true;
+        else if (t == "UP")
+            k.up = true;
+        else if (key.empty())
+            key = canonKeyName(t);  // a second key token is dropped
     }
     if (key.empty()) {
-        if (mods.empty()) { k = MacroKey{}; return false; }
+        if (mods.empty()) {
+            k = MacroKey{};
+            return false;
+        }
         key = mods.back();  // all-modifier spec: the LAST one is the key
-        if (key == "CTRL") k.ctrl = false;
-        else if (key == "SHIFT") k.shift = false;
-        else if (key == "ALT") k.alt = false;
+        if (key == "CTRL")
+            k.ctrl = false;
+        else if (key == "SHIFT")
+            k.shift = false;
+        else if (key == "ALT")
+            k.alt = false;
     }
     k.key = key;
     return true;
@@ -91,10 +106,12 @@ const MacroEntry* MacroSet::findAny(const MacroKey& k, bool repeat) const {
 std::vector<MacroKey> heldCombos(const MacroKey& k) {
     std::vector<MacroKey> out;
     const int held = (k.alt ? 4 : 0) | (k.ctrl ? 2 : 0) | (k.shift ? 1 : 0);
-    for (int m : {7, 6, 5, 3, 4, 2, 1, 0}) {   // most modifiers first, then Alt (4) over Ctrl (2) over Shift (1)
+    for (int m : {7, 6, 5, 3, 4, 2, 1, 0}) {  // most modifiers first, then Alt (4) over Ctrl (2) over Shift (1)
         if ((m & held) != m) continue;
         MacroKey c = k;
-        c.alt = m & 4; c.ctrl = m & 2; c.shift = m & 1;
+        c.alt = m & 4;
+        c.ctrl = m & 2;
+        c.shift = m & 1;
         out.push_back(c);
     }
     return out;
@@ -131,13 +148,15 @@ const MacroEntry* lookupHeld(std::initializer_list<const MacroSet*> layers, cons
 // The Windows virtual-key code of a canonical key name. The modifier keys, then Any, sort after every other key.
 static int keyCode(const std::string& k) {
     static const std::map<std::string, int> named = {
-        {"BACK", 0x08}, {"TAB", 0x09}, {"CENTER", 0x0c}, {"RETURN", 0x0d}, {"PAUSE", 0x13}, {"CAPSLOCK", 0x14},
-        {"ESCAPE", 0x1b}, {"SPACE", 0x20}, {"NORTHEAST", 0x21}, {"SOUTHEAST", 0x22}, {"SOUTHWEST", 0x23},
-        {"NORTHWEST", 0x24}, {"WEST", 0x25}, {"NORTH", 0x26}, {"EAST", 0x27}, {"SOUTH", 0x28}, {"INSERT", 0x2d},
-        {"DELETE", 0x2e}, {"APPS", 0x5d}, {"MULTIPLY", 0x6a}, {"ADD", 0x6b}, {"SEPARATOR", 0x6c}, {"SUBTRACT", 0x6d},
-        {"DECIMAL", 0x6e}, {"DIVIDE", 0x6f}, {"NUMLOCK", 0x90}, {"SCROLL", 0x91}, {";", 0xba}, {"=", 0xbb},
-        {",", 0xbc}, {"-", 0xbd}, {".", 0xbe}, {"/", 0xbf}, {"`", 0xc0}, {"[", 0xdb}, {"\\", 0xdc}, {"]", 0xdd},
-        {"'", 0xde}, {"ALT", 0x100}, {"CTRL", 0x100}, {"SHIFT", 0x100}, {"ANY", 0x101}};
+        {"BACK", 0x08},      {"TAB", 0x09},       {"CENTER", 0x0c},   {"RETURN", 0x0d},    {"PAUSE", 0x13},
+        {"CAPSLOCK", 0x14},  {"ESCAPE", 0x1b},    {"SPACE", 0x20},    {"NORTHEAST", 0x21}, {"SOUTHEAST", 0x22},
+        {"SOUTHWEST", 0x23}, {"NORTHWEST", 0x24}, {"WEST", 0x25},     {"NORTH", 0x26},     {"EAST", 0x27},
+        {"SOUTH", 0x28},     {"INSERT", 0x2d},    {"DELETE", 0x2e},   {"APPS", 0x5d},      {"MULTIPLY", 0x6a},
+        {"ADD", 0x6b},       {"SEPARATOR", 0x6c}, {"SUBTRACT", 0x6d}, {"DECIMAL", 0x6e},   {"DIVIDE", 0x6f},
+        {"NUMLOCK", 0x90},   {"SCROLL", 0x91},    {";", 0xba},        {"=", 0xbb},         {",", 0xbc},
+        {"-", 0xbd},         {".", 0xbe},         {"/", 0xbf},        {"`", 0xc0},         {"[", 0xdb},
+        {"\\", 0xdc},        {"]", 0xdd},         {"'", 0xde},        {"ALT", 0x100},      {"CTRL", 0x100},
+        {"SHIFT", 0x100},    {"ANY", 0x101}};
     if (auto it = named.find(k); it != named.end()) return it->second;
     if (k.size() == 1 && std::isalnum((unsigned char)k[0])) return (unsigned char)k[0];
     if (k.size() == 7 && k.rfind("NUMPAD", 0) == 0 && std::isdigit((unsigned char)k[6])) return 0x60 + (k[6] - '0');
@@ -154,7 +173,8 @@ static int listOrder(const MacroEntry& e) {
 bool listedBefore(const MacroEntry& a, const MacroEntry& b) { return listOrder(a) < listOrder(b); }
 
 std::string macroSpecName(const MacroKey& k, bool rep) {
-    std::string s = std::string(k.ctrl ? "CTRL+" : "") + (k.shift ? "SHIFT+" : "") + (k.alt ? "ALT+" : "") + anyKeyName(k.key);
+    std::string s =
+        std::string(k.ctrl ? "CTRL+" : "") + (k.shift ? "SHIFT+" : "") + (k.alt ? "ALT+" : "") + anyKeyName(k.key);
     return s + (rep ? "+REP" : "") + (k.up ? "+UP" : "");
 }
 
@@ -179,11 +199,18 @@ MacroSet macroSetFromBlock(const Block& b) {
         bool rep;
         if (!parseMacroName(spec, k, rep)) continue;
         MacroEntry ent;
-        ent.id = e.name; ent.spec = spec; ent.command = e.str("command", "");
-        ent.key = k; ent.rep = rep; ent.disabled = e.boolv("is-disabled", false);
+        ent.id = e.name;
+        ent.spec = spec;
+        ent.command = e.str("command", "");
+        ent.key = k;
+        ent.rep = rep;
+        ent.disabled = e.boolv("is-disabled", false);
         auto lk = std::make_pair(k, rep);
         auto prev = set.byKey.find(lk);
-        if (prev != set.byKey.end()) { set.entries[prev->second] = ent; continue; }  // later wins, in place
+        if (prev != set.byKey.end()) {
+            set.entries[prev->second] = ent;
+            continue;
+        }  // later wins, in place
         set.byKey[lk] = set.entries.size();
         set.entries.push_back(ent);
     }

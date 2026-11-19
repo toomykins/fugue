@@ -31,7 +31,7 @@ std::vector<std::string> buildArgs(const account::Config& cfg, const account::Se
         if (srv.hub) a.push_back("--hub");
         std::string e;
         std::string p = account::identityPath(cfg.account, &e);
-        if (!p.empty()) a.insert(a.end(), {"--identity-file", p});   // a PATH, 0600; the client reads the file itself
+        if (!p.empty()) a.insert(a.end(), {"--identity-file", p});  // a PATH, 0600; the client reads the file itself
     }
     a.insert(a.end(), srv.flags.begin(), srv.flags.end());
     return a;
@@ -49,7 +49,10 @@ bool buildCommand(const account::Config& cfg, const account::Server& srv, const 
 
 std::string displayCommand(const std::vector<std::string>& argv) {
     std::string o;
-    for (size_t i = 0; i < argv.size(); i++) { if (i) o += ' '; o += argv[i]; }
+    for (size_t i = 0; i < argv.size(); i++) {
+        if (i) o += ' ';
+        o += argv[i];
+    }
     return o;
 }
 
@@ -67,7 +70,8 @@ bool runSelf(const std::string& argv0, const std::vector<std::string>& args, boo
     QProcessEnvironment e = childEnvironment();
     for (const auto& kv : extraEnv) {
         const auto eq = kv.find('=');
-        if (eq != std::string::npos) e.insert(QString::fromStdString(kv.substr(0, eq)), QString::fromStdString(kv.substr(eq + 1)));
+        if (eq != std::string::npos)
+            e.insert(QString::fromStdString(kv.substr(0, eq)), QString::fromStdString(kv.substr(eq + 1)));
     }
     QStringList qa;
     for (const auto& a : args) qa << QString::fromStdString(a);
@@ -75,7 +79,10 @@ bool runSelf(const std::string& argv0, const std::vector<std::string>& args, boo
     p.setProgram(QString::fromStdString(argv0));
     p.setArguments(qa);
     p.setProcessEnvironment(e);
-    if (!p.startDetached()) { if (err) *err = "could not start " + argv0; return false; }
+    if (!p.startDetached()) {
+        if (err) *err = "could not start " + argv0;
+        return false;
+    }
     return true;
 #else
     std::vector<std::string> env = extraEnv;
@@ -101,7 +108,10 @@ bool runSelf(const std::string& argv0, const std::vector<std::string>& args, boo
         return false;
     }
     pid_t pid = ::fork();
-    if (pid < 0) { if (err) *err = std::string("fork: ") + std::strerror(errno); return false; }
+    if (pid < 0) {
+        if (err) *err = std::string("fork: ") + std::strerror(errno);
+        return false;
+    }
     if (pid == 0) {
         ::setsid();
         if (::fork() == 0) run();
@@ -128,9 +138,15 @@ bool guestRemembered() {
 }
 bool rememberGuest(bool on, std::string* err) {
     std::string p = guestChoicePath();
-    if (p.empty()) { if (err) *err = "$HOME is not defined"; return false; }
+    if (p.empty()) {
+        if (err) *err = "$HOME is not defined";
+        return false;
+    }
     if (on) return account::atomicWrite(p, "guest\n", err);
-    if (::unlink(p.c_str()) != 0 && errno != ENOENT) { if (err) *err = "remove " + p + ": " + std::strerror(errno); return false; }
+    if (::unlink(p.c_str()) != 0 && errno != ENOENT) {
+        if (err) *err = "remove " + p + ": " + std::strerror(errno);
+        return false;
+    }
     return true;
 }
 
@@ -145,9 +161,15 @@ bool autoSignIn() {
 }
 bool setAutoSignIn(bool on, std::string* err) {
     std::string p = autoSignInOffPath();
-    if (p.empty()) { if (err) *err = "$HOME is not defined"; return false; }
+    if (p.empty()) {
+        if (err) *err = "$HOME is not defined";
+        return false;
+    }
     if (!on) return account::atomicWrite(p, "off\n", err);
-    if (::unlink(p.c_str()) != 0 && errno != ENOENT) { if (err) *err = "remove " + p + ": " + std::strerror(errno); return false; }
+    if (::unlink(p.c_str()) != 0 && errno != ENOENT) {
+        if (err) *err = "remove " + p + ": " + std::strerror(errno);
+        return false;
+    }
     return true;
 }
 
@@ -156,8 +178,10 @@ std::string clientStateDir(const std::vector<std::string>& clientFlags) {
     for (size_t i = 0; i < clientFlags.size(); i++) {
         const std::string& a = clientFlags[i];
         // A bare "--" is dropped by the client's parse (pager/dsargv.cpp), which carries on past it.
-        if (a == "--state-dir" && i + 1 < clientFlags.size()) dir = clientFlags[++i];
-        else if (a.rfind("--state-dir=", 0) == 0) dir = a.substr(12);
+        if (a == "--state-dir" && i + 1 < clientFlags.size())
+            dir = clientFlags[++i];
+        else if (a.rfind("--state-dir=", 0) == 0)
+            dir = a.substr(12);
     }
     return dir;
 }
@@ -189,7 +213,10 @@ int runHeadless(const std::vector<std::string>& argv, FILE* out) {
     QStringList args;
     for (size_t i = 1; i < argv.size(); i++) args << QString::fromStdString(argv[i]);
     p.start(QString::fromStdString(argv[0]), args);
-    if (!p.waitForStarted(10000)) { std::fprintf(out, "[pager] could not start %s: %s\n", argv[0].c_str(), p.errorString().toUtf8().constData()); return 127; }
+    if (!p.waitForStarted(10000)) {
+        std::fprintf(out, "[pager] could not start %s: %s\n", argv[0].c_str(), p.errorString().toUtf8().constData());
+        return 127;
+    }
     FILE* logf = nullptr;
     std::string lp = clientLogPath();
     if (!lp.empty()) {
@@ -209,7 +236,10 @@ int runHeadless(const std::vector<std::string>& argv, FILE* out) {
         if (b.isEmpty()) return;
         std::fwrite(b.constData(), 1, size_t(b.size()), out);
         std::fflush(out);
-        if (logf) { std::fwrite(b.constData(), 1, size_t(b.size()), logf); std::fflush(logf); }
+        if (logf) {
+            std::fwrite(b.constData(), 1, size_t(b.size()), logf);
+            std::fflush(logf);
+        }
     };
     while (p.state() != QProcess::NotRunning) {
         p.waitForReadyRead(100);
@@ -237,12 +267,18 @@ std::string desktopQuote(const std::string& s) {
     if (s.find_first_of(" \t\n\"'\\><~|&;$*?#()`%") == std::string::npos) return s;
     std::string o = "\"";
     for (char c : s) {
-        if (c == '\\') o += "\\\\";
-        else if (c == '"') o += "\\\"";
-        else if (c == '`') o += "\\`";
-        else if (c == '$') o += "\\$";
-        else if (c == '%') o += "%%";
-        else o += c;
+        if (c == '\\')
+            o += "\\\\";
+        else if (c == '"')
+            o += "\\\"";
+        else if (c == '`')
+            o += "\\`";
+        else if (c == '$')
+            o += "\\$";
+        else if (c == '%')
+            o += "%%";
+        else
+            o += c;
     }
     return o + "\"";
 }
@@ -250,19 +286,24 @@ std::string desktopQuote(const std::string& s) {
 std::string desktopEntry(const std::string& exe) {
     // StartupWMClass: Qt's X11 WM_CLASS is the application name, "fugue-qt". A desktop that matches windows to .desktop
     // files by WM_CLASS needs it, because this file is named by app id.
-    return "[Desktop Entry]\nType=Application\nName=Fugue\nComment=Join Space Station 13 servers\nExec=" + desktopQuote(exe) +
-           " pager %u\nIcon=" + kAppId + "\nTerminal=false\nCategories=Game;\nMimeType=x-scheme-handler/byond;\nStartupWMClass=fugue-qt\n";
+    return "[Desktop Entry]\nType=Application\nName=Fugue\nComment=Join Space Station 13 servers\nExec=" +
+           desktopQuote(exe) + " pager %u\nIcon=" + kAppId +
+           "\nTerminal=false\nCategories=Game;\nMimeType=x-scheme-handler/byond;\nStartupWMClass=fugue-qt\n";
 }
 
 std::string urlHandlerCommand(const std::string& exe) { return "\"" + exe + "\" pager --url \"%1\""; }
 
 std::optional<std::string> handlerUrl(const std::vector<std::string>& args, std::string* err) {
-    auto fail = [&](const char* m) { if (err) *err = m; return std::nullopt; };
+    auto fail = [&](const char* m) {
+        if (err) *err = m;
+        return std::nullopt;
+    };
     if (args.size() != 2 || args[0] != "--url") return fail("--url takes exactly one link and nothing else");
     const std::string& u = args[1];
     if (u.empty()) return fail("--url: empty link");
     for (unsigned char c : u)
-        if (c <= ' ' || c == '"' || c == 0x7f) return fail("--url: the link holds a quote, a space or a control character");
+        if (c <= ' ' || c == '"' || c == 0x7f)
+            return fail("--url: the link holds a quote, a space or a control character");
     return u;
 }
 
@@ -271,7 +312,10 @@ DesktopResult installDesktop(const std::string& exe, const std::vector<std::pair
 #ifdef _WIN32
     // Per-user registration only; never requires elevation. Quote both executable and URL.
     const QString path = QDir::toNativeSeparators(QFileInfo(QString::fromStdString(exe)).absoluteFilePath());
-    if (path.contains('"')) { r.err = "invalid executable path"; return r; }
+    if (path.contains('"')) {
+        r.err = "invalid executable path";
+        return r;
+    }
     QSettings reg("HKEY_CURRENT_USER\\Software\\Classes\\byond", QSettings::NativeFormat);
     reg.setValue(".", "URL:BYOND Protocol");
     reg.setValue("URL Protocol", "");
@@ -284,17 +328,31 @@ DesktopResult installDesktop(const std::string& exe, const std::vector<std::pair
     return r;
 #else
     std::string base;
-    if (const char* x = std::getenv("XDG_DATA_HOME"); x && *x) base = x;
-    else if (auto h = account::homeDir()) base = *h + "/.local/share";
-    else { r.err = "no XDG_DATA_HOME and no HOME"; return r; }
+    if (const char* x = std::getenv("XDG_DATA_HOME"); x && *x)
+        base = x;
+    else if (auto h = account::homeDir())
+        base = *h + "/.local/share";
+    else {
+        r.err = "no XDG_DATA_HOME and no HOME";
+        return r;
+    }
     QString dir = QString::fromStdString(base) + "/applications";
-    if (!QDir().mkpath(dir)) { r.err = "cannot create " + dir.toStdString(); return r; }
+    if (!QDir().mkpath(dir)) {
+        r.err = "cannot create " + dir.toStdString();
+        return r;
+    }
     r.desktopPath = dir.toStdString() + "/" + kDesktopFile;
     {
         QSaveFile f(QString::fromStdString(r.desktopPath));
-        if (!f.open(QIODevice::WriteOnly)) { r.err = "cannot write " + r.desktopPath; return r; }
+        if (!f.open(QIODevice::WriteOnly)) {
+            r.err = "cannot write " + r.desktopPath;
+            return r;
+        }
         f.write(QByteArray::fromStdString(desktopEntry(exe)));
-        if (!f.commit()) { r.err = "cannot write " + r.desktopPath; return r; }
+        if (!f.commit()) {
+            r.err = "cannot write " + r.desktopPath;
+            return r;
+        }
         ::chmod(r.desktopPath.c_str(), 0644);
     }
     // Remove a fugue.desktop whose content is a Fugue pager entry, so Fugue is not listed twice; any other file of that
@@ -304,15 +362,22 @@ DesktopResult installDesktop(const std::string& exe, const std::vector<std::pair
         if (legacy.open(QIODevice::ReadOnly)) {
             QByteArray b = legacy.readAll();
             legacy.close();
-            if (b.startsWith("[Desktop Entry]\nType=Application\nName=Fugue\n") && b.contains(" pager %u\n")) legacy.remove();
+            if (b.startsWith("[Desktop Entry]\nType=Application\nName=Fugue\n") && b.contains(" pager %u\n"))
+                legacy.remove();
         }
     }
     for (const auto& [px, png] : icons) {
         QString idir = QString::fromStdString(base) + QString("/icons/hicolor/%1x%1/apps").arg(px);
-        if (!QDir().mkpath(idir)) { r.err = "cannot create " + idir.toStdString(); return r; }
+        if (!QDir().mkpath(idir)) {
+            r.err = "cannot create " + idir.toStdString();
+            return r;
+        }
         std::string ip = idir.toStdString() + "/" + kAppId + ".png";
         QSaveFile f(QString::fromStdString(ip));
-        if (!f.open(QIODevice::WriteOnly) || f.write(png) != png.size() || !f.commit()) { r.err = "cannot write " + ip; return r; }
+        if (!f.open(QIODevice::WriteOnly) || f.write(png) != png.size() || !f.commit()) {
+            r.err = "cannot write " + ip;
+            return r;
+        }
         ::chmod(ip.c_str(), 0644);
         r.iconPaths.push_back(ip);
     }
@@ -320,23 +385,41 @@ DesktopResult installDesktop(const std::string& exe, const std::vector<std::pair
     r.mimeappsPath = dir.toStdString() + "/mimeapps.list";
     QFile in(QString::fromStdString(r.mimeappsPath));
     QStringList lines;
-    if (in.open(QIODevice::ReadOnly)) { lines = QString::fromUtf8(in.readAll()).split('\n'); in.close(); }
+    if (in.open(QIODevice::ReadOnly)) {
+        lines = QString::fromUtf8(in.readAll()).split('\n');
+        in.close();
+    }
     while (!lines.isEmpty() && lines.last().isEmpty()) lines.removeLast();
     const QString key = "x-scheme-handler/byond=";
     int sec = -1;
-    for (int i = 0; i < lines.size(); i++) if (lines[i].trimmed() == "[Default Applications]") { sec = i; break; }
-    if (sec < 0) { lines << "[Default Applications]" << key + kDesktopFile; }
-    else {
+    for (int i = 0; i < lines.size(); i++)
+        if (lines[i].trimmed() == "[Default Applications]") {
+            sec = i;
+            break;
+        }
+    if (sec < 0) {
+        lines << "[Default Applications]" << key + kDesktopFile;
+    } else {
         int j = sec + 1;
         bool done = false;
         for (; j < lines.size() && !lines[j].startsWith('['); j++)
-            if (lines[j].startsWith(key)) { lines[j] = key + kDesktopFile; done = true; break; }
+            if (lines[j].startsWith(key)) {
+                lines[j] = key + kDesktopFile;
+                done = true;
+                break;
+            }
         if (!done) lines.insert(j, key + kDesktopFile);
     }
     QSaveFile mf(QString::fromStdString(r.mimeappsPath));
-    if (!mf.open(QIODevice::WriteOnly)) { r.err = "cannot write " + r.mimeappsPath; return r; }
+    if (!mf.open(QIODevice::WriteOnly)) {
+        r.err = "cannot write " + r.mimeappsPath;
+        return r;
+    }
     mf.write((lines.join('\n') + "\n").toUtf8());
-    if (!mf.commit()) { r.err = "cannot write " + r.mimeappsPath; return r; }
+    if (!mf.commit()) {
+        r.err = "cannot write " + r.mimeappsPath;
+        return r;
+    }
     r.ok = true;
     return r;
 #endif

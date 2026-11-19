@@ -26,10 +26,15 @@ QString singleLine(QString text);
 // went in. Handles QLineEdit, QTextEdit, QPlainTextEdit, QComboBox(editable), QAbstractSpinBox.
 bool pasteInto(QWidget* w, QClipboard::Mode mode = QClipboard::Clipboard, const QPoint* at = nullptr);
 // Installs the filter on `w` (and its viewport / inner line edit). Idempotent. Returns w for chaining.
-template <class W> W* wirePaste(W* w);
+template <class W>
+W* wirePaste(W* w);
 QWidget* wirePasteWidget(QWidget* w);
 bool isPasteWired(const QWidget* w);
 
-template <class W> W* wirePaste(W* w) { wirePasteWidget(w); return w; }
+template <class W>
+W* wirePaste(W* w) {
+    wirePasteWidget(w);
+    return w;
+}
 
 }  // namespace fugue::shell

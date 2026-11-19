@@ -6,36 +6,68 @@
 
 namespace fugue::pager {
 
-HubLink::~HubLink() { if (fd_ >= 0) socket::close(fd_); }
+HubLink::~HubLink() {
+    if (fd_ >= 0) socket::close(fd_);
+}
 
 bool HubLink::dial(const std::string& addr, std::string* err) {
     size_t c = addr.rfind(':');
-    if (c == std::string::npos) { *err = "bad hub address " + addr; return false; }
+    if (c == std::string::npos) {
+        *err = "bad hub address " + addr;
+        return false;
+    }
     std::string host = addr.substr(0, c), port = addr.substr(c + 1);
     if (host.size() > 1 && host.front() == '[' && host.back() == ']') host = host.substr(1, host.size() - 2);
-    if (!socket::initialize()) { *err = "Winsock initialization failed"; return false; }
+    if (!socket::initialize()) {
+        *err = "Winsock initialization failed";
+        return false;
+    }
     addrinfo hints{};
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     addrinfo* res = nullptr;
-    if (int rc = ::getaddrinfo(host.c_str(), port.c_str(), &hints, &res); rc != 0) { *err = "hub: dial " + addr + ": " + socket::addressError(rc); return false; }
+    if (int rc = ::getaddrinfo(host.c_str(), port.c_str(), &hints, &res); rc != 0) {
+        *err = "hub: dial " + addr + ": " + socket::addressError(rc);
+        return false;
+    }
     std::string last = "no address";
     for (addrinfo* ai = res; ai; ai = ai->ai_next) {
         auto fd = socket::create(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
-        if (fd < 0) { last = std::strerror(errno); continue; }
-        if (socket::nonblocking(fd, true) != 0) { socket::close(fd); continue; }
-        if (socket::connect(fd, ai->ai_addr, int(ai->ai_addrlen)) != 0 && errno != EINPROGRESS) { last = std::strerror(errno); socket::close(fd); continue; }
+        if (fd < 0) {
+            last = std::strerror(errno);
+            continue;
+        }
+        if (socket::nonblocking(fd, true) != 0) {
+            socket::close(fd);
+            continue;
+        }
+        if (socket::connect(fd, ai->ai_addr, int(ai->ai_addrlen)) != 0 && errno != EINPROGRESS) {
+            last = std::strerror(errno);
+            socket::close(fd);
+            continue;
+        }
         socket::PollFd p{fd, POLLOUT, 0};
         int pr = socket::poll(&p, 1, remainingMs());
         int soerr = 0;
         socket::Length sl = sizeof soerr;
-        if (pr <= 0) { last = pr == 0 ? "timed out" : std::strerror(errno); socket::close(fd); continue; }
-        if (socket::getsockopt(fd, SOL_SOCKET, SO_ERROR, &soerr, &sl) != 0 || soerr != 0) { last = "connection failed"; socket::close(fd); continue; }
+        if (pr <= 0) {
+            last = pr == 0 ? "timed out" : std::strerror(errno);
+            socket::close(fd);
+            continue;
+        }
+        if (socket::getsockopt(fd, SOL_SOCKET, SO_ERROR, &soerr, &sl) != 0 || soerr != 0) {
+            last = "connection failed";
+            socket::close(fd);
+            continue;
+        }
         fd_ = fd;
         break;
     }
     ::freeaddrinfo(res);
-    if (fd_ < 0) { *err = "hub: dial " + addr + ": " + last; return false; }
+    if (fd_ < 0) {
+        *err = "hub: dial " + addr + ": " + last;
+        return false;
+    }
     return true;
 }
 bool HubLink::writeFrame(uint16_t type, const Bytes& payload, std::string* err) {
@@ -45,10 +77,20 @@ bool HubLink::writeFrame(uint16_t type, const Bytes& payload, std::string* err) 
     while (off < w.size()) {
         socket::PollFd p{fd_, POLLOUT, 0};
         int pr = socket::poll(&p, 1, remainingMs());
-        if (pr <= 0) { *err = pr == 0 ? "timed out" : std::strerror(errno); return false; }
+        if (pr <= 0) {
+            *err = pr == 0 ? "timed out" : std::strerror(errno);
+            return false;
+        }
         auto n = socket::send(fd_, w.data() + off, w.size() - off);
-        if (n == 0) { *err = "EOF"; return false; }
-        if (n < 0) { if (errno == EAGAIN || errno == EINTR) continue; *err = std::strerror(errno); return false; }
+        if (n == 0) {
+            *err = "EOF";
+            return false;
+        }
+        if (n < 0) {
+            if (errno == EAGAIN || errno == EINTR) continue;
+            *err = std::strerror(errno);
+            return false;
+        }
         off += size_t(n);
     }
     return true;
@@ -70,11 +112,25 @@ bool HubLink::readFull(uint8_t* b, size_t n, std::string* err) {
     while (off < n) {
         socket::PollFd p{fd_, POLLIN, 0};
         int pr = socket::poll(&p, 1, remainingMs());
-        if (pr == 0) { *err = "timed out"; return false; }
-        if (pr < 0) { if (errno == EINTR) continue; *err = std::strerror(errno); return false; }
+        if (pr == 0) {
+            *err = "timed out";
+            return false;
+        }
+        if (pr < 0) {
+            if (errno == EINTR) continue;
+            *err = std::strerror(errno);
+            return false;
+        }
         auto r = socket::recv(fd_, b + off, n - off, 0);
-        if (r == 0) { *err = "EOF"; return false; }
-        if (r < 0) { if (errno == EAGAIN || errno == EINTR) continue; *err = std::strerror(errno); return false; }
+        if (r == 0) {
+            *err = "EOF";
+            return false;
+        }
+        if (r < 0) {
+            if (errno == EAGAIN || errno == EINTR) continue;
+            *err = std::strerror(errno);
+            return false;
+        }
         off += size_t(r);
     }
     return true;
@@ -82,7 +138,8 @@ bool HubLink::readFull(uint8_t* b, size_t n, std::string* err) {
 
 bool HubThrottle::allow(Clock::time_point now, int* waitMs) {
     if (any_ && now - last_ < gap_) {
-        if (waitMs) *waitMs = int(std::chrono::duration_cast<std::chrono::milliseconds>(gap_ - (now - last_)).count()) + 1;
+        if (waitMs)
+            *waitMs = int(std::chrono::duration_cast<std::chrono::milliseconds>(gap_ - (now - last_)).count()) + 1;
         return false;
     }
     any_ = true;

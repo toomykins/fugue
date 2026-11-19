@@ -9,13 +9,16 @@ namespace {
 
 struct Bits {
     const uint8_t* p;
-    size_t n, pos = 0;   // pos in bytes
+    size_t n, pos = 0;  // pos in bytes
     uint32_t buf = 0;
     int cnt = 0;
     bool eof = false;
     int bit() {
         if (cnt == 0) {
-            if (pos >= n) { eof = true; return 0; }
+            if (pos >= n) {
+                eof = true;
+                return 0;
+            }
             buf = p[pos++];
             cnt = 8;
         }
@@ -24,7 +27,7 @@ struct Bits {
         cnt--;
         return b;
     }
-    uint32_t bits(int k) {   // LSB-first
+    uint32_t bits(int k) {  // LSB-first
         uint32_t v = 0;
         for (int i = 0; i < k; i++) v |= uint32_t(bit()) << i;
         return v;
@@ -72,10 +75,13 @@ int decodeSym(Bits& b, const Huff& h) {
     return -1;
 }
 
-const uint16_t kLenBase[29] = {3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258};
+const uint16_t kLenBase[29] = {3,  4,  5,  6,  7,  8,  9,  10, 11,  13,  15,  17,  19,  23, 27,
+                               31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258};
 const uint8_t kLenExtra[29] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0};
-const uint16_t kDistBase[30] = {1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577};
-const uint8_t kDistExtra[30] = {0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13};
+const uint16_t kDistBase[30] = {1,   2,   3,   4,   5,   7,    9,    13,   17,   25,   33,   49,   65,    97,    129,
+                                193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577};
+const uint8_t kDistExtra[30] = {0, 0, 0, 0, 1, 1, 2, 2,  3,  3,  4,  4,  5,  5,  6,
+                                6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13};
 
 ZStatus codes(Bits& b, std::vector<uint8_t>& out, size_t base, size_t limit, const Huff& lit, const Huff& dist) {
     for (;;) {
@@ -122,7 +128,8 @@ uint32_t crc32Ieee(const uint8_t* p, size_t n, uint32_t crc) {
 ZStatus zlibInflate(const uint8_t* p, size_t n, std::vector<uint8_t>& out, size_t limit, size_t* used) {
     if (n < 2) return ZStatus::Truncated;
     // RFC 1950 2.2: CM=8, CINFO<=7, (CMF*256+FLG) % 31 == 0, FDICT unsupported (PNG/zTXt never set it).
-    if ((p[0] & 0x0f) != 8 || (p[0] >> 4) > 7 || ((p[0] << 8) | p[1]) % 31 != 0 || (p[1] & 0x20)) return ZStatus::BadHeader;
+    if ((p[0] & 0x0f) != 8 || (p[0] >> 4) > 7 || ((p[0] << 8) | p[1]) % 31 != 0 || (p[1] & 0x20))
+        return ZStatus::BadHeader;
     Bits b{p + 2, n - 2};
     const size_t base = out.size();
     bool last = false;
@@ -131,7 +138,7 @@ ZStatus zlibInflate(const uint8_t* p, size_t n, std::vector<uint8_t>& out, size_
         uint32_t type = b.bits(2);
         if (b.eof) return ZStatus::Truncated;
         if (type == 0) {
-            b.cnt = 0;   // discard the rest of the current byte
+            b.cnt = 0;  // discard the rest of the current byte
             if (b.pos + 4 > b.n) return ZStatus::Truncated;
             uint32_t len = b.p[b.pos] | (b.p[b.pos + 1] << 8);
             uint32_t nlen = b.p[b.pos + 2] | (b.p[b.pos + 3] << 8);
@@ -190,7 +197,7 @@ ZStatus zlibInflate(const uint8_t* p, size_t n, std::vector<uint8_t>& out, size_
                 }
             }
             if (b.eof) return ZStatus::Truncated;
-            if (ll[256] == 0) return ZStatus::BadData;   // no end-of-block code
+            if (ll[256] == 0) return ZStatus::BadData;  // no end-of-block code
             Huff lit, dist;
             if (!build(lit, ll, nlen) || !build(dist, ll + nlen, ndist)) return ZStatus::BadData;
             ZStatus s = codes(b, out, base, limit, lit, dist);
@@ -202,7 +209,8 @@ ZStatus zlibInflate(const uint8_t* p, size_t n, std::vector<uint8_t>& out, size_
     // Adler-32 trailer, big-endian, starts at the next byte boundary.
     b.cnt = 0;
     if (b.pos + 4 > b.n) return ZStatus::Truncated;
-    uint32_t want = (uint32_t(b.p[b.pos]) << 24) | (uint32_t(b.p[b.pos + 1]) << 16) | (uint32_t(b.p[b.pos + 2]) << 8) | b.p[b.pos + 3];
+    uint32_t want = (uint32_t(b.p[b.pos]) << 24) | (uint32_t(b.p[b.pos + 1]) << 16) | (uint32_t(b.p[b.pos + 2]) << 8) |
+                    b.p[b.pos + 3];
     uint32_t s1 = 1, s2 = 0;
     for (size_t i = base; i < out.size(); i++) {
         s1 = (s1 + out[i]) % 65521;

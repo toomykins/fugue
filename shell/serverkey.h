@@ -16,7 +16,8 @@ bool sameServerAddresses(const QList<QHostAddress>& a, const QList<QHostAddress>
 class ServerKey : public QObject {
     Q_OBJECT
 public:
-    ServerKey(QString host, quint16 port, QObject* parent = nullptr) : QObject(parent), host_(std::move(host)), port_(port) {}
+    ServerKey(QString host, quint16 port, QObject* parent = nullptr)
+        : QObject(parent), host_(std::move(host)), port_(port) {}
     QString host() const { return host_; }
     quint16 port() const { return port_; }
     // The window's session now talks to host:port. A different server changes the key (changed), the same one keeps it
@@ -25,7 +26,7 @@ public:
 
 signals:
     void changed(const QString& host, quint16 port);
-    void kept(const QString& host, quint16 port);   // host:port is the keyed server
+    void kept(const QString& host, quint16 port);  // host:port is the keyed server
 
 private:
     void rekey(const QString& host, quint16 port);

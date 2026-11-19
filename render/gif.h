@@ -20,11 +20,11 @@ namespace fugue::render {
 bool decodeGifFirstFrame(const uint8_t* d, size_t n, RgbaImage& out, std::string& why);
 
 struct GifAnimation {
-    int w = 0, h = 0;                          // the logical screen = one frame
+    int w = 0, h = 0;  // the logical screen = one frame
     int frames = 0;
-    RgbaImage strip;                           // w x (h*frames): frame i, already composited, at rows [i*h, (i+1)*h)
-    std::vector<double> delays;                // deciseconds per frame, BYOND's (max(1, cs/10))
-    int64_t loop = 0;                          // BYOND's icon loop: 0 = forever, n = play n times
+    RgbaImage strip;             // w x (h*frames): frame i, already composited, at rows [i*h, (i+1)*h)
+    std::vector<double> delays;  // deciseconds per frame, BYOND's (max(1, cs/10))
+    int64_t loop = 0;            // BYOND's icon loop: 0 = forever, n = play n times
 };
 
 // false + why on a malformed stream, or when the composited frames would exceed maxBytes.

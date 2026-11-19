@@ -25,7 +25,7 @@ std::string slurp(const std::string& p) {
 constexpr int64_t kT0 = 1'000'000'000'000'000'000;
 constexpr uint32_t kGreen = 0x00ff00, kEmpty = 0x500000, kFrame = 0x000000;  // bar colours
 constexpr uint32_t kResDoafter = 0x51262fcb, kResThing = 0x90df3876;
-}
+}  // namespace
 
 class Progbar : public QObject {
     Q_OBJECT
@@ -46,7 +46,10 @@ class Progbar : public QObject {
         }
     }
 
-    struct Frame { render::RgbaImage img; int tileW = 0, tileH = 0, originX = 0, originY = 0, pixH = 0; };
+    struct Frame {
+        render::RgbaImage img;
+        int tileW = 0, tileH = 0, originX = 0, originY = 0, pixH = 0;
+    };
     Frame frame(const model::Session& s) {
         render::DrawList dl;
         render::SceneStats st;
@@ -57,7 +60,13 @@ class Progbar : public QObject {
             return f;
         }
         f.img = render::execute(dl);
-        if (dl.hit) { f.tileW = dl.hit->tileW; f.tileH = dl.hit->tileH; f.originX = dl.hit->originX; f.originY = dl.hit->originY; f.pixH = dl.hit->pixH(); }
+        if (dl.hit) {
+            f.tileW = dl.hit->tileW;
+            f.tileH = dl.hit->tileH;
+            f.originX = dl.hit->originX;
+            f.originY = dl.hit->originY;
+            f.pixH = dl.hit->pixH();
+        }
         return f;
     }
     static uint32_t at(const Frame& f, int x, int y) {
@@ -90,17 +99,18 @@ private slots:
         std::ifstream f(dir_ + "/frames.txt");
         QVERIFY(f);
         std::string line;
-        std::getline(f, line);   // header
+        std::getline(f, line);  // header
         while (std::getline(f, line)) {
             QVERIFY(line.rfind("0x", 0) == 0);
             size_t sp = line.find(' ', line.find("len="));
-            frames_.push_back({uint16_t(std::stoul(line.substr(2, 4), nullptr, 16)), sp == std::string::npos ? Bytes{} : unhex(line.substr(sp + 1))});
+            frames_.push_back({uint16_t(std::stoul(line.substr(2, 4), nullptr, 16)),
+                               sp == std::string::npos ? Bytes{} : unhex(line.substr(sp + 1))});
         }
         QCOMPARE(int(frames_.size()), 145);
-        QCOMPARE(frames_[35 - 2].first, uint16_t(0x0033));
-        QCOMPARE(frames_[85 - 2].first, uint16_t(0x0034));
-        QCOMPARE(frames_[86 - 2].first, uint16_t(0x0033));
-        QCOMPARE(frames_[126 - 2].first, uint16_t(0x0034));
+        QCOMPARE(frames_[35 - 2].first, uint16_t(S2C::ImageCreate));
+        QCOMPARE(frames_[85 - 2].first, uint16_t(S2C::ImageDelete));
+        QCOMPARE(frames_[86 - 2].first, uint16_t(S2C::ImageCreate));
+        QCOMPARE(frames_[126 - 2].first, uint16_t(S2C::ImageDelete));
         for (uint32_t id : {kResDoafter, kResThing}) {
             char n[16];
             std::snprintf(n, sizeof n, "%08x", id);
@@ -127,7 +137,8 @@ private slots:
     // The next do_after puts a fresh image on the crate (6,5): drawn there, untinted by the crate's colour (RESET_COLOR), and gone with its 0x0034.
     void barOnCrateThenGone() {
         std::string blank(24, '.');
-        for (auto [line, want] : std::vector<std::pair<size_t, std::string>>{{86, bar(10)}, {122, bar(100)}, {126, blank}}) {
+        for (auto [line, want] :
+             std::vector<std::pair<size_t, std::string>>{{86, bar(10)}, {122, bar(100)}, {126, blank}}) {
             model::Session s;
             ingestUpTo(s, line);
             Frame f = frame(s);

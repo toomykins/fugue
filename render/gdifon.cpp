@@ -8,7 +8,13 @@ namespace {
 struct Reader {
     std::string_view d;
     bool ok = true;
-    unsigned u8(size_t o) { if (o >= d.size()) { ok = false; return 0; } return uint8_t(d[o]); }
+    unsigned u8(size_t o) {
+        if (o >= d.size()) {
+            ok = false;
+            return 0;
+        }
+        return uint8_t(d[o]);
+    }
     unsigned u16(size_t o) { return u8(o) | u8(o + 1) << 8; }
     uint32_t u32(size_t o) { return u16(o) | uint32_t(u16(o + 2)) << 16; }
 };
@@ -38,7 +44,8 @@ bool parseStrike(Reader& r, size_t f, size_t len, FonStrike& s) {
         // Column-major: each 8-pixel-wide column is h bytes, one per row, the high bit leftmost.
         for (int y = 0; y < s.h; y++)
             for (int x = 0; x < g.w; x++)
-                if (r.u8(f + off + size_t(x / 8) * size_t(s.h) + size_t(y)) & (0x80u >> (x % 8))) g.bits[size_t(y) * size_t(g.w) + size_t(x)] = 1;
+                if (r.u8(f + off + size_t(x / 8) * size_t(s.h) + size_t(y)) & (0x80u >> (x % 8)))
+                    g.bits[size_t(y) * size_t(g.w) + size_t(x)] = 1;
         s.glyphs.push_back(std::move(g));
     }
     return r.ok;
@@ -61,7 +68,7 @@ std::vector<FonStrike> parseFon(std::string_view file) {
         const unsigned n = r.u16(p + 2);
         p += 8;
         for (unsigned i = 0; i < n && r.ok; i++, p += 12) {
-            if (type != 0x8008) continue;   // RT_FONT
+            if (type != 0x8008) continue;  // RT_FONT
             const size_t f = size_t(r.u16(p)) << shift, len = size_t(r.u16(p + 2)) << shift;
             FonStrike s;
             if (f + len <= file.size() && parseStrike(r, f, len, s)) out.push_back(std::move(s));
@@ -76,7 +83,8 @@ bool fonGlyph(const std::vector<FonStrike>& strikes, const DsFace& face, char32_
     if (strikes.empty()) return false;
     // GDI font mapping: the largest strike whose character height fits the request, else the smallest; then integer scaling.
     const FonStrike* s = &strikes.front();
-    for (const FonStrike& c : strikes) if (c.h - c.il <= face.em) s = &c;
+    for (const FonStrike& c : strikes)
+        if (c.h - c.il <= face.em) s = &c;
     const int k = std::max(1, (face.em + 2 * s->il) / s->h);
     if (s->h * k != face.height || s->ascent * k != face.ascent) return false;
     // A byte the strike lacks is its default char. Every advance must be the one the layout placed the glyph with, or
@@ -85,7 +93,10 @@ bool fonGlyph(const std::vector<FonStrike>& strikes, const DsFace& face, char32_
         if (c < std::max(s->first, 32) || c > s->last) c = s->defaultChar;
         return c >= s->first && c <= s->last ? &s->glyphs[size_t(c - s->first)] : nullptr;
     };
-    auto adv = [&](int c) { const FonStrike::Glyph* g = glyphOf(c); return g ? g->w : -1; };
+    auto adv = [&](int c) {
+        const FonStrike::Glyph* g = glyphOf(c);
+        return g ? g->w : -1;
+    };
     if (adv(-1) != dsBitmapAdvance(face, -1)) return false;
     for (int c = 32; c <= 255; c++)
         if (adv(c) != dsBitmapAdvance(face, c)) return false;

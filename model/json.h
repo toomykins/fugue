@@ -1,5 +1,5 @@
-// Minimal JSON reader for the model: parses the canonical JSON the wire decoders emit, so the model
-// reuses those decoders as the single wire parser.
+// Minimal JSON reader for the tools and tests: command lines, fixture manifests, and canonical JSON
+// read back. The client's live path never parses JSON.
 // Numbers are integers only (the canon encoding never emits fractions); floats arrive as {"f32":"0x.."}.
 // Strings: standard escapes; {"bstr":"<hex>"} is NOT unwrapped here (see JVal::bytesOrStr).
 #pragma once
@@ -37,7 +37,7 @@ struct JVal {
 JVal parseJson(std::string_view text);
 // Re-serialises a parsed value as canonical JSON (object member order is kept as parsed, which is the
 // sorted order the decoders emit; strings re-escaped by canon::str). parse->dump is the identity on
-// decoder output, which is what lets the model embed a decoder's record verbatim.
+// decoder output.
 std::string dumpCanon(const JVal& v);
 
 }  // namespace fugue::model

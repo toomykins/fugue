@@ -60,7 +60,11 @@ private slots:
         filt->setMacros(t.sets.at(t.active));
         qApp->installEventFilter(filt);
     }
-    void cleanupTestCase() { qApp->removeEventFilter(filt); delete filt; delete win; }
+    void cleanupTestCase() {
+        qApp->removeEventFilter(filt);
+        delete filt;
+        delete win;
+    }
 
     void designSizeAndMapRect() {
         // the MAIN window states no `statusbar`, so it gets DreamSeeker's default strip below the client area
@@ -70,34 +74,37 @@ private slots:
     }
     void relayoutOnResize() {
         win->resize(800, 700);
-        QCOMPARE(win->mapControlRect().topLeft(), QPoint(0, 0));     // anchors none: designed extent kept
+        QCOMPARE(win->mapControlRect().topLeft(), QPoint(0, 0));  // anchors none: designed extent kept
         QCOMPARE(win->mapControlRect().size(), QSize(480, 480));
         auto* in = win->findChild<QLineEdit*>();
         QVERIFY(in);
-        QCOMPARE(in->width(), 800);                                  // anchored 0%..100% horizontally
-        QCOMPARE(in->y(), 500 + (700 - 18 - 560));                   // anchored to the client area's bottom edge (above the status bar)
+        QCOMPARE(in->width(), 800);                 // anchored 0%..100% horizontally
+        QCOMPARE(in->y(), 500 + (700 - 18 - 560));  // anchored to the client area's bottom edge (above the status bar)
         win->resize(560, 560);
         QCOMPARE(in->width(), 560);
     }
     void mapPaintsFramePixelForPixel() {
         QImage f(480, 480, QImage::Format_RGBX8888);
-        for (int y = 0; y < 480; y++) for (int x = 0; x < 480; x++) f.setPixel(x, y, qRgb(x & 255, y & 255, (x ^ y) & 255));
+        for (int y = 0; y < 480; y++)
+            for (int x = 0; x < 480; x++) f.setPixel(x, y, qRgb(x & 255, y & 255, (x ^ y) & 255));
         win->setMapFrame(f);
         QImage g = win->grab().toImage().convertToFormat(QImage::Format_RGB32).copy(win->mapControlRect());
-        QCOMPARE(g, f.convertToFormat(QImage::Format_RGB32));      // scale 1: an exact blit
+        QCOMPARE(g, f.convertToFormat(QImage::Format_RGB32));  // scale 1: an exact blit
         QCOMPARE(win->map()->scale(), 1);
     }
     void integerZoomIsPointSampled() {
-        win->map()->setIconSize(64);                                 // zoom 2
+        win->map()->setIconSize(64);  // zoom 2
         QImage f(100, 100, QImage::Format_RGBX8888);
-        for (int y = 0; y < 100; y++) for (int x = 0; x < 100; x++) f.setPixel(x, y, qRgb(x * 2, y * 2, 77));
+        for (int y = 0; y < 100; y++)
+            for (int x = 0; x < 100; x++) f.setPixel(x, y, qRgb(x * 2, y * 2, 77));
         win->setMapFrame(f);
         QCOMPARE(win->map()->scale(), 2);
         QImage g = win->grab().toImage().convertToFormat(QImage::Format_RGB32);
         QRect ir = win->map()->imageRect().translated(win->mapControlRect().topLeft());
         QCOMPARE(ir.size(), QSize(200, 200));
-        for (int y = 0; y < 200; y += 7) for (int x = 0; x < 200; x += 5)   // every sampled pixel is a source pixel, no blends
-            QCOMPARE(g.pixel(ir.x() + x, ir.y() + y), f.pixel(x / 2, y / 2) | 0xff000000u);
+        for (int y = 0; y < 200; y += 7)
+            for (int x = 0; x < 200; x += 5)  // every sampled pixel is a source pixel, no blends
+                QCOMPARE(g.pixel(ir.x() + x, ir.y() + y), f.pixel(x / 2, y / 2) | 0xff000000u);
         win->map()->setIconSize(32);
     }
     void focusTable() {
@@ -120,7 +127,7 @@ private slots:
         QTest::keyClick(in, Qt::Key_K, Qt::ControlModifier);
         QCOMPARE(spy.count(), 2);
         QCOMPARE(spy.at(1).at(1).toString(), QString("ctrlk"));
-        QCOMPARE(in->text(), QString("q"));                          // the macro swallowed it
+        QCOMPARE(in->text(), QString("q"));  // the macro swallowed it
         // browser focused: the page owns its keys
         browser->setFocus();
         QVERIFY(QTest::qWaitFor([&] { return FocusFilter::zoneOf(qApp->focusWidget()) == Zone::Browser; }));

@@ -1,6 +1,8 @@
 // key.txt blocks: marker scan (keyNames), per-account line-1 extraction, and the line-1 two-stage codec.
-// Line 1 is stage 1 (run-length groups of base64-style characters) then stage 2 (subtractive cipher). The decoded blob
-// is [00][identity: len(acct)+13 bytes][00][tail: 00 installID(le32) innerKey(le32) 3 bytes].
+// Line 1 is stage 1 (run-length groups of base64-style characters) then stage 2 (subtractive cipher). The decoded
+// plaintext (= blob[1:], since blob[0] is the stage-2 key-correctness byte) is a tagged container, NOT a fixed
+// name+13+tail layout: optional server:/friends:/ds:/save: sections, then the identity, then a fixed trailer whose
+// size is set by the format letter line1[0] (A:4 B:8 C:12 else:13), as stock reads it.
 // Key blocks are bearer tokens; nothing here logs them.
 #pragma once
 #include <optional>
@@ -19,10 +21,10 @@ std::vector<std::string> keyNames(std::string_view keytxt);
 std::optional<std::string> keyBlockLine1(std::string_view keytxt, std::string_view acct, std::string* err = nullptr);
 
 struct KeyBlockFields {
-    fugue::Bytes identity;  // len(account)+13
+    fugue::Bytes identity;  // variable length, as mintAccountLoginRecord wants it
     uint32_t installId = 0;
     uint32_t innerKey = 0;
-    fugue::Bytes tail;      // 12 bytes
+    bool haveHubIds = false;  // whether the format letter carries installId/innerKey
 };
 
 // Stages 1+2 -> blob, checking blob[0]==0. keyStr = pwordCryptLevel2(password) (32 hex chars).

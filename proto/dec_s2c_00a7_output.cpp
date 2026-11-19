@@ -1,20 +1,22 @@
-// s2c 0x00a7: targeted output(value, control).
+// S2C::Output: targeted output(value, control).
 #include "proto/registry.h"
 
 namespace fugue::proto {
-namespace {
 
 // Layout [value\n\0][control\0], raw bytes, NUL terminated. The BYOND-appended newline is removed from value (one only).
 //   The text is NOT url-decoded: the DM code url-encodes it before it reaches the wire.
-canon::Json decode(State&, ByteSpan body) {
+Output decodeOutput(ByteSpan body) {
     Reader r(body);
-    std::string value = r.cstr(), control = r.cstr();
+    Output m;
+    m.value = r.cstr();
+    m.control = r.cstr();
     r.expectEnd();
-    if (!value.empty() && value.back() == '\n') value.pop_back();
-    return canon::Object().str("value", value).str("control", control).build();
+    if (!m.value.empty() && m.value.back() == '\n') m.value.pop_back();
+    return m;
 }
 
-FUGUE_REGISTER_DECODER(Dir::S2C, 0x00a7, "cpp:stock-dd-wire", decode);
+canon::Json toJson(const Output& m) { return canon::Object().str("value", m.value).str("control", m.control).build(); }
 
-}  // namespace
+FUGUE_REGISTER_DECODER(Dir::S2C, S2C::Output, "cpp:stock-dd-wire", jsonOf<decodeOutput>);
+
 }  // namespace fugue::proto

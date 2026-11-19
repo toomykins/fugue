@@ -56,6 +56,7 @@ public:
         le_->setCursorPosition(out.size());
         return true;
     }
+
 private:
     QLineEdit* le_;
     const SkinWindow::SpaceCompleter* c_;
@@ -79,15 +80,18 @@ QColor skinColor(const std::string& v) {
 class SplitterHandle : public QWidget {
 public:
     using Drop = std::function<void(const std::string& path, double pct)>;
-    SplitterHandle(QWidget* parent, std::string path, Drop drop) : QWidget(parent), path_(std::move(path)), drop_(std::move(drop)) {
+    SplitterHandle(QWidget* parent, std::string path, Drop drop)
+        : QWidget(parent), path_(std::move(path)), drop_(std::move(drop)) {
         setObjectName(QString::fromStdString("splitter:" + path_));
     }
     // sp is in client coordinates; top is the client area's offset in the parent (the menu bar).
     void place(const skin::Splitter& sp, int top) {
-        sp_ = sp; top_ = top;
+        sp_ = sp;
+        top_ = top;
         setCursor(sp.vert ? Qt::SplitHCursor : Qt::SplitVCursor);
         if (!dragging_) setGeometry(sp.rect.x0, sp.rect.y0 + top, sp.rect.dx(), sp.rect.dy());
     }
+
 protected:
     void mousePressEvent(QMouseEvent* e) override {
         if (e->button() != Qt::LeftButton) return QWidget::mousePressEvent(e);
@@ -98,8 +102,10 @@ protected:
     void mouseMoveEvent(QMouseEvent* e) override {
         if (!dragging_) return;
         int edge = edgeAt(e);
-        if (sp_.vert) move(std::clamp(edge, sp_.box.x0, std::max(sp_.box.x0, sp_.box.x1 - width())), y());
-        else move(x(), std::clamp(edge, sp_.box.y0, std::max(sp_.box.y0, sp_.box.y1 - height())) + top_);
+        if (sp_.vert)
+            move(std::clamp(edge, sp_.box.x0, std::max(sp_.box.x0, sp_.box.x1 - width())), y());
+        else
+            move(x(), std::clamp(edge, sp_.box.y0, std::max(sp_.box.y0, sp_.box.y1 - height())) + top_);
     }
     void mouseReleaseEvent(QMouseEvent* e) override {
         if (!dragging_ || e->button() != Qt::LeftButton) return QWidget::mouseReleaseEvent(e);
@@ -110,13 +116,14 @@ protected:
         if (avail <= 0) return;
         int from = sp_.vert ? sp_.box.x0 : sp_.box.y0;
         double pct = std::clamp(double(edgeAt(e) - from) / avail * 100, 0.0, 100.0);
-        place(sp_, top_);   // back to rest; the relayout below moves it if the value was taken
-        if (drop_) drop_(path_, pct);   // the relayout re-places this widget
+        place(sp_, top_);              // back to rest; the relayout below moves it if the value was taken
+        if (drop_) drop_(path_, pct);  // the relayout re-places this widget
     }
     void paintEvent(QPaintEvent*) override {
-        if (!dragging_) return;   // at rest the window background shows through the 4 px gap
+        if (!dragging_) return;  // at rest the window background shows through the 4 px gap
         QPainter(this).fillRect(rect(), palette().color(QPalette::Dark));
     }
+
 private:
     // The pointer position on the split axis, in client coordinates.
     int edgeAt(QMouseEvent* e) const {
@@ -129,6 +136,23 @@ private:
     int top_ = 0;
     bool dragging_ = false;
 };
+
+// A floating skin window. The close box hides it, as stock does; the owner is told so it can record is-visible=false.
+class FloatWindow : public QWidget {
+public:
+    FloatWindow(QWidget* parent, Qt::WindowFlags f, std::function<void()> closed)
+        : QWidget(parent, f), closed_(std::move(closed)) {}
+
+protected:
+    void closeEvent(QCloseEvent* e) override {
+        e->ignore();
+        hide();
+        if (closed_) closed_();
+    }
+
+private:
+    std::function<void()> closed_;
+};
 }  // namespace
 
 // The status strip is 18 px and sits below the client area. Stock DreamSeeker shows it unless the skin sets
@@ -140,26 +164,36 @@ SkinWindow::SkinWindow(QWidget* parent) : QWidget(parent), live_(std::make_share
     display_ = new DisplaySettings(this);
     setObjectName("skinwindow");
     setAutoFillBackground(true);
-    setWindowIcon(fugueIcon());   // until the world names an icon (setSkinIcon)
+    setWindowIcon(fugueIcon());  // until the world names an icon (setSkinIcon)
     host_ = new BrowseHost(this);
     host_->setLiveSkin(live_);
     host_->setDeclaredPredicate([this](const QString& n) { return declaresBrowser(n); });
     host_->setHiddenPredicate([this](const QString& n) { return declaresHiddenBrowser(n); });
+    host_->setHiddenWindowPredicate([this](const QString& n) { return hiddenWindowBrowser(n); });
     host_->setChatBacklog([this] { return chat_; });
     connect(host_, &BrowseHost::byondLink, this, &SkinWindow::byondLink);
     connect(host_, &BrowseHost::worldLink, this, &SkinWindow::worldLink);
     connect(host_, &BrowseHost::commandRequested, this, &SkinWindow::commandEntered);
-    connect(host_, &BrowseHost::onCloseCommand, this, [this](const QString&, const QString& cmd) { emit worldCommand(cmd); });
+    connect(host_, &BrowseHost::onCloseCommand, this,
+            [this](const QString&, const QString& cmd) { emit worldCommand(cmd); });
     // The live skin is mutated from the session thread, so this window syncs on the GUI thread, coalescing a burst
     // of changes into one sync.
     live_->setOnChange([this] {
-        QMetaObject::invokeMethod(this, [this] { syncQueued_ = false; syncFromLive(); }, Qt::QueuedConnection);
+        QMetaObject::invokeMethod(
+            this,
+            [this] {
+                syncQueued_ = false;
+                syncFromLive();
+            },
+            Qt::QueuedConnection);
     });
     // winget(null, "focus") follows the real keyboard focus, on a focus move and on a window activation. A fresh popup
     // has no focus widget yet, and stock answers "<popup>.browser" for it shortly after browse().
-    connect(qApp, &QApplication::focusChanged, this, [this](QWidget*, QWidget* now) { if (now) publishFocus(now); });
+    connect(qApp, &QApplication::focusChanged, this, [this](QWidget*, QWidget* now) {
+        if (now) publishFocus(now);
+    });
     connect(qApp, &QGuiApplication::focusWindowChanged, this, [this](QWindow* w) {
-        if (!w) return;   // focus left the application: keep the last answer
+        if (!w) return;  // focus left the application: keep the last answer
         QWidget* fw = QApplication::focusWidget();
         publishFocus(fw && fw->window() == QApplication::activeWindow() ? fw : QApplication::activeWindow());
     });
@@ -176,32 +210,55 @@ struct BarCornerButton : QToolButton {
 void SkinWindow::publishFocus(QWidget* now) {
     if (!now) return;
     // Check popups first: a popup is a top-level child of this widget, so the parent walk would reach `this` through it.
-    QString id = host_->focusIdFor(now);   // a popup's page, "<popup>.browser"
-    if (!id.isEmpty()) { live_->setGuiFocus(id.toStdString()); return; }
+    QString id = host_->focusIdFor(now);  // a popup's page, "<popup>.browser"
+    if (!id.isEmpty()) {
+        live_->setGuiFocus(id.toStdString());
+        return;
+    }
     for (QWidget* w = now; w; w = w->parentWidget()) {
         for (const auto& [key, cw] : widgets_)
-            if (cw == w) { live_->setGuiFocus(key); return; }
-        if (w == this) { live_->setGuiFocus(""); return; }   // the main window itself
-        if (w->isWindow()) return;                            // another top-level, such as a dialog: not a skin control
+            if (cw == w) {
+                live_->setGuiFocus(key);
+                return;
+            }
+        for (const auto& [key, rb] : rtBrowsers_)
+            if (rb.pane == w) {
+                live_->setGuiFocus(rb.parent + "." + rb.name);
+                return;
+            }
+        if (w == this) {
+            live_->setGuiFocus("");
+            return;
+        }  // the main window itself
+        if (w->isWindow()) return;  // another top-level, such as a dialog: not a skin control
     }
 }
 SkinWindow::~SkinWindow() {
     live_->setOnChange({});
-    clearWidgets();   // the panes first: the host's profile must outlive every page
+    clearWidgets();  // the panes first: the host's profile must outlive every page
     delete host_;
 }
 
 void SkinWindow::clearWidgets() {
-    if (host_) for (auto* bp : browsers_) host_->releaseControl(bp);
+    while (!rtBrowsers_.empty()) dropRuntimeBrowser(rtBrowsers_.begin()->first);
+    if (host_)
+        for (auto* bp : browsers_) host_->releaseControl(bp);
     for (auto& [k, w] : widgets_) delete w;
     for (auto& [k, h] : handles_) delete h;
     handles_.clear();
-    widgets_.clear(); types_.clear(); outputs_.clear(); infos_.clear(); browsers_.clear();
+    widgets_.clear();
+    types_.clear();
+    outputs_.clear();
+    infos_.clear();
+    browsers_.clear();
     map_ = nullptr;
     lastMapSignalled_ = nullptr;
     for (const std::string& k : dmfAux_) auxMaps_.erase(k);
     dmfAux_.clear();
     pendingMaps_.clear();
+    for (auto& [k, f] : floats_) delete f;
+    floats_.clear();
+    floatPos_.clear();
 }
 
 int SkinWindow::menuBarHeight() const { return bar_ && !bar_->isHidden() ? bar_->height() : 0; }
@@ -210,7 +267,11 @@ int SkinWindow::statusBarHeight() const { return status_ && !status_->isHidden()
 skin::Rect SkinWindow::clientRect() const { return {0, 0, width(), std::max(0, height() - chromeHeight())}; }
 
 namespace {
-std::string lowerKey(const std::string& s) { std::string o = s; for (char& c : o) c = char(std::tolower(static_cast<unsigned char>(c))); return o; }
+std::string lowerKey(const std::string& s) {
+    std::string o = s;
+    for (char& c : o) c = char(std::tolower(static_cast<unsigned char>(c)));
+    return o;
+}
 // The main window's `statusbar` setting comes from the skin file, whose default is true. Nothing at runtime reads a winset of it.
 bool wantsStatusBar(const skin::SkinSnapshot& s) {
     if (s.file)
@@ -221,15 +282,18 @@ bool wantsStatusBar(const skin::SkinSnapshot& s) {
 }  // namespace
 
 void SkinWindow::syncStatusBar(const skin::SkinSnapshot& s) {
-    if (!wantsStatusBar(s)) { if (status_) status_->hide(); return; }
+    if (!wantsStatusBar(s)) {
+        if (status_) status_->hide();
+        return;
+    }
     if (!status_) {
-        status_ = new QLabel(this);   // shows the map's hoverName() (makeWidget connects MapWidget::hoverChanged)
+        status_ = new QLabel(this);  // shows the map's hoverName() (makeWidget connects MapWidget::hoverChanged)
         status_->setObjectName("statusbar");
         status_->setFrameShape(QFrame::Panel);
         status_->setFrameShadow(QFrame::Sunken);
         status_->setAutoFillBackground(true);
-        status_->setBackgroundRole(QPalette::Button);   // OS chrome, not the skin's background colour
-        status_->setTextFormat(Qt::PlainText);           // an atom's name is data, not markup
+        status_->setBackgroundRole(QPalette::Button);  // OS chrome, not the skin's background colour
+        status_->setTextFormat(Qt::PlainText);         // an atom's name is data, not markup
         status_->setFont(skinMenuFont());
         if (map_) status_->setText(map_->hoverName());
     }
@@ -240,8 +304,10 @@ void SkinWindow::syncStatusBar(const skin::SkinSnapshot& s) {
 QSize SkinWindow::designSize() const {
     int bar = 0;
     if (!snap_.menu.empty()) {
-        if (bar_) bar = bar_->sizeHint().height();
-        else bar = 22;
+        if (bar_)
+            bar = bar_->sizeHint().height();
+        else
+            bar = 22;
     }
     int status = wantsStatusBar(snap_) ? kStatusBarH : 0;
     return QSize(design_.width(), design_.height() + bar + status);
@@ -254,12 +320,16 @@ QString SkinWindow::loadSkin(const std::string& dmf) {
     skin::SkinSnapshot s = live_->snapshot();
     int w = width() > 1 ? width() : 0, h = height() > 1 ? height() : 0;
     if (!w || !h) {
-        w = 640; h = 480;
+        w = 640;
+        h = 480;
         if (s.file)
             if (const skin::Block* mw = skin::findMainWindow(*s.file))
                 if (const skin::Elem* m = mw->main()) {
                     int64_t dw, dh;
-                    if (m->size("size", dw, dh) && dw > 0 && dh > 0) { w = int(dw); h = int(dh); }
+                    if (m->size("size", dw, dh) && dw > 0 && dh > 0) {
+                        w = int(dw);
+                        h = int(dh);
+                    }
                 }
     }
     live_->setClient(w, std::max(0, h - chromeHeight()));
@@ -275,9 +345,12 @@ QWidget* SkinWindow::makeWidget(const skin::Control& c) {
         const std::string id = c.window + "." + c.name;
         auto* mw = new MapWidget(this);
         mw->setControlId(id);
+        connect(mw, &MapWidget::presentationChanged, this, [this, mw] { publishViewSize(mw); });
         if (!map_ && id == live_->defaultMapId()) {
             map_ = mw;
-            connect(map_, &MapWidget::hoverChanged, this, [this](const QString& name) { if (status_) status_->setText(name); });
+            connect(map_, &MapWidget::hoverChanged, this, [this](const QString& name) {
+                if (status_) status_->setText(name);
+            });
         } else {
             const std::string key = lowerKey(c.name);
             auxMaps_[key] = mw;
@@ -325,7 +398,8 @@ QWidget* SkinWindow::makeWidget(const skin::Control& c) {
         BrowserPane* bp = host_->takeHidden(QString::fromStdString(c.window), QString::fromStdString(c.name));
         if (!bp) {
             bp = new BrowserPane(this, host_->profile());
-            host_->adoptControl(QString::fromStdString(c.window), QString::fromStdString(c.name), bp);   // shows a page sent before the control existed
+            host_->adoptControl(QString::fromStdString(c.window), QString::fromStdString(c.name),
+                                bp);  // shows a page sent before the control existed
         }
         browsers_.insert(QString::fromStdString(c.name), bp);
         w = bp;
@@ -341,7 +415,8 @@ QWidget* SkinWindow::makeWidget(const skin::Control& c) {
             connect(b, &QPushButton::clicked, this, [this, cmd, pushbox, path, group] {
                 if (pushbox) {
                     std::string cur;
-                    bool now = group.empty() ? !(live_->winget(path, "is-checked", cur) && skin::winsetBool(cur)) : true;
+                    bool now =
+                        group.empty() ? !(live_->winget(path, "is-checked", cur) && skin::winsetBool(cur)) : true;
                     live_->winset("", path + ".is-checked=" + (now ? "true" : "false"));
                     syncFromLive();
                 }
@@ -351,7 +426,7 @@ QWidget* SkinWindow::makeWidget(const skin::Control& c) {
     } else if (c.type == "LABEL") {
         w = new SkinLabel(this);
     } else {
-        auto* f = new QFrame(this);   // placeholder for a control type this client does not model
+        auto* f = new QFrame(this);  // placeholder for a control type this client does not model
         f->setFrameShape(QFrame::StyledPanel);
         w = f;
     }
@@ -360,7 +435,7 @@ QWidget* SkinWindow::makeWidget(const skin::Control& c) {
 
 void SkinWindow::rebuild(const skin::SkinSnapshot& s) {
     clearWidgets();
-    mapPaneShown_ = infoPaneShown_ = false;   // a new skin shows its panes afresh (setPaneShown)
+    mapPaneShown_ = infoPaneShown_ = false;  // a new skin shows its panes afresh (setPaneShown)
     builtFileId_ = s.fileId;
     lastGen_ = ~0ull;
     design_ = QSize(640, 480);
@@ -386,7 +461,10 @@ void SkinWindow::applyProps(const skin::Control& c, QWidget* w, const skin::Skin
     auto prop = [&](const char* key, std::string& out) {
         if (s.props.controlProp(c.window, c.name, key, out)) return true;
         if (c.elem)
-            if (const std::string* v = c.elem->get(key)) { out = *v; return true; }
+            if (const std::string* v = c.elem->get(key)) {
+                out = *v;
+                return true;
+            }
         return false;
     };
     std::string v;
@@ -395,7 +473,8 @@ void SkinWindow::applyProps(const skin::Control& c, QWidget* w, const skin::Skin
         if (prop("text", v)) b->setText(QString::fromStdString(v));
         std::string chk, bt = c.elem ? skin::lowerAscii(c.elem->str("button-type", "")) : "";
         bool pushbox = bt == "pushbox" || bt == "checkbox";
-        if (s.props.controlProp(c.window, c.name, "is-checked", chk) || (c.elem && c.elem->get("is-checked")) || pushbox) {
+        if (s.props.controlProp(c.window, c.name, "is-checked", chk) || (c.elem && c.elem->get("is-checked")) ||
+            pushbox) {
             if (!(s.props.controlProp(c.window, c.name, "is-checked", chk))) chk = c.elem->str("is-checked", "false");
             b->setCheckable(true);
             b->setChecked(skin::winsetBool(chk));
@@ -404,12 +483,16 @@ void SkinWindow::applyProps(const skin::Control& c, QWidget* w, const skin::Skin
         // `command` goes to the bar. A new `!` default replaces the text only while the bar still shows the old default
         // unedited. Otherwise the player's text is left alone.
         std::string cmd, text;
-        if (s.props.controlProp(c.window, c.name, "text", text) && le->text().toStdString() != text) le->setText(QString::fromStdString(text));
+        if (s.props.controlProp(c.window, c.name, "text", text) && le->text().toStdString() != text)
+            le->setText(QString::fromStdString(text));
         prop("command", cmd);
         QString now = QString::fromStdString(cmd), was = le->property("fugueInputCommand").toString();
         if (now != was || !le->property("fugueInputCommand").isValid()) {
             auto shown = [](const QString& c) { return c.startsWith('!') ? c.mid(1) : QString(); };
-            if (le->text() == shown(was)) { le->setText(shown(now)); le->setCursorPosition(le->text().size()); }
+            if (le->text() == shown(was)) {
+                le->setText(shown(now));
+                le->setCursorPosition(le->text().size());
+            }
             le->setProperty("fugueInputCommand", now);
         }
     } else if (auto* l = qobject_cast<QLabel*>(w)) {
@@ -423,8 +506,14 @@ void SkinWindow::applyProps(const skin::Control& c, QWidget* w, const skin::Skin
         std::string zs, is, lb, zm;
         double zoom = c.elem ? std::atof(c.elem->str("zoom", "0").c_str()) : 0;
         int icon = c.elem ? int(c.elem->intv("icon-size", 0)) : 0;
-        if (s.props.controlProp(c.window, c.name, "icon-size", is)) { icon = std::atoi(is.c_str()); zoom = 0; }
-        if (s.props.controlProp(c.window, c.name, "zoom", zs)) { zoom = std::atof(zs.c_str()); icon = 0; }
+        if (s.props.controlProp(c.window, c.name, "icon-size", is)) {
+            icon = std::atoi(is.c_str());
+            zoom = 0;
+        }
+        if (s.props.controlProp(c.window, c.name, "zoom", zs)) {
+            zoom = std::atof(zs.c_str());
+            icon = 0;
+        }
         bool letterbox = c.elem ? c.elem->boolv("letterbox", true) : true;
         if (s.props.controlProp(c.window, c.name, "letterbox", lb)) letterbox = skin::winsetBool(lb);
         std::string mode = c.elem ? c.elem->str("zoom-mode", "normal") : "normal";
@@ -440,28 +529,35 @@ void SkinWindow::applyProps(const skin::Control& c, QWidget* w, const skin::Skin
     QColor bg = col("background-color");
     std::string bgv;
     // An INPUT, OUTPUT or INFO set to "none" takes the control face colour; with no colour at all it is white.
-    if (!bg.isValid() && (c.type == "INPUT" || c.type == "OUTPUT" || c.type == "INFO") && prop("background-color", bgv) && skin::lowerAscii(skin::trimSpace(bgv)) == "none")
+    if (!bg.isValid() && (c.type == "INPUT" || c.type == "OUTPUT" || c.type == "INFO") &&
+        prop("background-color", bgv) && skin::lowerAscii(skin::trimSpace(bgv)) == "none")
         bg = QColor(0xf4, 0xf4, 0xf4);
     if (bg.isValid()) css += QString("background-color:%1;").arg(bg.name());
     if (QColor fg = col("text-color"); fg.isValid()) css += QString("color:%1;").arg(fg.name());
     if (auto* sp = qobject_cast<StatPanelWidget*>(w)) {
-        QColor tb = col("tab-background-color"), tt = col("tab-text-color"), pc = col("prefix-color"), sc = col("suffix-color");
+        QColor tb = col("tab-background-color"), tt = col("tab-text-color"), pc = col("prefix-color"),
+               sc = col("suffix-color");
         sp->setTextColors(pc, sc);
-        sp->tabBar()->setDrawBase(!(tb.isValid() || tt.isValid()));   // the base line is the style's, not the tab text colour
+        sp->tabBar()->setDrawBase(
+            !(tb.isValid() || tt.isValid()));  // the base line is the style's, not the tab text colour
         if (tb.isValid() || tt.isValid()) {
             QString tab = "padding:2px 6px;";
             if (tb.isValid()) tab += QString("background-color:%1;").arg(tb.name());
             if (tt.isValid()) tab += QString("color:%1;border:1px solid %1;").arg(tt.name());
             rules += "QTabBar::tab{" + tab + "}";
             if (tb.isValid()) rules += QString("QTabBar{background-color:%1;}").arg(tb.name());
-            if (QColor edge = pc.isValid() ? pc : tt; edge.isValid()) rules += QString("QTableWidget{border:1px solid %1;}").arg(edge.name());
+            if (QColor edge = pc.isValid() ? pc : tt; edge.isValid())
+                rules += QString("QTableWidget{border:1px solid %1;}").arg(edge.name());
         }
     }
-    if (!rules.isEmpty()) css = (css.isEmpty() ? QString() : "*{" + css + "}") + rules;   // declarations ahead of rules are not parsed as the widget's own
+    if (!rules.isEmpty())
+        css = (css.isEmpty() ? QString() : "*{" + css + "}") +
+              rules;  // declarations ahead of rules are not parsed as the widget's own
     if (css != w->property("fugueCss").toString()) {
         w->setProperty("fugueCss", css);
         w->setStyleSheet(css);
-        w->setProperty("fugueFont", QVariant());   // a style sheet change drops the font set before it: set it again below
+        w->setProperty("fugueFont",
+                       QVariant());  // a style sheet change drops the font set before it: set it again below
     }
     if (c.type == "BUTTON" || c.type == "LABEL" || c.type == "INPUT" || c.type == "INFO") {
         std::string fam, size, style;
@@ -472,10 +568,14 @@ void SkinWindow::applyProps(const skin::Control& c, QWidget* w, const skin::Skin
         if (!w->property("fugueFont").isValid() || key != w->property("fugueFont").toString()) {
             w->setProperty("fugueFont", key);
             const SkinFont sf = skinControlFont(fam, size, style);
-            if (auto* b = dynamic_cast<SkinButton*>(w)) b->setSkinFont(sf);
-            else if (auto* l = dynamic_cast<SkinLabel*>(w)) l->setSkinFont(sf);
-            else if (auto* sp = qobject_cast<StatPanelWidget*>(w)) sp->setPanelFont(sf.font);
-            else w->setFont(sf.font);
+            if (auto* b = dynamic_cast<SkinButton*>(w))
+                b->setSkinFont(sf);
+            else if (auto* l = dynamic_cast<SkinLabel*>(w))
+                l->setSkinFont(sf);
+            else if (auto* sp = qobject_cast<StatPanelWidget*>(w))
+                sp->setPanelFont(sf.font);
+            else
+                w->setFont(sf.font);
         }
     }
     if (auto* l = dynamic_cast<SkinLabel*>(w)) {
@@ -498,25 +598,29 @@ void SkinWindow::apply(const skin::SkinSnapshot& s) {
     fills_.clear();
     std::set<std::string> filled;
     auto addFill = [&](const skin::Rect& r, const std::string& color) {
-        if (QColor col = skinColor(color); col.isValid()) fills_.emplace_back(QRect(r.x0, r.y0 + menuBarHeight(), r.dx(), r.dy()), col);
+        if (QColor col = skinColor(color); col.isValid())
+            fills_.emplace_back(QRect(r.x0, r.y0 + menuBarHeight(), r.dx(), r.dy()), col);
     };
     for (const skin::Control& c : s.tree.controls) {
         std::string bg;
-        if (c.visible && !c.offPane && filled.insert(c.window).second && s.props.get(c.window, "background-color", bg))
-            addFill(c.box, bg);   // the window's own background, over the box it was laid out in
+        if (c.top.empty() && c.visible && !c.offPane && filled.insert(c.window).second &&
+            s.props.get(c.window, "background-color", bg))
+            addFill(c.box, bg);  // the window's own background, over the box it was laid out in
         if (c.type == "CHILD" || c.type == "MAIN") {
-            if (c.visible && !c.offPane && s.props.controlProp(c.window, c.name, "background-color", bg)) addFill(c.rect, bg);
+            if (c.visible && !c.offPane && s.props.controlProp(c.window, c.name, "background-color", bg))
+                addFill(c.rect, bg);
             continue;
         }
         std::string key = c.window + "." + c.name;
-        bool show = c.visible && !c.offPane;
+        const skin::Floating* fl = c.top.empty() ? nullptr : s.tree.floating(c.top);
+        bool show = c.visible && !c.offPane && (!fl || fl->visible);
         auto it = widgets_.find(key);
         if (it == widgets_.end()) {
             if (!show) continue;
             QWidget* w = makeWidget(c);
             if (!w) continue;
             w->setObjectName(QString::fromStdString(key));
-            w->setProperty("fugueControl", QString::fromStdString(key));   // MapWidget::targetAt
+            w->setProperty("fugueControl", QString::fromStdString(key));  // MapWidget::targetAt
             widgets_[key] = w;
             types_[key] = c.type;
             it = widgets_.find(key);
@@ -525,9 +629,15 @@ void SkinWindow::apply(const skin::SkinSnapshot& s) {
         placed.insert(key);
         applyProps(c, w, s);
         int top = menuBarHeight();
+        if (!c.top.empty()) {
+            QWidget* fw = floatWindow(c.top, s);
+            if (w->parentWidget() != fw) w->setParent(fw);
+            top = 0;
+        }
         w->setGeometry(c.rect.x0, c.rect.y0 + top, c.rect.dx(), c.rect.dy());
         w->setVisible(show);
     }
+    syncFloats(s);
     update();
     // A control that left the layout is hidden, not destroyed, so its content survives.
     for (auto& [key, w] : widgets_)
@@ -538,12 +648,13 @@ void SkinWindow::apply(const skin::SkinSnapshot& s) {
     // The CHILD dividers the layout placed (none for show-splitter=false or a cleared side).
     std::set<std::string> dividers;
     for (const skin::Splitter& sp : s.tree.splitters) {
-        if (sp.rect.empty()) continue;
+        if (sp.rect.empty() || !sp.top.empty()) continue;
         QWidget*& h = handles_[sp.path];
-        if (!h) h = new SplitterHandle(this, sp.path, [this](const std::string& path, double pct) {
-            live_->setSplitter(path, pct);
-            syncFromLive();
-        });
+        if (!h)
+            h = new SplitterHandle(this, sp.path, [this](const std::string& path, double pct) {
+                live_->setSplitter(path, pct);
+                syncFromLive();
+            });
         static_cast<SplitterHandle*>(h)->place(sp, menuBarHeight());
         h->show();
         h->raise();
@@ -564,18 +675,20 @@ void SkinWindow::apply(const skin::SkinSnapshot& s) {
 void SkinWindow::setSkinIcon(const QString& name, const QByteArray& bytes) {
     QImage img = bytes.isEmpty() ? QImage() : skinIconImage(bytes);
     if (!bytes.isEmpty() && img.isNull())
-        std::fprintf(stderr, "[icon] window icon \"%s\": %d bytes that do not decode - Fugue's icon instead\n", name.toUtf8().constData(), int(bytes.size()));
+        std::fprintf(stderr, "[icon] window icon \"%s\": %d bytes that do not decode - Fugue's icon instead\n",
+                     name.toUtf8().constData(), int(bytes.size()));
     skinIcon_ = !img.isNull();
     setWindowIcon(skinIcon_ ? QIcon(QPixmap::fromImage(img)) : fugueIcon());
     // A browse() popup is a child WINDOW: Qt reads the parent's icon when it is created but sends an open one no change,
     // so bring the open ones along. A dialog with an icon of its own (prompts, options, macros: Fugue's) keeps it.
     for (QWidget* c : findChildren<QWidget*>(Qt::FindDirectChildrenOnly))
-        if (c->isWindow() && !c->testAttribute(Qt::WA_SetWindowIcon) && c->windowHandle()) c->windowHandle()->setIcon(windowIcon());
+        if (c->isWindow() && !c->testAttribute(Qt::WA_SetWindowIcon) && c->windowHandle())
+            c->windowHandle()->setIcon(windowIcon());
 }
 
 void SkinWindow::updateTitle() {
     QString t = skinTitle_;
-    if (builtFileId_ == builtinFileId_ && t == "Dream Seeker") t.clear();   // the built-in skin's own default title
+    if (builtFileId_ == builtinFileId_ && t == "Dream Seeker") t.clear();  // the built-in skin's own default title
     if (t.isEmpty()) t = worldName_;
     setWindowTitle(t.isEmpty() ? QString("Fugue") : t);
 }
@@ -585,13 +698,17 @@ void SkinWindow::rebuildMenu(const skin::Menu& m) {
     for (const skin::MenuCat& c : m.cats) {
         sig += "|" + QString::fromStdString(c.name + ":" + c.label) + (c.disabled ? "!" : "");
         for (const skin::MenuItem& it : c.items)
-            sig += "," + QString::fromStdString(it.name + ":" + it.label + ":" + it.command) + (it.disabled ? "!" : "") + (it.separator ? "-" : "");
+            sig += "," + QString::fromStdString(it.name + ":" + it.label + ":" + it.command) +
+                   (it.disabled ? "!" : "") + (it.separator ? "-" : "");
     }
     // A new skin clears the signature, so a menu-less skin's empty one matches it: the bar must still go.
     if (sig == menuSig_ && m.empty() == (!bar_ || bar_->isHidden())) return;
     menuSig_ = sig;
     if (m.empty()) {
-        if (bar_) { bar_->clear(); bar_->hide(); }
+        if (bar_) {
+            bar_->clear();
+            bar_->hide();
+        }
         return;
     }
     if (!bar_) {
@@ -621,10 +738,10 @@ void SkinWindow::rebuildMenu(const skin::Menu& m) {
         const int itemH = std::max(8, probe.sizeHint().height() - 2 * pad);
         sysBtn_->setIconSize(QSize(itemH - 4, itemH - 4));
         sysBtn_->setFixedSize(itemH, itemH);
-        static_cast<BarCornerButton*>(sysBtn_)->hint = QSize(itemH, itemH);   // QMenuBar sizes itself from the HINT
+        static_cast<BarCornerButton*>(sysBtn_)->hint = QSize(itemH, itemH);  // QMenuBar sizes itself from the HINT
         bar_->setCornerWidget(sysBtn_, Qt::TopLeftCorner);
     }
-    bar_->clear();   // the skin's menus; the corner widget stays
+    bar_->clear();  // the skin's menus; the corner widget stays
     menuActs_.clear();
     menuChk_.clear();
     auto withAccel = [](const std::string& label, int accel) {
@@ -634,11 +751,14 @@ void SkinWindow::rebuildMenu(const skin::Menu& m) {
     };
     for (const skin::MenuCat& c : m.cats) {
         QMenu* menu = bar_->addMenu(withAccel(c.label, c.accel));
-        menu->setFont(bar_->font());   // a popup does not inherit its parent's font
+        menu->setFont(bar_->font());  // a popup does not inherit its parent's font
         menu->setEnabled(!c.disabled);
         QHash<QString, QActionGroup*> groups;
         for (const skin::MenuItem& it : c.items) {
-            if (it.separator) { menu->addSeparator(); continue; }
+            if (it.separator) {
+                menu->addSeparator();
+                continue;
+            }
             QString text = withAccel(it.label, it.accel);
             if (!it.shortcut.empty()) text += "\t" + QString::fromStdString(it.shortcut);
             QAction* a = menu->addAction(text);
@@ -646,10 +766,16 @@ void SkinWindow::rebuildMenu(const skin::Menu& m) {
             if (it.canCheck) {
                 a->setCheckable(true);
                 a->setChecked(it.checked);
-                if (!it.name.empty()) { menuActs_.emplace(it.name, a); menuChk_[it.name] = it.checked; }
+                if (!it.name.empty()) {
+                    menuActs_.emplace(it.name, a);
+                    menuChk_[it.name] = it.checked;
+                }
                 if (!it.group.empty()) {
                     QString g = QString::fromStdString(it.group);
-                    if (!groups.contains(g)) { groups[g] = new QActionGroup(menu); groups[g]->setExclusive(true); }
+                    if (!groups.contains(g)) {
+                        groups[g] = new QActionGroup(menu);
+                        groups[g]->setExclusive(true);
+                    }
                     groups[g]->addAction(a);
                 }
             }
@@ -689,7 +815,10 @@ void SkinWindow::syncFromLive() {
     if (syncing_) return;
     syncing_ = true;
     skin::SkinSnapshot s = live_->snapshot();
-    if (!s.file) { syncing_ = false; return; }
+    if (!s.file) {
+        syncing_ = false;
+        return;
+    }
     if (s.fileId != builtFileId_) rebuild(s);
     // The menu bar and the status bar come first: their heights come off the client area the layout is measured in.
     int before = chromeHeight();
@@ -708,10 +837,17 @@ void SkinWindow::syncFromLive() {
     snap_ = s;
     markMapShown();
     markInfoShown();
-    if (map_ != lastMapSignalled_) { lastMapSignalled_ = map_; if (map_) emit mapReady(map_); }
-    for (QPointer<MapWidget>& mw : pendingMaps_) if (mw) emit mapReady(mw.data());
+    if (map_ != lastMapSignalled_) {
+        lastMapSignalled_ = map_;
+        if (map_) emit mapReady(map_);
+    }
+    for (QPointer<MapWidget>& mw : pendingMaps_)
+        if (mw) emit mapReady(mw.data());
     pendingMaps_.clear();
-    if (QSize cl(s.client.dx(), s.client.dy()); cl != lastClient_ && cl.width() > 0 && cl.height() > 0) { lastClient_ = cl; emit clientResized(cl); }
+    if (QSize cl(s.client.dx(), s.client.dy()); cl != lastClient_ && cl.width() > 0 && cl.height() > 0) {
+        lastClient_ = cl;
+        emit clientResized(cl);
+    }
     if (s.macro != lastMacro_ || s.macroGen != lastMacroGen_) {
         bool first = lastMacro_.empty();
         lastMacro_ = s.macro;
@@ -722,11 +858,132 @@ void SkinWindow::syncFromLive() {
         lastFocusSeq_ = s.focusSeq;
         if (const skin::Control* c = s.tree.byName(s.focus)) {
             auto it = widgets_.find(c->window + "." + c->name);
-            if (it != widgets_.end() && it->second->isVisible()) it->second->setFocus(Qt::OtherFocusReason);
+            if (it != widgets_.end() && it->second->isVisible()) {
+                if (!c->top.empty()) it->second->window()->activateWindow();
+                it->second->setFocus(Qt::OtherFocusReason);
+            }
         }
     }
     syncRuntimeMaps(s);
+    syncRuntimeBrowsers(s);
     syncing_ = false;
+}
+
+// The runtime BROWSER controls (skin::SkinSnapshot::runtime) whose parent is a skin window. Stock DreamSeeker 516
+// creates the control at the winset, hidden or not, so its page runs at once: vg's tooltip is created
+// `pos=0,0;size=1x1;anchor1=0,0;is-visible=false` and its page later winsets its own size, pos and is-visible.
+// Geometry is skin::runtimeRect in the box the parent window was laid out in (the slot hosting a pane, the main
+// client, a floating window's client area). pos and size are divided by the device pixel ratio, as for a runtime map:
+// vg's page sends them in device pixels. The control is stacked above its window's .dmf controls (it is created after
+// them) and a native map presenter is masked where it covers it. is-disabled disables it.
+void SkinWindow::syncRuntimeBrowsers(const skin::SkinSnapshot& s) {
+    std::set<std::string> live;
+    bool changed = false;
+    for (const skin::SkinSnapshot::RuntimeControl& rc : s.runtime) {
+        if (rc.type != "BROWSER" || !host_ || !s.file || !s.file->window(rc.parent)) continue;
+        // The box its window was laid out in, and whether that window is on screen at all.
+        skin::Rect box;
+        bool placed = false;
+        QWidget* holder = this;
+        int top = menuBarHeight();
+        if (const skin::Floating* fl = s.tree.floating(rc.parent)) {
+            box = fl->box;
+            placed = fl->visible;
+            top = 0;
+            holder = floatWindow(fl->window, s);
+        } else if (skin::lowerAscii(rc.parent) == skin::lowerAscii(s.mainWindow)) {
+            box = s.tree.client;
+            placed = true;
+        } else {
+            for (const skin::Control& c : s.tree.controls)
+                if (skin::lowerAscii(c.window) == skin::lowerAscii(rc.parent) && c.visible && !c.offPane &&
+                    !c.box.empty()) {
+                    box = c.box;
+                    placed = true;
+                    break;
+                }
+        }
+        const std::string key = lowerKey(rc.name);
+        live.insert(key);
+        auto it = rtBrowsers_.find(key);
+        if (it != rtBrowsers_.end() && (!it->second.pane || lowerKey(it->second.parent) != lowerKey(rc.parent))) {
+            dropRuntimeBrowser(key);  // re-parented to another window: a new control there
+            it = rtBrowsers_.end();
+        }
+        if (it == rtBrowsers_.end()) {
+            auto* bp = new BrowserPane(holder, host_->profile());
+            const QString id = QString::fromStdString(rc.parent + "." + rc.name);
+            bp->setObjectName(id);
+            bp->setProperty("fugueControl", id);  // MapWidget::targetAt
+            bp->hide();
+            it = rtBrowsers_.emplace(key, RuntimeBrowser{bp, rc.name, rc.parent}).first;
+            std::fprintf(stderr, "[browse] runtime browser \"%s\" created in %s\n", rc.name.c_str(), rc.parent.c_str());
+            // Shows a page the world sent before the control existed (BrowseHost::open held it: declaresBrowser).
+            host_->adoptControl(QString::fromStdString(rc.parent), QString::fromStdString(rc.name), bp, false);
+        }
+        BrowserPane* bp = it->second.pane;
+        if (bp->parentWidget() != holder) bp->setParent(holder);
+        std::string pos, size, a1, a2, v;
+        s.props.get(rc.name, "pos", pos);
+        s.props.get(rc.name, "size", size);
+        s.props.get(rc.name, "anchor1", a1);
+        s.props.get(rc.name, "anchor2", a2);
+        const bool visible = placed && !(s.props.get(rc.name, "is-visible", v) && !skin::winsetBool(v));
+        const bool disabled = s.props.get(rc.name, "is-disabled", v) && skin::winsetBool(v);
+        const double dpr = holder->devicePixelRatioF() > 0 ? holder->devicePixelRatioF() : 1.0;
+        const skin::Rect r = skin::runtimeRect(*s.file, rc.parent, box, pos, size, a1, a2, dpr);
+        const QRect g(r.x0, r.y0 + top, std::max(1, r.dx()), std::max(1, r.dy()));
+        bp->setEnabled(!disabled);
+        if (bp->geometry() != g) {
+            bp->setGeometry(g);
+            changed = true;
+        }
+        if (visible) bp->raise();
+        if (bp->isVisible() != visible) {
+            bp->setVisible(visible);
+            changed = true;
+        }
+    }
+    for (auto it = rtBrowsers_.begin(); it != rtBrowsers_.end();) {
+        auto next = std::next(it);
+        if (!live.count(it->first)) {
+            dropRuntimeBrowser(it->first);
+            changed = true;
+        }
+        it = next;
+    }
+    if (changed)
+        for (MapWidget* mw : findChildren<MapWidget*>()) mw->clipExternalView();
+}
+
+// The control is gone (`parent=none`, a new skin): its page goes with it, so a later browse() of the name is a window.
+void SkinWindow::dropRuntimeBrowser(const std::string& key) {
+    auto it = rtBrowsers_.find(key);
+    if (it == rtBrowsers_.end()) return;
+    QPointer<BrowserPane> bp = it->second.pane;
+    const QString name = QString::fromStdString(it->second.name);
+    rtBrowsers_.erase(it);
+    if (!bp) return;
+    std::fprintf(stderr, "[browse] runtime browser \"%s\" destroyed\n", name.toUtf8().constData());
+    if (host_) {
+        const QString page = bp->name;  // a copy: close() clears the pane's name
+        if (!page.isEmpty()) host_->close(page);
+        host_->releaseControl(bp);
+    }
+    delete bp.data();
+}
+
+BrowserPane* SkinWindow::runtimeBrowser(const QString& name) const {
+    auto it = rtBrowsers_.find(lowerKey(name.toStdString()));
+    return it == rtBrowsers_.end() ? nullptr : it->second.pane.data();
+}
+
+void SkinWindow::publishViewSize(MapWidget* mw) {
+    if (!mw || !mw->hasFrame()) return;
+    const QSize vs = mw->imageRect().intersected(mw->rect()).size();
+    if (mw->property("fugueViewSize").toSize() == vs) return;
+    mw->setProperty("fugueViewSize", vs);
+    live_->setViewSize(mw->controlId(), vs.width(), vs.height());
 }
 
 // The runtime MAP controls (skin::SkinSnapshot::runtime) inside their browse() popups. pos is in the popup's client area.
@@ -748,7 +1005,7 @@ void SkinWindow::syncRuntimeMaps(const skin::SkinSnapshot& s) {
         if (!mw) {
             mw = new MapWidget(popup);
             mw->setObjectName(QString::fromStdString(rc.name));
-            mw->setControlId(rc.parent + "." + rc.name);   // stock's full id: popup.control
+            mw->setControlId(rc.parent + "." + rc.name);  // stock's full id: popup.control
             auto img = auxImg_.find(key);
             if (img != auxImg_.end()) mw->setFrame(img->second, auxHit_[key]);
             emit auxMapBuilt(QString::fromStdString(rc.name));
@@ -759,22 +1016,108 @@ void SkinWindow::syncRuntimeMaps(const skin::SkinSnapshot& s) {
         if (s.props.get(rc.name, "pos", v)) std::sscanf(v.c_str(), "%lf,%lf", &x, &y);
         if (s.props.get(rc.name, "size", v)) {
             double sw = 0, sh = 0;
-            if (std::sscanf(v.c_str(), "%lfx%lf", &sw, &sh) == 2 && sw > 0 && sh > 0) { w = sw; h = sh; }
+            if (std::sscanf(v.c_str(), "%lfx%lf", &sw, &sh) == 2 && sw > 0 && sh > 0) {
+                w = sw;
+                h = sh;
+            }
         }
         bool visible = !(s.props.get(rc.name, "is-visible", v) && !skin::winsetBool(v));
         const double dpr = popup->devicePixelRatioF() > 0 ? popup->devicePixelRatioF() : 1.0;
-        x /= dpr; y /= dpr; w /= dpr; h /= dpr;
-        mw->setGeometry(int(std::lround(x)), int(std::lround(y)), std::max(1, int(std::lround(w))), std::max(1, int(std::lround(h))));
+        x /= dpr;
+        y /= dpr;
+        w /= dpr;
+        h /= dpr;
+        mw->setGeometry(int(std::lround(x)), int(std::lround(y)), std::max(1, int(std::lround(w))),
+                        std::max(1, int(std::lround(h))));
         mw->setVisible(visible);
-        mw->raise();   // above the popup's page
+        mw->raise();  // above the popup's page
     }
     for (auto it = auxMaps_.begin(); it != auxMaps_.end();) {
-        if (live.count(it->first) || dmfAux_.count(it->first)) { ++it; continue; }
+        if (live.count(it->first) || dmfAux_.count(it->first)) {
+            ++it;
+            continue;
+        }
         if (it->second) delete it->second.data();
         auxImg_.erase(it->first);
         auxHit_.erase(it->first);
         emit auxMapRemoved(QString::fromStdString(it->first));
         it = auxMaps_.erase(it);
+    }
+}
+
+QWidget* SkinWindow::floatWindow(const std::string& window, const skin::SkinSnapshot& s) {
+    const std::string key = lowerKey(window);
+    if (auto it = floats_.find(key); it != floats_.end()) return it->second;
+    const skin::Block* b = s.file ? s.file->window(window) : nullptr;
+    const skin::Elem* m = b ? b->main() : nullptr;
+    Qt::WindowFlags fl = Qt::Dialog | Qt::WindowCloseButtonHint;
+    if (m && !m->boolv("titlebar", true)) fl |= Qt::FramelessWindowHint;
+    if (m && m->boolv("can-minimize", true)) fl |= Qt::WindowMinimizeButtonHint;
+    auto* fw = new FloatWindow(this, fl, [this, window] {
+        live_->winset(window, "is-visible=false");
+        std::string cmd;
+        if (live_->winget(window, "on-close", cmd) && !skin::trimSpace(cmd).empty())
+            emit worldCommand(QString::fromStdString(cmd));
+        syncFromLive();
+    });
+    fw->setObjectName(QString::fromStdString(window));
+    fw->setProperty("fugueControl", QString::fromStdString(window));
+    fw->setAutoFillBackground(true);
+    uint8_t c[4];
+    if (m && m->color("background-color", c)) {
+        QPalette pal = fw->palette();
+        pal.setColor(QPalette::Window, QColor(c[0], c[1], c[2]));
+        fw->setPalette(pal);
+    }
+    fw->hide();
+    floats_[key] = fw;
+    return fw;
+}
+
+// Size, place, title and show or hide each floating window. Showing one activates it and gives the keyboard to the
+// control a winset last focused there, else its first visible control.
+void SkinWindow::syncFloats(const skin::SkinSnapshot& s) {
+    for (const skin::Floating& f : s.tree.floats) {
+        const std::string key = lowerKey(f.window);
+        auto it = floats_.find(key);
+        if (it == floats_.end() && !f.visible) continue;
+        QWidget* fw = it == floats_.end() ? floatWindow(f.window, s) : it->second;
+        const skin::Block* b = s.file->window(f.window);
+        const skin::Elem* m = b ? b->main() : nullptr;
+        QSize sz(std::max(1, f.box.dx()), std::max(1, f.box.dy()));
+        if (m && !m->boolv("can-resize", true))
+            fw->setFixedSize(sz);
+        else if (fw->size() != sz)
+            fw->resize(sz);
+        std::string pos, title;
+        if (!s.props.get(f.window, "pos", pos) && m) pos = m->str("pos", "");
+        if (pos != floatPos_[key]) {
+            long long x, y;
+            if (skin::parsePair(pos, ",", x, y)) fw->move(int(x), int(y));
+            floatPos_[key] = pos;
+        }
+        if (!s.props.get(f.window, "title", title) && m) title = m->str("title", "");
+        fw->setWindowTitle(title.empty() ? QStringLiteral(" ") : QString::fromStdString(title));
+        if (!f.visible) {
+            fw->hide();
+            continue;
+        }
+        if (fw->isVisible()) continue;
+        fw->show();
+        fw->raise();
+        fw->activateWindow();
+        QWidget* target = nullptr;
+        if (const skin::Control* c = s.tree.byName(s.focus); c && lowerKey(c->top) == key) {
+            auto w = widgets_.find(c->window + "." + c->name);
+            if (w != widgets_.end()) target = w->second;
+        }
+        for (const skin::Control& c : s.tree.controls) {
+            if (target) break;
+            if (lowerKey(c.top) != key) continue;
+            auto w = widgets_.find(c.window + "." + c.name);
+            if (w != widgets_.end() && w->second->isVisible()) target = w->second;
+        }
+        if (target) target->setFocus(Qt::OtherFocusReason);
     }
 }
 
@@ -787,6 +1130,7 @@ void SkinWindow::setAuxMapFrame(const QString& id, const QImage& img, HitPtr hit
     auto it = auxMaps_.find(key);
     if (it == auxMaps_.end() || !it->second) return;
     it->second->setFrame(img, std::move(hit));
+    publishViewSize(it->second);
 }
 
 void SkinWindow::setAuxMapHit(const QString& id, HitPtr hit) {
@@ -799,7 +1143,8 @@ void SkinWindow::setAuxMapHit(const QString& id, HitPtr hit) {
 QList<MapWidget*> SkinWindow::mapWidgets() const {
     QList<MapWidget*> out;
     if (map_) out << map_;
-    for (const auto& [k, mw] : auxMaps_) if (mw) out << mw.data();
+    for (const auto& [k, mw] : auxMaps_)
+        if (mw) out << mw.data();
     return out;
 }
 
@@ -857,6 +1202,7 @@ void SkinWindow::setMapFrame(const QImage& img, HitPtr hit) {
     mapImg_ = img;
     markMapShown();
     if (map_) map_->setFrame(img, std::move(hit));
+    publishViewSize(map_);
 }
 
 void SkinWindow::setMapExternalFrame(QSize size, HitPtr hit, std::function<QImage()> snapshot) {
@@ -864,6 +1210,7 @@ void SkinWindow::setMapExternalFrame(QSize size, HitPtr hit, std::function<QImag
     mapImg_ = {};
     markMapShown();
     if (map_) map_->setExternalFrame(size, std::move(hit), std::move(snapshot));
+    publishViewSize(map_);
 }
 
 QPixmap SkinWindow::grabWithMaps() {
@@ -906,14 +1253,16 @@ void SkinWindow::markInfoShown() {
 void SkinWindow::setMapHit(HitPtr hit) {
     if (!map_) return;
     markMapShown();
-    if (!map_->hasFrame() && !mapImg_.isNull()) map_->setFrame(mapImg_, std::move(hit));
-    else map_->setHit(std::move(hit));
+    if (!map_->hasFrame() && !mapImg_.isNull())
+        map_->setFrame(mapImg_, std::move(hit));
+    else
+        map_->setHit(std::move(hit));
 }
 
 void SkinWindow::appendChat(const QStringList& html) {
     chat_ += html;
     while (chat_.size() > 500) chat_.removeFirst();
-    if (host_->chatHosted()) {   // the world's own chat page replaces the log: lines go to its output(), once READY
+    if (host_->chatHosted()) {  // the world's own chat page replaces the log: lines go to its output(), once READY
         for (const QString& h : html) host_->chatLine(h);
         return;
     }
@@ -923,7 +1272,7 @@ void SkinWindow::appendChat(const QStringList& html) {
     }
 }
 
-void SkinWindow::setStat(const QString& html) { stat_ = html; }   // the INFO control renders setStatView()
+void SkinWindow::setStat(const QString& html) { stat_ = html; }  // the INFO control renders setStatView()
 
 void SkinWindow::setStatView(const StatView& v) {
     statView_ = v;
@@ -933,15 +1282,24 @@ void SkinWindow::setStatView(const StatView& v) {
 
 void SkinWindow::showBrowse(const QString& name, const QString& params, const QString& html) {
     host_->open(name, params, html);
-    if (live_->loaded()) syncRuntimeMaps(live_->snapshot());   // a runtime map may already name this popup as its parent
+    if (live_->loaded()) {
+        skin::SkinSnapshot s = live_->snapshot();
+        syncRuntimeMaps(s);      // a runtime map may already name this popup as its parent
+        syncRuntimeBrowsers(s);  // a page held for a runtime browser the winset just before it created
+    }
 }
 void SkinWindow::closeBrowse(const QString& name) { host_->close(name); }
 // output(file, control) loads the file into that browser control, never into a window of its own.
 void SkinWindow::showOutputFile(const QString& control, const QString& html) {
-    if (declaresBrowser(control)) host_->open(control, QString(), html);
-    else std::fprintf(stderr, "[browse] output(file) to \"%s\": not a browser control of this skin - dropped\n", control.toUtf8().constData());
+    if (declaresBrowser(control))
+        host_->open(control, QString(), html);
+    else
+        std::fprintf(stderr, "[browse] output(file) to \"%s\": not a browser control of this skin - dropped\n",
+                     control.toUtf8().constData());
 }
-void SkinWindow::pageCall(const QString& window, const QString& fn, const QStringList& args) { host_->pageCall(window, fn, args); }
+void SkinWindow::pageCall(const QString& window, const QString& fn, const QStringList& args) {
+    host_->pageCall(window, fn, args);
+}
 
 static const skin::Elem* declaredBrowser(const skin::File* f, const QString& name) {
     if (!f) return nullptr;
@@ -949,19 +1307,65 @@ static const skin::Elem* declaredBrowser(const skin::File* f, const QString& nam
     for (const skin::Block& b : f->blocks) {
         if (b.kind != "window") continue;
         for (const skin::Elem& e : b.elems)
-            if (e.type() == "BROWSER" && (QString::fromStdString(e.name) == name || (QString::fromStdString(e.name) == ctl && (!name.contains('.') || QString::fromStdString(b.name) == name.section('.', 0, -2)))))
+            if (e.type() == "BROWSER" &&
+                (QString::fromStdString(e.name) == name ||
+                 (QString::fromStdString(e.name) == ctl &&
+                  (!name.contains('.') || QString::fromStdString(b.name) == name.section('.', 0, -2)))))
                 return &e;
     }
     return nullptr;
 }
 
-bool SkinWindow::declaresBrowser(const QString& name) const { return declaredBrowser(snap_.file.get(), name) != nullptr; }
+// Also a BROWSER a winset created at runtime in a skin window (syncRuntimeBrowsers): a browse() that arrives before
+// the GUI has built it is held for it, not opened as a window of its own.
+bool SkinWindow::declaresBrowser(const QString& name) const {
+    if (declaredBrowser(snap_.file.get(), name)) return true;
+    skin::SkinSnapshot::RuntimeControl rc;
+    return snap_.file && live_->runtimeControl(name.toStdString(), rc) && rc.type == "BROWSER" &&
+           snap_.file->window(rc.parent);
+}
 
 // The skin file declares it: vg's interface/skin.dmf declares rpane.hosttracker and rpane.hosttracker2 at 1x1 with
 // `is-visible = false`.
+// Also a control the layout does not show now (its pane is not placed, as tg's browseroutput until its page swaps
+// output_browser in, or its floating window is hidden): stock creates every control at load, so its page runs.
 bool SkinWindow::declaresHiddenBrowser(const QString& name) const {
     const skin::Elem* e = declaredBrowser(snap_.file.get(), name);
-    return e && !e->boolv("is-visible", true);
+    if (!e) return false;
+    if (!e->boolv("is-visible", true)) return true;
+    for (const skin::Control& c : snap_.tree.controls) {
+        if (c.elem != e) continue;
+        if (widgets_.count(c.window + "." + c.name)) return false;
+        const skin::Floating* f = c.top.empty() ? nullptr : snap_.tree.floating(c.top);
+        return !c.visible || c.offPane || (f && !f->visible);
+    }
+    return true;
+}
+
+// browse(html, "window=W") where W names a skin window rather than a control: tg's tgui_say is a hidden 231x30
+// window holding one BROWSER. Its page runs in that window's browser, so while the window is hidden the page runs
+// windowless instead of in a popup of its own.
+bool SkinWindow::hiddenWindowBrowser(const QString& name) const {
+    const skin::File* f = snap_.file.get();
+    if (!f || name.contains('.')) return false;
+    for (const skin::Block& b : f->blocks) {
+        if (b.kind != "window" || QString::fromStdString(b.name) != name) continue;
+        if (skin::findMainWindow(*f) == &b) return false;
+        bool browser = false;
+        for (const skin::Elem& e : b.elems) browser = browser || e.type() == "BROWSER";
+        if (!browser) return false;
+        // A floating window's browser runs windowless until its control is built.
+        if (skin::isFloatingWindow(*f, b)) {
+            for (const skin::Elem& e : b.elems)
+                if (e.type() == "BROWSER" && widgets_.count(b.name + "." + e.name)) return false;
+            return true;
+        }
+        std::string v;
+        if (!live_->winget(b.name, "is-visible", v)) return false;
+        v = skin::lowerAscii(skin::trimSpace(v));
+        return v == "false" || v == "0" || v == "no" || v == "off";
+    }
+    return false;
 }
 
 QWidget* SkinWindow::controlWidget(const QString& windowDotName) const {
@@ -978,9 +1382,13 @@ QString SkinWindow::describe() const {
     QString s;
     for (const skin::Control& c : snap_.tree.controls) {
         auto it = widgets_.find(c.window + "." + c.name);
-        s += QString("%1 %2.%3 (%4,%5 %6x%7)%8\n").arg(QString::fromStdString(c.type), QString::fromStdString(c.window),
-              QString::fromStdString(c.name)).arg(c.rect.x0).arg(c.rect.y0).arg(c.rect.dx()).arg(c.rect.dy())
-              .arg(it == widgets_.end() ? " [no widget]" : "");
+        s += QString("%1 %2.%3 (%4,%5 %6x%7)%8\n")
+                 .arg(QString::fromStdString(c.type), QString::fromStdString(c.window), QString::fromStdString(c.name))
+                 .arg(c.rect.x0)
+                 .arg(c.rect.y0)
+                 .arg(c.rect.dx())
+                 .arg(c.rect.dy())
+                 .arg(it == widgets_.end() ? " [no widget]" : "");
     }
     return s;
 }

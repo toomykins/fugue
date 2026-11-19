@@ -38,6 +38,8 @@ tests/data/gifanim/
 tests/glidecarry_test.cpp
 tests/data/glide-world/
 tests/data/glidenpc-world/
+tests/glidezero_test.cpp
+tests/data/glide-zero/
 tests/ddmiops_test.cpp
 tests/data/ddmiops-world/
 tests/holomap_test.cpp
@@ -84,6 +86,8 @@ tests/aistatic_test.cpp
 tests/data/aistatic-world/
 tests/passmouse_test.cpp
 tests/data/passmouse-world/
+tests/data/popupmenu-world/
+tests/menulist_test.cpp
 tests/verboverride_test.cpp
 tests/data/verboverride-world/
 tests/verbrank_test.cpp
@@ -102,6 +106,7 @@ tests/scene_cache_test.cpp
 shell/tests/browse_pages.h
 shell/tests/browse_test.cpp
 shell/tests/input_test.cpp
+shell/tests/live_skin.h
 shell/tests/paste_scan_test.cpp
 shell/tests/prompt_skin.h
 shell/tests/prompt_test.cpp

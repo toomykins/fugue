@@ -1,5 +1,6 @@
-// skin/skinfeed.h - wires the s2c skin frames (0x00af text, 0x00ef resource id + the .dmf resource, 0x00a8
-// winset, 0x00a7 output to a winclone()d window, 0x00b1 winclone, 0x00b2 winshow) into a LiveSkin and answers 0x00a9 winget queries from it. Pure C++, session-thread use.
+// skin/skinfeed.h - wires the s2c skin frames (SkinText, SkinResource + the .dmf resource it names, Winset, Output to a
+// winclone()d window, WinClone, WinShow) into a LiveSkin and answers Winget queries from it. Pure C++, session-thread
+// use.
 //
 // Reply rules:
 //   * every winget gets a reply (the DM proc is parked on it); the empty string is the refusal encoding.
@@ -10,9 +11,10 @@
 //     is the same as no flag (the named-property arm). Only winexists() adds a flag byte. A wildcard control (* ?) is
 //     not answerable by winexists. A browse() popup answers MAIN once a skin is loaded (a name the skin declares answers
 //     that control's type instead), and even with no skin once the hold's deadline passes (liveskin.h setPopups).
-//   * the skin text wins over the skin resource. A 0x00af with an empty body or an empty dmf is "this world has no
-//     skin" (stock applies a null skin there): the default skin (setDefaultSkin), unless the 0x00ef before it named a
-//     skin resource (inferred: stock never sends that pair, and its 0x00af handler applies a null skin regardless).
+//   * the skin text wins over the skin resource. A SkinText with an empty body or an empty dmf is "this world has no
+//     skin" (stock applies a null skin there): the default skin (setDefaultSkin), unless the SkinResource before it
+//     named a skin resource (inferred: stock never sends that pair, and its SkinText handler applies a null skin
+//     regardless).
 //   * the skin a session brings (the world's, or the default one when it sends none) is compared with the loaded one.
 //     The same skin, sent again by a later session (a reconnect, a reboot, a link() to any world), changes nothing:
 //     stock DreamSeeker keeps every control's state, runtime window and macro across it, so vg's credits keep rolling.
@@ -36,6 +38,7 @@
 #include <set>
 #include "fugue_version.h"
 #include "net/bytes.h"
+#include "proto/msg.h"
 #include "skin/liveskin.h"
 
 namespace fugue::skin {
@@ -47,10 +50,10 @@ struct WingetQuery {
     uint8_t flag = 0;
 };
 
-// body of s2c 0x00a9: [control\0][prop\0][reqid u32][flag u8]?  false = malformed.
+// body of S2C::Winget: [control\0][prop\0][reqid u32][flag u8]?  false = malformed.
 bool parseWingetBody(ByteSpan body, WingetQuery& q);
 
-constexpr int64_t kWingetDeferBudgetMs = 3000;   // the winget hold deadline
+constexpr int64_t kWingetDeferBudgetMs = 3000;  // the winget hold deadline
 
 // The disclosure parameter (client-wide: asked with a null control) and this build's answer to it, the same text
 // `fugue-qt --version` prints. A FUGUE_RELEASE session worker overrides it with setClientVersion(kVersionRelease).
@@ -62,14 +65,18 @@ public:
     using Reply = std::function<void(uint32_t reqId, const std::string& value)>;
     explicit SkinFeed(std::shared_ptr<LiveSkin> live) : live_(std::move(live)) {}
 
-    void onFrame(uint16_t type, ByteSpan body);                                   // 0x00af 0x00ef 0x00a8 0x00a7 0x00b1 0x00b2
-    void onResource(uint32_t id, const std::string& name, ByteSpan data);          // every verified resource
+    // SkinText, SkinResource, Winset, Output, WinClone, WinShow; other types are ignored.
+    void onFrame(uint16_t type, ByteSpan body);
+    void onResource(uint32_t id, const std::string& name, ByteSpan data);  // every verified resource
     // Browse windows currently open (names), for winexists / popup winsets. Cheap; call each tick.
     void setBrowseNames(std::set<std::string> names) { live_->setPopups(std::move(names)); }
     // What winget(src, null, "fugue-version") answers (see the header). Default kFugueVersionValue.
     void setClientVersion(std::string v) { version_ = std::move(v); }
     // The skin for a world that sends none (app/defaultskin.h). Empty = such a world leaves the loaded skin alone.
     void setDefaultSkin(std::string dmf) { defaultSkin_ = std::move(dmf); }
+
+    // Receives each command a world winset(src, null, "command=...") asks the client to run (LiveSkin WinsetResult).
+    void setCommandSink(std::function<void(const std::string&)> f) { commandSink_ = std::move(f); }
 
     // Answer now when ready, else hold. `reply` is invoked synchronously for an immediate answer.
     void submitWinget(const WingetQuery& q, int64_t nowMs, const Reply& reply);
@@ -80,22 +87,28 @@ public:
     // The answer for a query against the live skin, without holding.
     std::string answer(const WingetQuery& q) const;
 
-    struct Counters { uint64_t winsets = 0, wingets = 0, heldTotal = 0, timedOut = 0, skinLoads = 0; };
+    struct Counters {
+        uint64_t winsets = 0, wingets = 0, heldTotal = 0, timedOut = 0, skinLoads = 0;
+    };
     const Counters& counters() const { return c_; }
     LiveSkin& live() { return *live_; }
     const std::string& lastLoadError() const { return loadErr_; }
 
 private:
-    struct Held { WingetQuery q; int64_t deadline; };
+    struct Held {
+        WingetQuery q;
+        int64_t deadline;
+    };
     void loadText(const std::string& text);
     std::shared_ptr<LiveSkin> live_;
     std::deque<Held> held_;
-    std::map<uint32_t, std::string> dmfRes_;   // small .dmf resources by verified id
+    std::map<uint32_t, std::string> dmfRes_;  // small .dmf resources by verified id
     uint32_t skinResId_ = 0xffffffffu;
     bool textLoaded_ = false, resLoaded_ = false;
     std::string loadErr_;
     std::string version_ = kFugueVersionValue;
     std::string defaultSkin_;
+    std::function<void(const std::string&)> commandSink_;
     Counters c_;
 };
 

@@ -10,8 +10,8 @@ namespace fugue {
 
 struct MapCadence {
     using Clock = std::chrono::steady_clock;
-    static constexpr std::chrono::milliseconds kMotion{16};   // ~60 fps
-    static constexpr std::chrono::milliseconds kIdle{50};     // icon_state steps in deciseconds, so 20 fps is frame-exact
+    static constexpr std::chrono::milliseconds kMotion{16};  // ~60 fps
+    static constexpr std::chrono::milliseconds kIdle{50};  // icon_state steps in deciseconds, so 20 fps is frame-exact
 
     Clock::time_point next{}, last{};
     bool idle = false;

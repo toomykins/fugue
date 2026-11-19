@@ -22,7 +22,6 @@
 #include <unordered_map>
 
 #include "model/gomath.h"
-#include "model/json.h"
 #include "model/statpanel.h"
 #include "net/resource.h"
 #include "net/textmacro.h"
@@ -34,8 +33,6 @@
 
 namespace fugue::render {
 
-using model::JVal;
-
 namespace {
 
 int g_sceneMutation = 0;
@@ -45,7 +42,8 @@ int floorDivI(int a, int b) { return a >= 0 ? a / b : -((-a + b - 1) / b); }
 constexpr uint32_t kNoIcon = 0xFFFF;
 constexpr int kDefaultViewRange = 7;
 constexpr int kMinAbsolutePlane = -16384;
-constexpr int kFloatPlane = -32767;        // FLOAT_PLANE
+constexpr int kFloatPlane = -32767;  // FLOAT_PLANE
+constexpr double kFlyLayer = 5;      // FLY_LAYER
 constexpr uint32_t kSightMobs = 1u << 2, kSightObjs = 1u << 3, kSightTurfs = 1u << 4;
 constexpr int kDirEast = 4, kDirWest = 8;
 
@@ -59,7 +57,7 @@ double resolvePlane(double plane, double base) {
     return plane;
 }
 
-// The subset of an appearance the renderer reads, parsed from the model's canonical JSON.
+// The subset of an appearance the renderer reads, built from the model's decoded record.
 struct Ap {
     uint32_t iconResID = kNoIcon;
     std::string iconState;
@@ -72,46 +70,53 @@ struct Ap {
     int cr = 0, cg = 0, cb = 0, ca = 0;
     int pixelX = 0, pixelY = 0, pixelW = 0, pixelZ = 0;
     std::string screenLoc, renderSource, maptext, name;
-    int mtW = 0, mtH = 0, mtX = 0, mtY = 0;   // maptext_width / _height / _x / _y
+    int mtW = 0, mtH = 0, mtX = 0, mtY = 0;  // maptext_width / _height / _x / _y
     std::vector<uint32_t> overlays, underlays;
     bool hasTransform = false;
-    std::array<float, 6> transform{1, 0, 0, 0, 1, 0};   // the six float32 cells, DM matrix(a,b,c,d,e,f) order
+    std::array<float, 6> transform{1, 0, 0, 0, 1, 0};  // the six float32 cells, DM matrix(a,b,c,d,e,f) order
     bool hasPixelOffsets = false;
     int invisibility = 0;
     bool hasBlend = false;
     int blend = 0;
     bool hasColorMatrix = false;
-    ColorMatrixPtr cmat;               // 20 float32 -> float64
-    std::string renderTarget;          // the SECOND 0x1000 cstr (RenderTarget)
-    struct Flt { int type = 0; uint32_t mask = 0; Bytes params; };
-    std::vector<Flt> filters;          // the 0x0800 chain, params raw in ascending param-bit order
+    ColorMatrixPtr cmat;       // 20 float32 -> float64
+    std::string renderTarget;  // the SECOND 0x1000 cstr (RenderTarget)
+    struct Flt {
+        int type = 0;
+        uint32_t mask = 0;
+        Bytes params;
+        std::string str;  // the 0x200 cstr (render_source)
+    };
+    std::vector<Flt> filters;  // the 0x0800 chain, params raw in ascending param-bit order
 
     // MouseOpacity: a 2-bit field at bits 12-13, rotated so the default (1) encodes as 0.
     int mouseOpacity() const { return int(((flags >> 12) + 1) & 3); }
-    bool opaque() const { return flags & 1; }                       // Opaque
-    bool mouseWheel() const { return flags & 0x100000; }            // declares MouseWheel or MouseMove
-    bool mouseHover() const { return flags & 0x800; }               // declares a hover proc (Entered/Exited/Move/Wheel)
-    bool mouseMove() const { return flags & 0x80000; }              // declares MouseMove
-    bool dirValid() const { return flags & 0x200; }                 // DirValid (ApprDirValid)
-    bool resetColor() const { return (flags >> 21) & 2; }           // DM appearance flag: reset colour
-    bool resetAlpha() const { return (flags >> 21) & 4; }           // DM appearance flag: reset alpha
+    bool opaque() const { return flags & 1; }              // Opaque
+    bool mouseWheel() const { return flags & 0x100000; }   // declares MouseWheel or MouseMove
+    bool mouseHover() const { return flags & 0x800; }      // declares a hover proc (Entered/Exited/Move/Wheel)
+    bool mouseMove() const { return flags & 0x80000; }     // declares MouseMove
+    bool dirValid() const { return flags & 0x200; }        // DirValid (ApprDirValid)
+    bool resetColor() const { return (flags >> 21) & 2; }  // DM appearance flag: reset colour
+    bool resetAlpha() const { return (flags >> 21) & 4; }  // DM appearance flag: reset alpha
+    bool keepTogether() const { return ((flags >> 21) & 32) != 0; }  // DM appearance flag KEEP_TOGETHER
+    bool keepApart() const { return ((flags >> 21) & 64) != 0; }     // DM appearance flag KEEP_APART
     bool planeMaster() const { return ((flags >> 21) & 128) != 0; }
     bool passMouse() const { return ((flags >> 21) & 1024) != 0; }  // DM appearance flag PASS_MOUSE
     // image.override: bit 0x40000 of the low (client-internal) flags word, set on images with override = 1.
     bool overrides() const { return (flags & 0x40000) != 0; }
 };
 
-} // namespace
+}  // namespace
 
 struct SceneCache::Impl {
     struct Entry {
         uint32_t id;
-        std::string json;
-        std::shared_ptr<const Ap> parsed; // null also caches a malformed record
+        proto::Appearance fields;  // what `parsed` was built from: a recycled id with new fields misses
+        std::shared_ptr<const Ap> parsed;
         size_t bytes;
     };
     size_t maxBytes, maxEntries, bytes = 0;
-    std::list<Entry> recent; // MRU first; shared parsed values keep active assemblers safe during eviction
+    std::list<Entry> recent;  // MRU first; shared parsed values keep active assemblers safe during eviction
     std::unordered_map<uint32_t, std::list<Entry>::iterator> index;
 
     Impl(size_t b, size_t n) : maxBytes(b), maxEntries(n) {}
@@ -120,19 +125,36 @@ struct SceneCache::Impl {
         index.erase(it->id);
         recent.erase(it);
     }
-    bool find(uint32_t id, const std::string& json, std::shared_ptr<const Ap>& result) {
+    bool find(uint32_t id, const proto::Appearance& fields, std::shared_ptr<const Ap>& result) {
         auto found = index.find(id);
         if (found == index.end()) return false;
         auto it = found->second;
-        if (it->json != json) { erase(it); return false; }
+        if (it->fields != fields) {
+            erase(it);
+            return false;
+        }
         result = it->parsed;
         recent.splice(recent.begin(), recent, it);
         return true;
     }
-    void insert(uint32_t id, const std::string& json, const std::shared_ptr<const Ap>& parsed) {
-        if (!maxEntries || json.size() > maxBytes) return;
-        Entry entry{id, json, parsed, 0};
-        size_t size = sizeof(Entry) + entry.json.capacity() + 1;
+    // The heap a record holds, besides sizeof(proto::Appearance).
+    static size_t heapBytes(const proto::Appearance& f) {
+        size_t n = 0;
+        for (const auto* s :
+             {&f.name, &f.suffix, &f.iconState, &f.text, &f.maptext, &f.screenLoc, &f.renderSource, &f.renderTarget})
+            n += s->capacity() + 1;
+        n +=
+            f.verbs.capacity() * sizeof(uint16_t) + (f.overlays.capacity() + f.underlays.capacity()) * sizeof(uint32_t);
+        n += f.vars.capacity() * sizeof(proto::Appearance::Var) +
+             f.filters.capacity() * sizeof(proto::Appearance::Filter);
+        for (const auto& v : f.vars) n += v.data.capacity();
+        for (const auto& flt : f.filters) n += flt.params.capacity() + flt.str.capacity() + 1;
+        return n;
+    }
+    void insert(uint32_t id, const proto::Appearance& fields, const std::shared_ptr<const Ap>& parsed) {
+        if (!maxEntries) return;
+        Entry entry{id, fields, parsed, 0};
+        size_t size = sizeof(Entry) + heapBytes(entry.fields);
         if (parsed) {
             // Keep dynamic-field accounting in sync with Ap; fixed fields are covered by sizeof(Ap).
             const auto& a = *parsed;
@@ -141,22 +163,31 @@ struct SceneCache::Impl {
                 size += s->capacity() + 1;
             size += (a.overlays.capacity() + a.underlays.capacity()) * sizeof(uint32_t);
             size += a.filters.capacity() * sizeof(Ap::Flt);
-            for (const auto& f : a.filters) size += f.params.capacity();
+            for (const auto& f : a.filters) size += f.params.capacity() + f.str.capacity();
             if (a.cmat) size += sizeof(ColorMatrix);
         }
         if (size > maxBytes) return;
-        while (!recent.empty() && (recent.size() >= maxEntries || size > maxBytes - bytes)) erase(std::prev(recent.end()));
+        while (!recent.empty() && (recent.size() >= maxEntries || size > maxBytes - bytes))
+            erase(std::prev(recent.end()));
         entry.bytes = size;
         recent.push_front(std::move(entry));
-        try { index.emplace(id, recent.begin()); }
-        catch (...) { recent.pop_front(); throw; }
+        try {
+            index.emplace(id, recent.begin());
+        } catch (...) {
+            recent.pop_front();
+            throw;
+        }
         bytes += size;
     }
 };
 
 SceneCache::SceneCache(size_t maxBytes, size_t maxEntries) : impl_(std::make_unique<Impl>(maxBytes, maxEntries)) {}
 SceneCache::~SceneCache() = default;
-void SceneCache::clear() { impl_->index.clear(); impl_->recent.clear(); impl_->bytes = 0; }
+void SceneCache::clear() {
+    impl_->index.clear();
+    impl_->recent.clear();
+    impl_->bytes = 0;
+}
 size_t SceneCache::retainedBytes() const { return impl_->bytes; }
 size_t SceneCache::entries() const { return impl_->recent.size(); }
 
@@ -167,8 +198,8 @@ struct RApp {
     const Icon* icon = nullptr;
     std::string state;
     int dir = 0;
-    bool dirValid = false;   // dir is its OWN, not the parent's (applyOverlayDir)
-    bool underlay = false;   // placed BEFORE its parent's own icon (placeApp, flatten)
+    bool dirValid = false;  // dir is its OWN, not the parent's (applyOverlayDir)
+    bool underlay = false;  // placed BEFORE its parent's own icon (placeApp, flatten)
     int frame = 0;
     bool hasTint = false;
     uint8_t tr = 255, tg = 255, tb = 255;
@@ -178,18 +209,25 @@ struct RApp {
     bool hasXform = false;
     std::array<float, 6> xf{1, 0, 0, 0, 1, 0};
     std::vector<RApp> overlays;
-    uint8_t blend = 0;                                   // a BlendMode
+    uint8_t blend = 0;  // a BlendMode
     ColorMatrixPtr cmat;
-    std::string relay;                                   // render_source: a relay draws a slate, not an icon
-    std::string target;                                  // render_target: relays of this name draw this atom's image
-    bool passMouse = false;                              // PASS_MOUSE: a relay's pixels answer for its source atom
-    std::string maptext;                                 // drawn by placeApp in a box of mtW x mtH at offset mtX, mtY
+    std::string relay;       // render_source: a relay draws a slate, not an icon
+    std::string target;      // render_target: relays of this name draw this atom's image
+    bool passMouse = false;  // PASS_MOUSE: a relay's pixels answer for its source atom
+    std::string maptext;     // drawn by placeApp in a box of mtW x mtH at offset mtX, mtY
     int mtW = 0, mtH = 0, mtX = 0, mtY = 0;
-    int hitAtom = -1;   // HitScene::atoms index of the TOP-LEVEL atom this appearance belongs to (hit collection only)
-    bool hasParticles = false;   // the atom carries a particle set (model::World::particles), drawn over its own icon
+    int hitAtom = -1;  // HitScene::atoms index of the TOP-LEVEL atom this appearance belongs to (hit collection only)
+    bool hasParticles = false;  // the atom carries a particle set (model::World::particles), drawn over its own icon
     uint32_t particleKey = 0;
-    bool borrowsHit = false;   // a client.image: hitAtom is its PARENT's, whose position/facing it must not overwrite
-    bool holdsCell = false;    // a map atom's own appearance: drawing nothing, it still has a footprint (Placed::footprint)
+    bool borrowsHit = false;  // a client.image: hitAtom is its PARENT's, whose position/facing it must not overwrite
+    bool keepTogether =
+        false;  // KEEP_TOGETHER: this appearance and its overlays are composed as one image (placeKeptTogether)
+    bool keepApart = false;  // KEEP_APART: an overlay of a KEEP_TOGETHER parent that is drawn on its own
+    bool holdsCell =
+        false;  // a map atom's own appearance: drawing nothing, it still has a footprint (Placed::footprint)
+    bool hitOnly =
+        false;  // a client.image drawn inside its parent's KEEP_TOGETHER group: here it only answers the mouse
+    std::vector<RApp> groupImages;  // a KEEP_TOGETHER parent's client.images, drawn in its group and never hit there
 };
 
 using Tile = std::vector<RApp>;
@@ -200,15 +238,17 @@ struct Placed {
     double sortLayer = 0;
     int seq = 0;
     int atom = -1;
-    bool hitVisible = true;   // false for layers the hit sidecar never saw (blackness, group overlays)
-    bool screen = false;   // a client.screen layer (drawKey)
-    int cell = -1;         // a map layer's view cell, mapCell(x, y) (drawKey)
-    DrawKey key;           // set by compositePlanes
-    HitFrame frame;           // the owning atom's icon frame (hittest.h), for icon-x / vis-x
-    bool own = false;         // the atom's own icon, not an overlay/underlay (HitLayer::own)
-    bool maptext = false;     // a maptext box (HitLayer::maptext)
-    bool footprint = false;   // HitLayer::footprint: hit sidecar only, never drawn
-    bool passMouse = false;   // HitLayer::passMouse
+    bool hitVisible = true;  // false for layers the hit sidecar never saw (blackness, group overlays)
+    bool screen = false;     // a client.screen layer (drawKey)
+    int cell = -1;           // a map layer's view cell, mapCell(x, y) (drawKey)
+    DrawKey key;             // set by compositePlanes
+    HitFrame frame;          // the owning atom's icon frame (hittest.h), for icon-x / vis-x
+    bool own = false;        // the atom's own icon, not an overlay/underlay (HitLayer::own)
+    bool maptext = false;    // a maptext box (HitLayer::maptext)
+    bool footprint = false;  // HitLayer::footprint: hit sidecar only, never drawn
+    bool noDraw =
+        false;  // a part of a kept-together image: answers the mouse as itself, drawn through the group's layer
+    bool passMouse = false;  // HitLayer::passMouse
 };
 
 // A collected PLANE_MASTER: its plane, how it composites, and the overlays that join its group.
@@ -224,7 +264,10 @@ struct MasterRec {
 
 // The colour/blend half of a DrawLayer, from the appearance it draws.
 void setFx(DrawLayer& l, const RApp& a) {
-    l.hasTint = a.hasTint; l.tintR = a.tr; l.tintG = a.tg; l.tintB = a.tb;
+    l.hasTint = a.hasTint;
+    l.tintR = a.tr;
+    l.tintG = a.tg;
+    l.tintB = a.tb;
     l.alpha = a.alpha;
     l.blend = a.blend;
     l.cmat = a.cmat;
@@ -244,33 +287,37 @@ public:
     bool runSecondary(std::string_view mapName, DrawList& out, std::string* err);
 
 private:
-    std::string mapName_;             // the map control being drawn: "" = the default map
+    std::string mapName_;  // the map control being drawn: "" = the default map
     const model::Session& s_;
     const model::World& w_;
     ResStore& res_;
     int64_t clockNs_;
-    int scrollX_ = 0, scrollY_ = 0;   // eye scroll offset at clockNs_, set by buildGrid
+    int scrollX_ = 0, scrollY_ = 0;  // eye scroll offset at clockNs_, set by buildGrid
     // What the map layers are moved by (the eye scroll plus the client.pixel_* view offset, image pixels: +x right,
     // +y down), and the ring of tiles beyond the view drawn so the move reveals no gutter. Set by buildGrid / run.
     int shiftX_ = 0, shiftY_ = 0, ring_ = 0;
     SceneStats& st_;
-    std::string mapStyle_;            // the default map control's `style`: maptext's sheet (render/maptextpaint.h)
+    std::string mapStyle_;  // the default map control's `style`: maptext's sheet (render/maptextpaint.h)
     std::string err_;
     bool failed_ = false;
-    std::shared_ptr<HitScene> hit_;   // non-null => collect the hit-test sidecar
-    int curAtom_ = -1;                // placeApp: the top-level atom being placed
-    HitFrame curFrame_;               // placeApp: that atom's icon frame, shared by all its layers
+    std::shared_ptr<HitScene> hit_;  // non-null => collect the hit-test sidecar
+    int curAtom_ = -1;               // placeApp: the top-level atom being placed
+    HitFrame curFrame_;              // placeApp: that atom's icon frame, shared by all its layers
     int newHitAtom(uint32_t appid, uint8_t kind, uint32_t ref, bool screen);
-    void finishHit(DrawList& dl);   // HitScene::anyHover, and the scene handed to the list
+    void finishHit(DrawList& dl);  // HitScene::anyHover, and the scene handed to the list
 
     SceneCache::Impl* cache_;
-    std::unordered_map<uint32_t, std::shared_ptr<const Ap>> apCache_; // pins values even if the bounded cache evicts them
+    std::unordered_map<uint32_t, std::shared_ptr<const Ap>>
+        apCache_;  // pins values even if the bounded cache evicts them
     struct SpriteKey {
-        const Icon* ic; int state, slot, frame;
-        bool operator<(const SpriteKey& o) const { return std::tie(ic, state, slot, frame) < std::tie(o.ic, o.state, o.slot, o.frame); }
+        const Icon* ic;
+        int state, slot, frame;
+        bool operator<(const SpriteKey& o) const {
+            return std::tie(ic, state, slot, frame) < std::tie(o.ic, o.state, o.slot, o.frame);
+        }
     };
     std::map<SpriteKey, SpritePtr> spriteCache_;
-    std::map<std::pair<int, int>, SpritePtr> blankCache_;   // transparent w x h sprites for HitLayer::footprint
+    std::map<std::pair<int, int>, SpritePtr> blankCache_;  // transparent w x h sprites for HitLayer::footprint
 
     // grid
     int maxX_ = 0, maxY_ = 0;
@@ -290,12 +337,23 @@ private:
     std::vector<MasterRec> masters_;
     // Atom render targets (screen objects and map atoms, not plane masters) by name, at their own origin.
     // A screen object's target also keeps its screen_loc position (HitFrame::visLeft/visBottom) and its hit atom.
-    struct Target { RApp app; bool hasOrigin = false; int left = 0, bottom = 0; };
+    struct Target {
+        RApp app;
+        bool hasOrigin = false;
+        int left = 0, bottom = 0;
+    };
     std::map<std::string, Target> targets_;
-    std::map<uint32_t, int> screenTargetHit_;   // client.screen id -> its hit atom, shared with placeHud
+    std::map<uint32_t, int> screenTargetHit_;  // client.screen id -> its hit atom, shared with placeHud
     int relayDepth_ = 0;
+    std::vector<Placed>* apartSink_ =
+        nullptr;  // where a KEEP_APART appearance nested in a kept-together group is placed
 
-    void fail(const std::string& e) { if (!failed_) { failed_ = true; err_ = e; } }
+    void fail(const std::string& e) {
+        if (!failed_) {
+            failed_ = true;
+            err_ = e;
+        }
+    }
 
     const Ap* ap(uint32_t appid);
     const Icon* iconFor(const Ap& a);
@@ -307,31 +365,39 @@ private:
     static void applyOverlayDir(RApp& ov, int dir);
     int frameFor(const Icon* ic, const std::string& state, int64_t startNs = 0) const;
     void applyIconAnimation(RApp& a, int64_t startNs = 0) const;
-    int64_t tileIconStart(int x, int y, int z) const;   // 0-based cell
+    int64_t tileIconStart(int x, int y, int z) const;  // 0-based cell
     int64_t hudIconStart(uint32_t ref) const;
     void countUnmodeled(const Ap& a);
 
     SpritePtr sprite(const RApp& a, bool& drawable);
     bool drawableState(const RApp& a, int& stateIdx);
 
-    void visChildren(const std::vector<uint32_t>& children, std::set<uint32_t>& visited, std::vector<RApp>& out, const RApp* holder);
+    void visChildren(const std::vector<uint32_t>& children, std::set<uint32_t>& visited, std::vector<RApp>& out,
+                     const RApp* holder);
 
     // client.images (per-movable images, turf images, image vis children), read once per frame.
-    struct ImgRec { uint32_t id = 0, appid = 0, locRef = 0, cell = 0; uint8_t locKind = 0; std::vector<uint32_t> visKids; };
+    struct ImgRec {
+        uint32_t id = 0, appid = 0, locRef = 0, cell = 0;
+        uint8_t locKind = 0;
+        std::vector<uint32_t> visKids;
+    };
     std::vector<ImgRec> imgs_;
-    std::unordered_map<uint32_t, std::vector<size_t>> imgsOn_;   // movable key -> imgs_ indices, ascending image id
+    std::unordered_map<uint32_t, std::vector<size_t>> imgsOn_;  // movable key -> imgs_ indices, ascending image id
     void collectImages();
     bool imageApp(const ImgRec& im, RApp& out);
-    bool imagesOn(uint32_t key, const RApp& parent, std::vector<RApp>& out);
+    bool imagesOn(uint32_t key, const RApp& parent, std::vector<RApp>& out, std::vector<RApp>* grouped = nullptr);
     void visContents(uint32_t id, std::set<uint32_t>& visited, std::vector<RApp>& out, const RApp* holder);
 
     // world
     bool buildGrid(int& originX, int& originY, int& winW, int& winH, int& extentW, int& extentH, int& vx0, int& vy0);
     void tileSize(int& tw, int& th) const;
-    void placeApp(const RApp& a, int baseX, int baseY, int tileH, double parentPlane, double parentLayer, bool hasParent, std::vector<Placed>& out,
-                  const std::array<float, 6>* inheritedXf = nullptr);
+    void placeApp(const RApp& a, int baseX, int baseY, int tileH, double parentPlane, double parentLayer,
+                  bool hasParent, std::vector<Placed>& out, const std::array<float, 6>* inheritedXf = nullptr);
+    bool placeKeptTogether(const RApp& a, int baseX, int baseY, int tileH, double parentPlane, double parentLayer,
+                           bool hasParent, std::vector<Placed>& out, const std::array<float, 6>* inheritedXf);
     void markParticles(RApp& a, uint32_t key) const;
-    void placeParticles(const RApp& a, int iconX, int iconY, int iconW, int iconH, double plane, double layer, std::vector<Placed>& out);
+    void placeParticles(const RApp& a, int iconX, int iconY, int iconW, int iconH, double plane, double layer,
+                        std::vector<Placed>& out);
     bool animatedApp(uint32_t id, const model::Atom& m, RApp& out);
     void flickOverride(uint32_t id, RApp& out);
     bool tweenChain(const model::Atom::Chain& ch, uint32_t settled, RApp& out);
@@ -342,17 +408,25 @@ private:
     void placeHud(int cols, int rows, int tw, int th, std::vector<Placed>& placed);
     bool screenApp(uint32_t id, uint32_t slotAppid, RApp& ra);
     void collectTargets(int cols, int rows, int tw, int th);
-    void placeRelayed(const RApp& relay, const Target& src, int baseX, int baseY, int tileH, double plane, double layer, std::vector<Placed>& out);
+    void placeRelayed(const RApp& relay, const Target& src, int baseX, int baseY, int tileH, double plane, double layer,
+                      std::vector<Placed>& out);
     void collectMasters(uint32_t appid, std::set<uint32_t>& seen);
-    void appendBlackness(std::vector<Placed>& placed, int originX, int originY, int extentW, int extentH, int tw, int th);
+    void appendBlackness(std::vector<Placed>& placed, int originX, int originY, int extentW, int extentH, int tw,
+                         int th);
     bool compositePlanes(std::vector<Placed>& placed, DrawList& dl, int th);
     bool mastersFor(uint32_t appid);
-    struct FlatLayer { DrawLayer l; double plane, layer; };
+    struct FlatLayer {
+        DrawLayer l;
+        double plane, layer;
+    };
     void flatten(const RApp& a, int w, int h, std::vector<FlatLayer>& out, bool bottom = false);
+
 public:
     bool appearanceIcon(uint32_t appid, int dir, int& w, int& h, std::vector<uint8_t>& rgba, int64_t startNs = 0);
+
 private:
-    void placeWarpedScreenObj(const RApp& ra, double anchorX, double anchorBottomY, int canvasW, int canvasH, std::vector<Placed>& placed);
+    void placeWarpedScreenObj(const RApp& ra, double anchorX, double anchorBottomY, int canvasW, int canvasH,
+                              std::vector<Placed>& placed);
 };
 
 // ---- appearances -----------------------------------------------------------------------------
@@ -361,9 +435,13 @@ const Ap* Assembler::ap(uint32_t appid) {
     auto c = apCache_.find(appid);
     if (c != apCache_.end()) return c->second.get();
     auto it = w_.appearances.find(appid);
-    if (it == w_.appearances.end()) { apCache_[appid] = nullptr; return nullptr; }
+    if (it == w_.appearances.end()) {
+        apCache_[appid] = nullptr;
+        return nullptr;
+    }
     std::shared_ptr<const Ap> cached;
-    if (cache_ && cache_->find(appid, it->second.fieldsJson, cached)) {
+    const proto::Appearance& v = it->second.fields;
+    if (cache_ && cache_->find(appid, v, cached)) {
         ++st_.appearanceCacheHits;
         const Ap* result = cached.get();
         apCache_[appid] = std::move(cached);
@@ -375,87 +453,78 @@ const Ap* Assembler::ap(uint32_t appid) {
         std::chrono::steady_clock::time_point start;
         ~Timer() {
             if (stats.profilePreparation)
-                stats.appearanceBuildMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
+                stats.appearanceBuildMs +=
+                    std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
         }
     } timer{st_, st_.profilePreparation ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{}};
-    JVal v;
-    try { v = model::parseJson(it->second.fieldsJson); }
-    catch (const std::runtime_error&) { // malformed JSON is deterministic; allocation failures are not
-        apCache_[appid] = nullptr;
-        if (cache_) cache_->insert(appid, it->second.fieldsJson, nullptr);
-        return nullptr;
-    }
-    catch (const std::exception&) { apCache_[appid] = nullptr; return nullptr; }
     auto a = std::make_shared<Ap>();
-    a->iconResID = v["iconResID"].u32();
-    a->iconState = v["iconState"].bytesOrStr();
-    a->dir = int(v["dir"].i());
-    a->flags = v["appearanceFlags"].u32();
-    uint32_t lb = v["layer"].f32bits();
+    a->iconResID = v.iconResID;
+    a->iconState = v.iconState;
+    a->dir = v.dir;
+    a->flags = v.appearanceFlags;
     float lf;
-    std::memcpy(&lf, &lb, 4);
+    std::memcpy(&lf, &v.layerBits, 4);
     a->layer = double(lf);
-    a->hasPlane = v["hasPlane"].b;
-    a->plane = int(v["plane"].i());
-    a->hasColor = v["hasColor"].b;
-    a->cr = int(v["colorR"].i()); a->cg = int(v["colorG"].i()); a->cb = int(v["colorB"].i()); a->ca = int(v["colorA"].i());
-    a->pixelX = int(v["pixelX"].i()); a->pixelY = int(v["pixelY"].i());
-    a->pixelW = int(v["pixelW"].i()); a->pixelZ = int(v["pixelZ"].i());
-    a->screenLoc = v["screenLoc"].bytesOrStr();
-    a->renderSource = v["renderSource"].bytesOrStr();
-    a->maptext = net::plainText(v["maptext"].bytesOrStr());
-    a->mtW = int(v["maptextW"].i()); a->mtH = int(v["maptextH"].i());
-    a->mtX = int(v["maptextX"].i()); a->mtY = int(v["maptextY"].i());
+    a->hasPlane = v.hasPlane;
+    a->plane = v.plane;
+    a->hasColor = v.hasColor;
+    a->cr = v.color[0];
+    a->cg = v.color[1];
+    a->cb = v.color[2];
+    a->ca = v.color[3];
+    a->pixelX = v.pixelX;
+    a->pixelY = v.pixelY;
+    a->pixelW = v.pixelW;
+    a->pixelZ = v.pixelZ;
+    a->screenLoc = v.screenLoc;
+    a->renderSource = v.renderSource;
+    a->maptext = net::plainText(v.maptext);
+    a->mtW = v.maptextW;
+    a->mtH = v.maptextH;
+    a->mtX = v.maptextX;
+    a->mtY = v.maptextY;
     // Stripped of BYOND's embedded text-macro markers here, once, so every reader of HitAtom::name (status bar, verb menu,
     // local menu) gets the plain name. A name such as "\improper Scrubbers pipe" arrives with a marker prefix from stock
     // DreamDaemon, and stock DreamSeeker shows the plain name in its status bar.
-    a->name = model::plainAtomName(v["name"].bytesOrStr());
-    for (const JVal& o : v["overlays"].a) a->overlays.push_back(o.u32());
-    for (const JVal& o : v["underlays"].a) a->underlays.push_back(o.u32());
-    a->hasTransform = v["hasTransform"].b;
-    a->hasPixelOffsets = v["hasPixelOffsets"].b;
-    {
-        const auto& tj = v["transform"].a;
-        for (size_t k = 0; k < 6 && k < tj.size(); k++) {
-            uint32_t b = tj[k].f32bits();
-            std::memcpy(&a->transform[k], &b, 4);
-        }
-    }
-    a->renderTarget = v["renderTarget"].bytesOrStr();
-    for (const JVal& f : v["filters"].a) {
+    a->name = model::plainAtomName(v.name);
+    a->overlays = v.overlays;
+    a->underlays = v.underlays;
+    a->hasTransform = v.hasTransform;
+    a->hasPixelOffsets = v.hasPixelOffsets;
+    for (size_t k = 0; k < 6; k++) std::memcpy(&a->transform[k], &v.transformBits[k], 4);
+    a->renderTarget = v.renderTarget;
+    for (const proto::Appearance::Filter& f : v.filters) {
         Ap::Flt ft;
-        ft.type = int(f["type"].i());
-        ft.mask = f["paramMask"].u32();
-        if (auto d = hexDecode(f["params"].bytesOrStr())) ft.params = *d;
+        ft.type = f.type;
+        ft.mask = f.paramMask;
+        ft.params = f.params;
+        ft.str = f.str;
         a->filters.push_back(std::move(ft));
     }
-    for (const JVal& var : v["vars"].a) {
-        int bit = int(var["bit"].i());
-        auto data = hexDecode(var["data"].bytesOrStr());
-        if (bit == 0x0004 && data && !data->empty()) a->invisibility = (*data)[0];   // VarInvisibility
-        if (bit == 0x0100 && data && data->size() == 1) { a->hasBlend = true; a->blend = (*data)[0]; }   // VarBlendMode
-        if (bit == 0x0400 && data && data->size() == 80) {   // VarColorMatrix
-            a->hasColorMatrix = true;
-            auto cm = std::make_shared<ColorMatrix>();
-            for (size_t k = 0; k < 20; k++) {
-                uint32_t b = uint32_t((*data)[k * 4]) | uint32_t((*data)[k * 4 + 1]) << 8 | uint32_t((*data)[k * 4 + 2]) << 16 | uint32_t((*data)[k * 4 + 3]) << 24;
-                float f;
-                std::memcpy(&f, &b, 4);
-                (*cm)[k] = double(f);
-            }
-            a->cmat = std::move(cm);
+    a->invisibility = v.invisibility;
+    a->hasBlend = v.hasBlend;
+    a->blend = v.blend;
+    if (v.hasColorMatrix) {
+        a->hasColorMatrix = true;
+        auto cm = std::make_shared<ColorMatrix>();
+        for (size_t k = 0; k < 20; k++) {
+            float f;
+            std::memcpy(&f, &v.colorMatrixBits[k], 4);
+            (*cm)[k] = double(f);
         }
+        a->cmat = std::move(cm);
     }
     const Ap* p = a.get();
     apCache_[appid] = a;
-    if (cache_) cache_->insert(appid, it->second.fieldsJson, a);
+    if (cache_) cache_->insert(appid, v, a);
     return p;
 }
 
 const Icon* Assembler::iconFor(const Ap& a) {
     if (a.iconResID == kNoIcon) return nullptr;
     if (a.iconResID >= w_.resources.size()) return nullptr;
-    return res_.iconResolved(w_.resources[a.iconResID].first, w_.resources);   // byRes: plain icons AND evaluated DDMI recipes
+    return res_.iconResolved(w_.resources[a.iconResID].first,
+                             w_.resources);  // byRes: plain icons AND evaluated DDMI recipes
 }
 
 // stateFor: the appearance's own icon_state wins whenever the sheet has it (including ""); a miss
@@ -482,9 +551,17 @@ void Assembler::countUnmodeled(const Ap& a) {
 int Assembler::newHitAtom(uint32_t appid, uint8_t kind, uint32_t ref, bool screen) {
     if (!hit_) return -1;
     HitAtom h;
-    if (const Ap* a = ap(appid)) { h.name = a->name; h.mouseOpacity = a->mouseOpacity(); h.wheel = a->mouseWheel(); h.hover = a->mouseHover(); h.mouseMove = a->mouseMove(); }
+    if (const Ap* a = ap(appid)) {
+        h.name = a->name;
+        h.mouseOpacity = a->mouseOpacity();
+        h.wheel = a->mouseWheel();
+        h.hover = a->mouseHover();
+        h.mouseMove = a->mouseMove();
+    }
     h.appid = appid;
-    h.kind = kind; h.ref = ref; h.screen = screen;
+    h.kind = kind;
+    h.ref = ref;
+    h.screen = screen;
     hit_->atoms.push_back(std::move(h));
     return int(hit_->atoms.size()) - 1;
 }
@@ -509,10 +586,15 @@ bool Assembler::buildApp(uint32_t appid, std::set<uint32_t>& visited, RApp& out)
     if (a->hasPlane) ra.plane = truePlane(a->plane);
     if (a->hasColor) {
         ra.hasTint = true;
-        ra.tr = uint8_t(a->cr); ra.tg = uint8_t(a->cg); ra.tb = uint8_t(a->cb);
+        ra.tr = uint8_t(a->cr);
+        ra.tg = uint8_t(a->cg);
+        ra.tb = uint8_t(a->cb);
         ra.alpha = a->ca;
     }
-    if (a->hasTransform) { ra.hasXform = true; ra.xf = a->transform; }
+    if (a->hasTransform) {
+        ra.hasXform = true;
+        ra.xf = a->transform;
+    }
     // atom.color's LIST form and atom.blend_mode ride on the appearance (NOT inherited by overlays; only the scalar
     // colour is, inheritOverlayColor).
     if (a->cmat) ra.cmat = a->cmat;
@@ -520,16 +602,23 @@ bool Assembler::buildApp(uint32_t appid, std::set<uint32_t>& visited, RApp& out)
     ra.relay = a->renderSource;
     ra.target = a->renderTarget;
     ra.passMouse = a->passMouse();
+    ra.keepTogether = a->keepTogether();
+    ra.keepApart = a->keepApart();
     ra.maptext = a->maptext;
-    ra.mtW = a->mtW; ra.mtH = a->mtH; ra.mtX = a->mtX; ra.mtY = a->mtY;
+    ra.mtW = a->mtW;
+    ra.mtH = a->mtH;
+    ra.mtX = a->mtX;
+    ra.mtY = a->mtY;
     countUnmodeled(*a);
 
+    // A KEEP_TOGETHER parent's colour and alpha apply to the composed image once (placeKeptTogether), not to each part.
     for (uint32_t uid : a->underlays) {
         RApp ov;
         if (buildApp(uid, visited, ov)) {
             inheritOverlayIcon(ov, ic);
-            applyOverlayDir(ov, ra.dir);   // underlays follow the parent's dir exactly like overlays
-            if (a->hasColor) inheritOverlayColor(ov, ra.hasTint, ra.tr, ra.tg, ra.tb, ra.alpha);
+            applyOverlayDir(ov, ra.dir);  // underlays follow the parent's dir exactly like overlays
+            if (a->hasColor && !(ra.keepTogether && !ov.keepApart && g_sceneMutation != 50))
+                inheritOverlayColor(ov, ra.hasTint, ra.tr, ra.tg, ra.tb, ra.alpha);
             ov.underlay = true;
             ra.overlays.push_back(std::move(ov));
         }
@@ -539,7 +628,8 @@ bool Assembler::buildApp(uint32_t appid, std::set<uint32_t>& visited, RApp& out)
         if (buildApp(oid, visited, ov)) {
             inheritOverlayIcon(ov, ic);
             applyOverlayDir(ov, ra.dir);
-            if (a->hasColor) inheritOverlayColor(ov, ra.hasTint, ra.tr, ra.tg, ra.tb, ra.alpha);
+            if (a->hasColor && !(ra.keepTogether && !ov.keepApart && g_sceneMutation != 50))
+                inheritOverlayColor(ov, ra.hasTint, ra.tr, ra.tg, ra.tb, ra.alpha);
             ra.overlays.push_back(std::move(ov));
         }
     }
@@ -552,15 +642,28 @@ bool Assembler::buildApp(uint32_t appid, std::set<uint32_t>& visited, RApp& out)
 // subtree, and RESET_COLOR / RESET_ALPHA cut the chain at that node. Rounding is (x*y + 127) / 255.
 void Assembler::inheritOverlayColor(RApp& ov, bool pHas, uint8_t pr, uint8_t pg, uint8_t pb, int pAlpha) {
     bool resetColor = false, resetAlpha = false;
-    if (const Ap* ca = ap(ov.appid)) { resetColor = ca->resetColor(); resetAlpha = ca->resetAlpha(); }
+    if (const Ap* ca = ap(ov.appid)) {
+        resetColor = ca->resetColor();
+        resetAlpha = ca->resetAlpha();
+    }
     if (resetColor && resetAlpha) return;
     auto mul = [](uint8_t x, uint8_t y) { return uint8_t((int(x) * int(y) + 127) / 255); };
     if (!resetColor && pHas) {
-        if (!ov.hasTint) { ov.hasTint = true; ov.tr = pr; ov.tg = pg; ov.tb = pb; }
-        else { ov.tr = mul(ov.tr, pr); ov.tg = mul(ov.tg, pg); ov.tb = mul(ov.tb, pb); }
+        if (!ov.hasTint) {
+            ov.hasTint = true;
+            ov.tr = pr;
+            ov.tg = pg;
+            ov.tb = pb;
+        } else {
+            ov.tr = mul(ov.tr, pr);
+            ov.tg = mul(ov.tg, pg);
+            ov.tb = mul(ov.tb, pb);
+        }
     }
     if (!resetAlpha) ov.alpha = (ov.alpha * pAlpha + 127) / 255;
-    for (auto& o : ov.overlays) inheritOverlayColor(o, pHas, pr, pg, pb, pAlpha);
+    for (auto& o : ov.overlays)
+        if (!(ov.keepTogether && !o.keepApart && g_sceneMutation != 50))
+            inheritOverlayColor(o, pHas, pr, pg, pb, pAlpha);  // a kept-together group takes it once, on itself
 }
 
 void Assembler::inheritOverlayIcon(RApp& ov, const Icon* parent) {
@@ -632,15 +735,29 @@ SpritePtr Assembler::sprite(const RApp& a, bool& drawable) {
     if (!drawableState(a, si)) return nullptr;
     const IconState& st = a.icon->states[size_t(si)];
     int dir = a.dir;
-    if (g_sceneMutation == 3) { if (dir == kDirEast) dir = kDirWest; else if (dir == kDirWest) dir = kDirEast; }
+    if (g_sceneMutation == 3) {
+        if (dir == kDirEast)
+            dir = kDirWest;
+        else if (dir == kDirWest)
+            dir = kDirEast;
+    }
     int slot = dirIndex(int(st.dirs), dir);
-    if (slot < 0) { fail("dmi: unsupported dir count " + std::to_string(st.dirs) + " (want 1, 4 or 8)"); return nullptr; }
+    if (slot < 0) {
+        fail("dmi: unsupported dir count " + std::to_string(st.dirs) + " (want 1, 4 or 8)");
+        return nullptr;
+    }
     SpriteKey key{a.icon, si, slot, a.frame};
     auto c = spriteCache_.find(key);
-    if (c != spriteCache_.end()) { drawable = true; return c->second; }
+    if (c != spriteCache_.end()) {
+        drawable = true;
+        return c->second;
+    }
     auto sp = std::make_shared<Sprite>();
     std::string e;
-    if (!a.icon->frame(st, slot, a.frame, sp->px, &e)) { fail("dmi: " + e); return nullptr; }
+    if (!a.icon->frame(st, slot, a.frame, sp->px, &e)) {
+        fail("dmi: " + e);
+        return nullptr;
+    }
     sp->w = a.icon->width;
     sp->h = a.icon->height;
     spriteCache_[key] = sp;
@@ -677,8 +794,14 @@ void Assembler::placeParticles(const RApp& a, int iconX, int iconY, int iconW, i
     const bool dots = s.live.front().icon == 0xffff;
     std::vector<size_t> order(s.live.size());
     for (size_t i = 0; i < order.size(); i++) order[i] = i;
-    std::stable_sort(order.begin(), order.end(), [&](size_t x, size_t y) { return s.live[x].pos[2] > s.live[y].pos[2]; });
-    static const SpritePtr kDot = [] { auto d = std::make_shared<Sprite>(); d->w = d->h = 1; d->px = {255, 255, 255, 255}; return SpritePtr(d); }();
+    std::stable_sort(order.begin(), order.end(),
+                     [&](size_t x, size_t y) { return s.live[x].pos[2] > s.live[y].pos[2]; });
+    static const SpritePtr kDot = [] {
+        auto d = std::make_shared<Sprite>();
+        d->w = d->h = 1;
+        d->px = {255, 255, 255, 255};
+        return SpritePtr(d);
+    }();
     const auto& M = s.transform;
     for (size_t i : order) {
         const model::Particle& p = s.live[i];
@@ -687,9 +810,14 @@ void Assembler::placeParticles(const RApp& a, int iconX, int iconY, int iconW, i
         l.alpha = int(c >> 24);
         if (l.alpha == 0) continue;
         l.hasTint = (c & 0xffffff) != 0xffffff;
-        l.tintR = uint8_t(c); l.tintG = uint8_t(c >> 8); l.tintB = uint8_t(c >> 16);
+        l.tintR = uint8_t(c);
+        l.tintG = uint8_t(c >> 8);
+        l.tintB = uint8_t(c >> 16);
         double x = p.pos[0], y = p.pos[1], z = p.pos[2];
-        if (!dots) { x = std::nearbyint(x); y = std::nearbyint(y); }
+        if (!dots) {
+            x = std::nearbyint(x);
+            y = std::nearbyint(y);
+        }
         // the set's transform, row-vector in DM space (+y up), then the w divide
         double ox = x, oy = y;
         Mat t;
@@ -738,13 +866,16 @@ void Assembler::placeParticles(const RApp& a, int iconX, int iconY, int iconW, i
         if (x0 >= x1 || y0 >= y1) continue;
         if (x0 != l.x || y0 != l.y || x1 != l.x + l.sprite->w || y1 != l.y + l.sprite->h) {
             auto cut = std::make_shared<Sprite>();
-            cut->w = x1 - x0; cut->h = y1 - y0;
+            cut->w = x1 - x0;
+            cut->h = y1 - y0;
             cut->px.resize(size_t(cut->w) * size_t(cut->h) * 4);
             for (int yy = 0; yy < cut->h; yy++)
                 std::memcpy(&cut->px[size_t(yy) * size_t(cut->w) * 4],
-                            &l.sprite->px[(size_t(y0 - l.y + yy) * size_t(l.sprite->w) + size_t(x0 - l.x)) * 4], size_t(cut->w) * 4);
+                            &l.sprite->px[(size_t(y0 - l.y + yy) * size_t(l.sprite->w) + size_t(x0 - l.x)) * 4],
+                            size_t(cut->w) * 4);
             l.sprite = std::move(cut);
-            l.x = x0; l.y = y0;
+            l.x = x0;
+            l.y = y0;
         }
         Placed pl;
         pl.layer = std::move(l);
@@ -770,7 +901,8 @@ static std::array<float, 6> composeDm(const std::array<float, 6>& h, const std::
             h[3] * c[0] + h[4] * c[3], h[3] * c[1] + h[4] * c[4], h[3] * c[2] + h[4] * c[5] + h[5]};
 }
 
-void Assembler::visChildren(const std::vector<uint32_t>& children, std::set<uint32_t>& visited, std::vector<RApp>& out, const RApp* holder) {
+void Assembler::visChildren(const std::vector<uint32_t>& children, std::set<uint32_t>& visited, std::vector<RApp>& out,
+                            const RApp* holder) {
     for (uint32_t child : children) {
         auto cs = w_.atoms.find(child);
         if (cs == w_.atoms.end()) continue;
@@ -783,7 +915,9 @@ void Assembler::visChildren(const std::vector<uint32_t>& children, std::set<uint
         // change nor its addition to a second holder restarts it.
         applyIconAnimation(ca, cs->second.iconStartNs);
         if (cs->second.dir != 0) ca.dir = cs->second.dir;
-        if (hit_) ca.hitAtom = newHitAtom(cs->second.appid, (child & kRegistryA) ? kAtomMob : kAtomObj, child & ~kRegistryA, false);
+        if (hit_)
+            ca.hitAtom =
+                newHitAtom(cs->second.appid, (child & kRegistryA) ? kAtomMob : kAtomObj, child & ~kRegistryA, false);
         ca.px += cs->second.pixelX;
         ca.py += cs->second.pixelY;
         markParticles(ca, child);
@@ -792,7 +926,7 @@ void Assembler::visChildren(const std::vector<uint32_t>& children, std::set<uint
             ca.hasXform = true;
         }
         out.push_back(std::move(ca));
-        const RApp held = out.back();   // a grandchild takes this child's (now inherited) transform
+        const RApp held = out.back();  // a grandchild takes this child's (now inherited) transform
         visContents(child, visited, out, &held);
     }
 }
@@ -806,29 +940,29 @@ void Assembler::visContents(uint32_t id, std::set<uint32_t>& visited, std::vecto
 }
 
 // ---- client.images -------------------------------------------------------------------------------
-// Stock DreamDaemon sends a speech bubble and a runechat as image frames (0x0033 with an image id, appid and a
-// mob location, then 0x0035 and 0x00f0). Stock DreamSeeker 516 draws the bubble over the speaker and the runechat maptext
-// above it.
+// Stock DreamDaemon sends a speech bubble and a runechat as image frames (ImageCreate with an image id, appid and a
+// mob location, then ImageModify and Animate). Stock DreamSeeker 516 draws the bubble over the speaker and the runechat
+// maptext above it.
 
 // The decoder's image records: kind 0x01 = obj slot, 0x02 = mob slot (the RegistryA space), 0x07 = a
 // turf's flat cell; visContents Type 2 cells name obj slots (any other Type is skipped).
 void Assembler::collectImages() {
     imgs_.clear();
     imgsOn_.clear();
-    for (const auto& [id, js] : w_.images) {   // ascending id: the stable draw order across runs
-        JVal v;
-        try { v = model::parseJson(js); } catch (const std::exception&) { continue; }
+    for (const auto& [id, op] : w_.images) {  // ascending id: the stable draw order across runs
         ImgRec im;
         im.id = id;
-        im.appid = v["appid"].u32();
-        im.locKind = uint8_t(v["locKind"].u32());
-        im.locRef = v["locRef"].u32();
-        im.cell = v["cell"].u32();
-        for (const JVal& c : v["visContents"].a)
-            if (c["type"].u32() == 2) im.visKids.push_back(c["value"].u32());
+        im.appid = op.appid;
+        im.locKind = op.locKind;
+        im.locRef = op.locRef;
+        im.cell = op.cell;
+        for (const proto::VisItem& c : op.visContents)
+            if (c.type == 2) im.visKids.push_back(c.value);
         // An obj slot keys bare, a mob slot with kRegistryA (separate id spaces: the KIND matters)
-        if (im.locKind == 0x01) imgsOn_[im.locRef].push_back(imgs_.size());
-        else if (im.locKind == 0x02) imgsOn_[kRegistryA | im.locRef].push_back(imgs_.size());
+        if (im.locKind == 0x01)
+            imgsOn_[im.locRef].push_back(imgs_.size());
+        else if (im.locKind == 0x02)
+            imgsOn_[kRegistryA | im.locRef].push_back(imgs_.size());
         imgs_.push_back(std::move(im));
     }
 }
@@ -860,11 +994,18 @@ bool Assembler::imageApp(const ImgRec& im, RApp& out) {
 //   * the image's own mouse_opacity and alpha are ignored: the parent's mouse_opacity governs (a parent at 0 takes nothing,
 //     image pixels included);
 //   * an image's maptext takes no click at all (hittest.h "maptext").
-// An image's FLOAT_PLANE and FLOAT_LAYER (an /image's defaults) are its parent's, as an overlay's are: a default image() is
-// drawn over the parent's floor turf, and one at layer 1 is hidden beneath that floor. Resolving them against plane 0 would
-// hide every such image under the turfs.
+// An image's FLOAT_PLANE is its parent's, as an overlay's is: resolving it against plane 0 would hide every such image under
+// the turfs. Its FLOAT_LAYER, or any negative layer, is a fixed FLY_LAYER (5) whatever the parent's layer
+// (stock DreamSeeker 516): over a mob at 4, under its own parent at 6 or more. A tie at 5 goes by arrival order, the image
+// right after its parent, so it beats an obj at 5 when the parent is a mob and loses to one created after its obj parent.
+// It also takes its parent's colour and alpha, multiplied into its own (RESET_COLOR / RESET_ALPHA cut them), as an overlay does.
+// A screen object's image takes the same layer rule (-2 or FLOAT_LAYER is 5, an explicit layer absolute, a tie 5 right after its
+// parent) and the same colour and alpha.
+// A KEEP_TOGETHER parent composes its image inside the group, sorted by layer with the parent's overlays and underlays (so
+// the parent's alpha applies once): the image goes to `grouped` with its own colour, and its map entry becomes hit-only. A
+// KEEP_APART image, one on another plane than its parent and an override image stay outside the group, drawn as above.
 // Returns true when one of the drawn images is an OVERRIDE (Ap::overrides): the caller then draws the parent as nothing.
-bool Assembler::imagesOn(uint32_t key, const RApp& parent, std::vector<RApp>& out) {
+bool Assembler::imagesOn(uint32_t key, const RApp& parent, std::vector<RApp>& out, std::vector<RApp>* grouped) {
     auto it = imgsOn_.find(key);
     if (it == imgsOn_.end()) return false;
     bool overridden = false;
@@ -876,10 +1017,20 @@ bool Assembler::imagesOn(uint32_t key, const RApp& parent, std::vector<RApp>& ou
             ra.hitAtom = parent.hitAtom;
             ra.borrowsHit = true;
             ra.plane = resolvePlane(ra.plane, resolvePlane(parent.plane, 0));
-            if (ra.layer < 0) ra.layer = parent.layer;
-            out.push_back(std::move(ra));
+            if (ra.layer < 0) ra.layer = kFlyLayer;
             const Ap* a = ap(im.appid);
-            if (a && a->overrides() && g_sceneMutation != 24) overridden = true;
+            const bool overrides = a && a->overrides() && g_sceneMutation != 24;
+            const bool joins = grouped && parent.keepTogether && parent.relay.empty() && !overrides && !ra.keepApart &&
+                               ra.plane == resolvePlane(parent.plane, 0);
+            if (joins) {
+                RApp g = ra;
+                g.hitAtom = -1;
+                grouped->push_back(std::move(g));
+                ra.hitOnly = true;
+            }
+            inheritOverlayColor(ra, parent.hasTint, parent.tr, parent.tg, parent.tb, parent.alpha);
+            out.push_back(std::move(ra));
+            if (overrides) overridden = true;
         }
         std::set<uint32_t> visited;
         visChildren(im.visKids, visited, out, nullptr);
@@ -896,9 +1047,15 @@ namespace {
 double lerpF(double a, double b, double t) { return a + (b - a) * t; }
 int lerpInt(int a, int b, double t) { return int(gomath::round(lerpF(double(a), double(b), t))); }
 
-float bitsToFloat(uint32_t b) { float f; std::memcpy(&f, &b, 4); return f; }
+float bitsToFloat(uint32_t b) {
+    float f;
+    std::memcpy(&f, &b, 4);
+    return f;
+}
 
-int64_t stepDurNs(const model::Atom::AnimStep& st, int64_t tickNs) { return int64_t(double(bitsToFloat(st.timeBits)) * double(tickNs)); }
+int64_t stepDurNs(const model::Atom::AnimStep& st, int64_t tickNs) {
+    return int64_t(double(bitsToFloat(st.timeBits)) * double(tickNs));
+}
 
 // The stock chain evaluator, for any target, over whatever value V it composes. The chain is pruned of finished
 // sequences, then the sequences are composed in order into `out`: the first is eased absolutely From -> To; a parallel
@@ -907,13 +1064,22 @@ int64_t stepDurNs(const model::Atom::AnimStep& st, int64_t tickNs) { return int6
 // get(appid) is an appearance's value; lerp(from, to, raw, f) one step at raw fraction `raw`, eased `f`; add(out, base,
 // from, to, raw, f) adds lerp(from, to) - base to `out`. False when nothing is left; `lastTo` is the last sequence's end.
 template <class V, class Get, class Lerp, class Add>
-bool composeChain(const model::Atom::Chain& ch, int64_t now, Get&& get, Lerp&& lerp, Add&& add, V& out, uint32_t& lastTo) {
+bool composeChain(const model::Atom::Chain& ch, int64_t now, Get&& get, Lerp&& lerp, Add&& add, V& out,
+                  uint32_t& lastTo) {
     auto stepNs = [&](size_t i) { return stepDurNs(ch.steps[i], ch.tickNs); };
-    const int64_t eps = ch.tickNs / 1000;   // the evaluator's 0.001-tick tolerance
+    const int64_t eps = ch.tickNs / 1000;  // the evaluator's 0.001-tick tolerance
     std::vector<model::AnimSeq> seqs = model::animSequences(ch);
     std::vector<bool> alive(seqs.size(), true);
-    auto nextAlive = [&](size_t i) { for (size_t j = i + 1; j < seqs.size(); j++) if (alive[j]) return j; return seqs.size(); };
-    auto nextHead = [&](size_t i) { for (size_t j = i + 1; j < seqs.size(); j++) if (alive[j] && seqs[j].head) return j; return seqs.size(); };
+    auto nextAlive = [&](size_t i) {
+        for (size_t j = i + 1; j < seqs.size(); j++)
+            if (alive[j]) return j;
+        return seqs.size();
+    };
+    auto nextHead = [&](size_t i) {
+        for (size_t j = i + 1; j < seqs.size(); j++)
+            if (alive[j] && seqs[j].head) return j;
+        return seqs.size();
+    };
     // A sequence's opening From; a head that starts with the sequence before it takes that one's.
     std::vector<uint32_t> headFrom(seqs.size());
     for (size_t i = 0; i < seqs.size(); i++) headFrom[i] = ch.steps[seqs[i].first].from;
@@ -926,10 +1092,15 @@ bool composeChain(const model::Atom::Chain& ch, int64_t now, Get&& get, Lerp&& l
             const model::AnimSeq& h = seqs[j];
             if (h.startNs > now) continue;
             if (q.endNs >= 0 && q.endNs <= h.startNs) return true;
-            if (h.startNs - eps <= q.startNs) { headFrom[j] = headFrom[i]; return true; }
+            if (h.startNs - eps <= q.startNs) {
+                headFrom[j] = headFrom[i];
+                return true;
+            }
             if (q.endNs < 0 || q.endNs != q.startNs + q.durNs) {
-                if (q.durNs > 0) q.startNs = h.startNs - (h.startNs - q.startNs) % q.durNs;
-                else q.startNs = h.startNs;
+                if (q.durNs > 0)
+                    q.startNs = h.startNs - (h.startNs - q.startNs) % q.durNs;
+                else
+                    q.startNs = h.startNs;
                 q.endNs = q.startNs + q.durNs;
             }
             if (j == nextAlive(i) && q.first == q.last && headFrom[i] == ch.steps[q.first].to) return true;
@@ -957,8 +1128,10 @@ bool composeChain(const model::Atom::Chain& ch, int64_t now, Get&& get, Lerp&& l
         const model::AnimSeq& q = seqs[i];
         if (!first && prevEnd != headFrom[i] && (q.head || q.parallel)) {
             V a = get(prevEnd), b = get(headFrom[i]);
-            if (q.parallel) add(out, a, a, b, 1.0, 1.0);
-            else out = lerp(a, b, 1.0, 1.0);
+            if (q.parallel)
+                add(out, a, a, b, 1.0, 1.0);
+            else
+                out = lerp(a, b, 1.0, 1.0);
         }
         // The step in flight and its fraction, the sequence held where the next head started.
         int64_t t = now;
@@ -968,10 +1141,15 @@ bool composeChain(const model::Atom::Chain& ch, int64_t now, Get&& get, Lerp&& l
         double f = 0;
         if (q.startNs <= now) {
             // Past its end with no later head the sequence rests on its last To; otherwise the clock wraps by its length.
-            if (q.durNs <= 0 || (nh == seqs.size() && q.endNs >= 0 && t >= q.endNs)) { cur = q.last; f = 1; }
-            else {
+            if (q.durNs <= 0 || (nh == seqs.size() && q.endNs >= 0 && t >= q.endNs)) {
+                cur = q.last;
+                f = 1;
+            } else {
                 int64_t e = (t - q.startNs) % q.durNs;
-                while (cur < q.last && stepNs(cur) <= e) { e -= stepNs(cur); cur++; }
+                while (cur < q.last && stepNs(cur) <= e) {
+                    e -= stepNs(cur);
+                    cur++;
+                }
                 int64_t d = stepNs(cur);
                 f = d > 0 ? std::min(1.0, double(e) / double(d)) : 1.0;
             }
@@ -1004,7 +1182,7 @@ Mat toMat(const std::array<float, 6>& x) {
 
 // One step of an appearance tween at raw fraction `raw`, eased `frac`.
 RApp lerpApp(const RApp& from, const RApp& to, double raw, double frac) {
-    RApp result = raw >= 0.5 ? to : from;   // discrete fields switch at the RAW midpoint
+    RApp result = raw >= 0.5 ? to : from;  // discrete fields switch at the RAW midpoint
     result.px = lerpInt(from.px, to.px, frac);
     result.py = lerpInt(from.py, to.py, frac);
     result.alpha = lerpInt(from.alpha, to.alpha, frac);
@@ -1016,7 +1194,10 @@ RApp lerpApp(const RApp& from, const RApp& to, double raw, double frac) {
         result.tb = uint8_t(lerpInt(from.tb, to.tb, frac));
     } else {
         const RApp& side = frac >= 0.5 ? to : from;
-        result.hasTint = side.hasTint; result.tr = side.tr; result.tg = side.tg; result.tb = side.tb;
+        result.hasTint = side.hasTint;
+        result.tr = side.tr;
+        result.tg = side.tg;
+        result.tb = side.tb;
     }
     // A colour matrix and a blend mode are not interpolated; they follow the discrete switch at the midpoint.
     // transform: a side without one tweens from/to IDENTITY; rigid interpolation via lerpMatrix.
@@ -1042,20 +1223,23 @@ void addApp(RApp& out, const RApp& base, const RApp& from, const RApp& to, doubl
     out.py += t.py - base.py;
     out.alpha = std::clamp(out.alpha + t.alpha - base.alpha, 0, 255);
     if (t.hasTint || base.hasTint) {
-        auto c = [](const RApp& r, uint8_t RApp::*ch) { return r.hasTint ? int(r.*ch) : 255; };
-        for (uint8_t RApp::*ch : {&RApp::tr, &RApp::tg, &RApp::tb}) out.*ch = uint8_t(std::clamp(c(out, ch) + c(t, ch) - c(base, ch), 0, 255));
+        auto c = [](const RApp& r, uint8_t RApp::* ch) { return r.hasTint ? int(r.*ch) : 255; };
+        for (uint8_t RApp::* ch : {&RApp::tr, &RApp::tg, &RApp::tb})
+            out.*ch = uint8_t(std::clamp(c(out, ch) + c(t, ch) - c(base, ch), 0, 255));
         out.hasTint = true;
     }
     if (t.hasXform || base.hasXform) {
         Mat inv, b = base.hasXform ? toMat(base.xf) : Mat{}, o = out.hasXform ? toMat(out.xf) : Mat{};
         if (invertMat(b, inv)) {
-            Mat m = matMul(matMul(t.hasXform ? toMat(t.xf) : Mat{}, inv), o);   // out, then inverse(base), then the step
+            Mat m = matMul(matMul(t.hasXform ? toMat(t.xf) : Mat{}, inv), o);  // out, then inverse(base), then the step
             out.xf = {float(m.a), float(m.b), float(m.c), float(m.d), float(m.e), float(m.f)};
             out.hasXform = true;
         }
     }
     if (from.icon != to.icon || from.state != to.state || base.icon != to.icon || base.state != to.state) {
-        out.icon = to.icon; out.state = to.state; out.frame = to.frame;
+        out.icon = to.icon;
+        out.state = to.state;
+        out.frame = to.frame;
     }
     if (from.blend != to.blend || base.blend != to.blend) out.blend = to.blend;
     if (from.cmat != to.cmat || base.cmat != to.cmat) out.cmat = to.cmat;
@@ -1070,11 +1254,14 @@ bool Assembler::tweenChain(const model::Atom::Chain& ch, uint32_t settled, RApp&
     std::map<uint32_t, std::pair<bool, RApp>> built;
     auto build = [&](uint32_t appid) -> const std::pair<bool, RApp>& {
         auto [it, fresh] = built.try_emplace(appid);
-        if (fresh) { std::set<uint32_t> v; it->second.first = buildApp(appid, v, it->second.second); }
+        if (fresh) {
+            std::set<uint32_t> v;
+            it->second.first = buildApp(appid, v, it->second.second);
+        }
         return it->second;
     };
     const std::pair<bool, RApp>& live = build(settled);
-    if (g_sceneMutation == 22 && clockNs_ < ch.startNs) {   // test-only: Go's rule, the first From as is until the start
+    if (g_sceneMutation == 22 && clockNs_ < ch.startNs) {  // test-only: Go's rule, the first From as is until the start
         const std::pair<bool, RApp>& f = build(ch.steps[0].from);
         if (f.first) out = f.second;
         return f.first;
@@ -1094,7 +1281,10 @@ bool Assembler::tweenChain(const model::Atom::Chain& ch, uint32_t settled, RApp&
         return true;
     }
     if (live.first) {
-        if (lastTo != settled && g_sceneMutation != 7) { RApp end = get(lastTo); addApp(res, end, end, live.second, 1.0, 1.0); }
+        if (lastTo != settled && g_sceneMutation != 7) {
+            RApp end = get(lastTo);
+            addApp(res, end, end, live.second, 1.0, 1.0);
+        }
         res.overlays = live.second.overlays;
     }
     out = std::move(res);
@@ -1131,7 +1321,7 @@ void Assembler::flickOverride(uint32_t id, RApp& out) {
     int si = ic->stateIndex(f.iconState);
     if (si < 0) return;
     const IconState& st = ic->states[size_t(si)];
-    std::vector<std::pair<int, double>> steps;   // frame, delay (ds); the same sequence frameFor plays, ONCE
+    std::vector<std::pair<int, double>> steps;  // frame, delay (ds); the same sequence frameFor plays, ONCE
     auto delay = [&](int64_t i) { return (i >= 0 && size_t(i) < st.delays.size()) ? st.delays[size_t(i)] : 1.0; };
     for (int64_t i = 0; i < std::max<int64_t>(1, st.frames); i++) steps.push_back({int(i), delay(i)});
     if (st.rewind && st.frames > 2)
@@ -1139,11 +1329,14 @@ void Assembler::flickOverride(uint32_t id, RApp& out) {
     double total = 0;
     for (auto& s : steps) total += s.second;
     double elapsed = double(clockNs_ - f.startNs) / 1e8;
-    if (total <= 0 || elapsed < 0 || elapsed >= total) return;   // not started (clock skew) or already played out
+    if (total <= 0 || elapsed < 0 || elapsed >= total) return;  // not started (clock skew) or already played out
     double acc = 0;
     int frame = steps.back().first;
     for (auto& s : steps) {
-        if (elapsed < acc + s.second) { frame = s.first; break; }
+        if (elapsed < acc + s.second) {
+            frame = s.first;
+            break;
+        }
         acc += s.second;
     }
     out.icon = ic;
@@ -1158,7 +1351,7 @@ void Assembler::glideOffset(const model::Atom& m, int tileW, int tileH, int& px,
     const model::Atom::Glide& g = m.glide;
     double rem = model::glideLeft(g, clockNs_);
     if (rem <= 0) return;
-    if (g_sceneMutation == 6) {   // test-only: truncate instead of round
+    if (g_sceneMutation == 6) {  // test-only: truncate instead of round
         px = int(g.sx * tileW * rem);
         py = int(g.sy * tileH * rem);
         return;
@@ -1172,22 +1365,24 @@ void Assembler::glideOffset(const model::Atom& m, int tileW, int tileH, int& px,
 // appearance minus the chain's end, which takes the end's offsets back out: the atom's own are then added on top, unless
 // the settled appearance carries them too.
 bool Assembler::animEndpointCarriesPixels(const model::Atom& m) const {
-    if (g_sceneMutation == 7) return false;   // test-only: add the A6 copy on top of the endpoint's
+    if (g_sceneMutation == 7) return false;  // test-only: add the A6 copy on top of the endpoint's
     if (!m.animating || m.chain.steps.empty()) return false;
     auto has = [&](uint32_t appid) {
         auto it = w_.appearances.find(appid);
-        return it != w_.appearances.end() && it->second.hasPixelOffsets;
+        return it != w_.appearances.end() && it->second.fields.hasPixelOffsets;
     };
     bool composes = false;
     uint32_t lastTo = 0;
-    if (g_sceneMutation == 22 && clockNs_ < m.chain.startNs) return m.appid == m.chain.steps.back().to && has(m.appid);   // test-only: Go's rule
+    if (g_sceneMutation == 22 && clockNs_ < m.chain.startNs)
+        return m.appid == m.chain.steps.back().to && has(m.appid);  // test-only: Go's rule
     auto lerp = [](bool, bool, double, double) { return false; };
     auto add = [](bool&, bool, bool, bool, double, double) {};
-    if (composeChain(m.chain, clockNs_, [](uint32_t) { return false; }, lerp, add, composes, lastTo)) return has(m.appid);
+    if (composeChain(m.chain, clockNs_, [](uint32_t) { return false; }, lerp, add, composes, lastTo))
+        return has(m.appid);
     return m.appid == m.chain.steps.back().to && has(m.chain.steps.back().to);
 }
 
-// client.pixel_x + pixel_w and pixel_y + pixel_z at the render clock, in world pixels: the last 0x0007 value plus
+// client.pixel_x + pixel_w and pixel_y + pixel_z at the render clock, in world pixels: the last WorldState value plus
 // what the animate(client) chain composes (composeChain) minus the last step's To, so a direct set during a tween
 // shifts the tween instead of ending it.
 void Assembler::clientViewOffset(int& x, int& y) {
@@ -1195,15 +1390,23 @@ void Assembler::clientViewOffset(int& x, int& y) {
     y = int(w_.viewPixelY) + int(w_.viewPixelZ);
     const model::Atom::Chain& ch = w_.clientChain;
     if (ch.steps.empty()) return;
-    struct Px { int v[4] = {0, 0, 0, 0}; };
+    struct Px {
+        int v[4] = {0, 0, 0, 0};
+    };
     auto pix = [&](uint32_t appid) {
         Px p;
-        if (const Ap* a = ap(appid)) { p.v[0] = a->pixelX; p.v[1] = a->pixelY; p.v[2] = a->pixelW; p.v[3] = a->pixelZ; }
+        if (const Ap* a = ap(appid)) {
+            p.v[0] = a->pixelX;
+            p.v[1] = a->pixelY;
+            p.v[2] = a->pixelW;
+            p.v[3] = a->pixelZ;
+        }
         return p;
     };
     auto lerp = [](const Px& from, const Px& to, double, double f) {
         Px r;
-        for (int k = 0; k < 4; k++) r.v[k] = from.v[k] == to.v[k] ? to.v[k] : int(float(to.v[k] - from.v[k]) * float(f)) + from.v[k];
+        for (int k = 0; k < 4; k++)
+            r.v[k] = from.v[k] == to.v[k] ? to.v[k] : int(float(to.v[k] - from.v[k]) * float(f)) + from.v[k];
         return r;
     };
     auto add = [&](Px& out, const Px& base, const Px& from, const Px& to, double raw, double f) {
@@ -1229,28 +1432,50 @@ int Assembler::ringFor(int tw, int th) const {
 static bool opaqueAppearance(const Ap* a) { return a && a->opaque(); }
 
 // Outputs the view rect (origin/extent); vx0/vy0 are unused padding for symmetry.
-bool Assembler::buildGrid(int& originX, int& originY, int& winW, int& winH, int& extentW, int& extentH, int& vx0, int& vy0) {
-    (void)vx0; (void)vy0;
+bool Assembler::buildGrid(int& originX, int& originY, int& winW, int& winH, int& extentW, int& extentH, int& vx0,
+                          int& vy0) {
+    (void)vx0;
+    (void)vy0;
     // The cell grid comes from the model (model::Session::cells).
     model::CellGrid cg = s_.cells();
-    if (cg.err) { fail("no bounds (0x3e) yet / no map grid yet"); return false; }
-    winW = cg.w; winH = cg.h;
-    originX = cg.originX; originY = cg.originY;
+    if (cg.err) {
+        fail("no bounds (0x3e) yet / no map grid yet");
+        return false;
+    }
+    winW = cg.w;
+    winH = cg.h;
+    originX = cg.originX;
+    originY = cg.originY;
     const std::vector<uint32_t>& cells = cg.appids;
-    if (size_t(winW) * size_t(winH) != cells.size()) { fail("cells section: w*h != len(appids)"); return false; }
+    if (size_t(winW) * size_t(winH) != cells.size()) {
+        fail("cells section: w*h != len(appids)");
+        return false;
+    }
 
-    maxX_ = w_.bounds.maxX; maxY_ = w_.bounds.maxY;
-    if (maxX_ <= 0 || maxY_ <= 0) { fail("render: empty grid"); return false; }
-    gridX0_ = originX; gridY0_ = originY; gridW_ = winW; gridH_ = winH;
+    maxX_ = w_.bounds.maxX;
+    maxY_ = w_.bounds.maxY;
+    if (maxX_ <= 0 || maxY_ <= 0) {
+        fail("render: empty grid");
+        return false;
+    }
+    gridX0_ = originX;
+    gridY0_ = originY;
+    gridW_ = winW;
+    gridH_ = winH;
     grid_.assign(size_t(winW) * size_t(winH), Tile{});
     auto tileAt = [&](int x, int y) -> Tile* { return const_cast<Tile*>(tileIn(x, y)); };
 
     // Visible rect: the eye, or the map centre when there is none.
     int eyeX = w_.haveEye ? w_.eyeX : (maxX_ + 1) / 2;
     int eyeY = w_.haveEye ? w_.eyeY : (maxY_ + 1) / 2;
-    if (w_.bounds.viewW > 0 && w_.bounds.viewH > 0) { extentW = w_.bounds.viewW; extentH = w_.bounds.viewH; }
-    else if (w_.bounds.view > 0) { extentW = extentH = 2 * w_.bounds.view + 1; }
-    else { extentW = extentH = 2 * kDefaultViewRange + 1; }
+    if (w_.bounds.viewW > 0 && w_.bounds.viewH > 0) {
+        extentW = w_.bounds.viewW;
+        extentH = w_.bounds.viewH;
+    } else if (w_.bounds.view > 0) {
+        extentW = extentH = 2 * w_.bounds.view + 1;
+    } else {
+        extentW = extentH = 2 * kDefaultViewRange + 1;
+    }
     if (maxX_ > 0 && extentW > maxX_) extentW = maxX_;
     if (maxY_ > 0 && extentH > maxY_) extentH = maxY_;
     int viewOriginX = eyeX - extentW / 2, viewOriginY = eyeY - extentH / 2;
@@ -1267,7 +1492,7 @@ bool Assembler::buildGrid(int& originX, int& originY, int& winW, int& winH, int&
     model::eyeScrollOffset(w_, clockNs_, scrollX_, scrollY_);
     int viewX, viewY;
     clientViewOffset(viewX, viewY);
-    shiftX_ = scrollX_ - viewX;   // the camera moves by the offset, so the map moves the other way (y flips)
+    shiftX_ = scrollX_ - viewX;  // the camera moves by the offset, so the map moves the other way (y flips)
     shiftY_ = scrollY_ + viewY;
     // A movable on another z is not on this map. DD sends one there for a flick() anywhere in the world (the record, its
     // position and the flick, retracted the next tick); stock DreamSeeker draws it only on its own z.
@@ -1284,7 +1509,10 @@ bool Assembler::buildGrid(int& originX, int& originY, int& winW, int& winH, int&
                 for (int x = ex - rng; x <= ex + rng; x++) {
                     int lx = x - originX, ly = y - originY;
                     if (lx < 0 || ly < 0 || lx >= winW || ly >= winH) continue;
-                    if (!w_.appearances.count(cells[size_t(ly) * size_t(winW) + size_t(lx)])) { allKnown = false; break; }
+                    if (!w_.appearances.count(cells[size_t(ly) * size_t(winW) + size_t(lx)])) {
+                        allKnown = false;
+                        break;
+                    }
                 }
             if (allKnown) {
                 std::set<std::pair<int, int>> blockers;
@@ -1292,7 +1520,7 @@ bool Assembler::buildGrid(int& originX, int& originY, int& winW, int& winH, int&
                     if (!offZ(m) && opaqueAppearance(ap(m.appid))) blockers.insert({m.x, m.y});
                 auto opaque = [&](int x, int y) {
                     int lx = x - originX, ly = y - originY;
-                    if (lx < 0 || ly < 0 || lx >= winW || ly >= winH) return true;   // an edge is an occluder
+                    if (lx < 0 || ly < 0 || lx >= winW || ly >= winH) return true;  // an edge is an occluder
                     if (blockers.count({x, y})) return true;
                     const Ap* a = ap(cells[size_t(ly) * size_t(winW) + size_t(lx)]);
                     return a ? a->opaque() : false;
@@ -1316,7 +1544,8 @@ bool Assembler::buildGrid(int& originX, int& originY, int& winW, int& winH, int&
                 continue;
             }
             // A turf's multi-frame icon animates in stock DreamSeeker 516, including an animated GIF on a turf.
-            if (g_sceneMutation != 22) applyIconAnimation(ra, tileIconStart(originX + lx - 1, originY + ly - 1, cg.viewZ - 1));
+            if (g_sceneMutation != 22)
+                applyIconAnimation(ra, tileIconStart(originX + lx - 1, originY + ly - 1, cg.viewZ - 1));
             ra.hitAtom = newHitAtom(appid, kAtomTurf, 0, false);
             ra.holdsCell = true;
             Tile* t = tileAt(originX + lx, originY + ly);
@@ -1351,7 +1580,7 @@ bool Assembler::buildGrid(int& originX, int& originY, int& winW, int& winH, int&
         if (haveVisible && !isVisible(m.x, m.y)) continue;
         if (hiddenFromClient(m.appid)) continue;
         RApp ra;
-        if (!animatedApp(id, m, ra)) continue;   // no appearance flyweight for this atom (or its chain's From) yet
+        if (!animatedApp(id, m, ra)) continue;  // no appearance flyweight for this atom (or its chain's From) yet
         ra.hitAtom = newHitAtom(m.appid, (id & kRegistryA) ? kAtomMob : kAtomObj, id & ~kRegistryA, false);
         ra.dir = m.dir;
         for (auto& o : ra.overlays) applyOverlayDir(o, m.dir);
@@ -1380,21 +1609,27 @@ bool Assembler::buildGrid(int& originX, int& originY, int& winW, int& winH, int&
         // leaves the atom invisible. The atom's vis_contents still draw and still answer as themselves. The atom stays in the
         // scene, drawing nothing, so the hit test still knows where it is.
         // An override image on a TURF is drawn in addition to the turf.
-        if (imagesOn(id, ra, attached)) {
+        std::vector<RApp> grouped;
+        if (imagesOn(id, ra, attached, &grouped)) {
             ra.icon = nullptr;
             ra.state.clear();
             ra.overlays.clear();
             ra.maptext.clear();
             ra.relay.clear();
+            for (RApp& a : attached) a.hitOnly = false;
         } else {
             ra.holdsCell = true;
+            ra.groupImages = std::move(grouped);
         }
         t->push_back(std::move(ra));
-        for (auto& a : attached) { a.px += gx; a.py += gy; t->push_back(std::move(a)); }
+        for (auto& a : attached) {
+            a.px += gx;
+            a.py += gy;
+            t->push_back(std::move(a));
+        }
     }
-    // client.images on a TURF (loc kind 0x07) draw after every movable of their tile, only on the
-    // viewport's own z. A cell the viewer cannot see draws nothing (in DreamSeeker a
-    // LOS-hidden cell is blackness). A hit on one falls through to the turf.
+    // client.images on a TURF (loc kind 0x07) draw only on the viewport's own z. A cell the viewer cannot see draws
+    // nothing (in DreamSeeker a LOS-hidden cell is blackness). A hit on one falls through to the turf.
     for (const ImgRec& im : imgs_) {
         if (im.locKind != 0x07) continue;
         if (maxX_ <= 0 || maxY_ <= 0) break;
@@ -1406,7 +1641,14 @@ bool Assembler::buildGrid(int& originX, int& originY, int& winW, int& winH, int&
         if (!t) continue;
         int turfHit = t->empty() ? -1 : t->front().hitAtom;
         RApp ra;
-        if (imageApp(im, ra)) { ra.hitAtom = turfHit; ra.borrowsHit = true; t->push_back(std::move(ra)); }
+        if (imageApp(im, ra)) {
+            ra.hitAtom = turfHit;
+            ra.borrowsHit = true;
+            // FLOAT_LAYER is a fixed FLY_LAYER (5) here, whatever stands on the tile: over mobs (4) and
+            // objs below 5, under one of layer 5 or more, even one created later. The draw key is a float.
+            if (ra.layer < 0) ra.layer = double(std::nextafter(float(kFlyLayer), 0.0f));  // one float step under a tie
+            t->push_back(std::move(ra));
+        }
         std::vector<RApp> kids;
         std::set<uint32_t> visited;
         visChildren(im.visKids, visited, kids, nullptr);
@@ -1414,7 +1656,7 @@ bool Assembler::buildGrid(int& originX, int& originY, int& winW, int& winH, int&
     }
     st_.images += int(w_.images.size());
 
-    originX = viewOriginX;   // from here on the caller wants the VIEW origin
+    originX = viewOriginX;  // from here on the caller wants the VIEW origin
     originY = viewOriginY;
     return !failed_;
 }
@@ -1422,7 +1664,11 @@ bool Assembler::buildGrid(int& originX, int& originY, int& winW, int& winH, int&
 // The size of the first icon found in an appearance or its overlays.
 static bool firstIconSize(const std::vector<RApp>& as, int& w, int& h) {
     for (const RApp& a : as) {
-        if (a.icon) { w = a.icon->width; h = a.icon->height; return true; }
+        if (a.icon) {
+            w = a.icon->width;
+            h = a.icon->height;
+            return true;
+        }
         if (firstIconSize(a.overlays, w, h)) return true;
     }
     return false;
@@ -1444,28 +1690,233 @@ void Assembler::tileSize(int& tw, int& th) const {
     auto best = first;
     int bestN = 0;
     for (auto& [sz, n] : counts)
-        if (n > bestN || (n == bestN && sz == first)) { best = sz; bestN = n; }
-    if (bestN == 0) { tw = th = 32; return; }
-    tw = best.first; th = best.second;
+        if (n > bestN || (n == bestN && sz == first)) {
+            best = sz;
+            bestN = n;
+        }
+    if (bestN == 0) {
+        tw = th = 32;
+        return;
+    }
+    tw = best.first;
+    th = best.second;
 }
 
 // ---- placement -----------------------------------------------------------------------------------
+
+// KEEP_TOGETHER: the appearance and its overlays are composed onto a transparent surface of their own first, each under its
+// own blend mode, and that image is drawn as one layer under the appearance's blend mode. So a BLEND_INSET_OVERLAY overlay is
+// masked by the appearance's own pixels rather than by whatever lies beneath it on the plane. The parts stay in `out` for the
+// mouse (noDraw). Inside the group the parts sort by plane, then layer, ties in placement order (underlays first).
+// Left out of the group: a KEEP_APART overlay at any depth (it keeps only the colour it inherited from its own parent), and an
+// overlay on another plane than the appearance, which is drawn on that plane and takes the appearance's colour and alpha.
+// The appearance's colour, alpha, colour matrix and TRANSFORM apply to the group: the parts are composed untransformed (each
+// keeping its own transform) and the whole image is transformed about the appearance's own icon centre.
+bool Assembler::placeKeptTogether(const RApp& a, int baseX, int baseY, int tileH, double parentPlane,
+                                  double parentLayer, bool hasParent, std::vector<Placed>& out,
+                                  const std::array<float, 6>* inheritedXf) {
+    // Without a group (a relay, or nothing but overlays that leave it) the parts are placed as they would be without the flag,
+    // each carrying the parent's colour and alpha as an overlay normally does.
+    auto ordinary = [&] {
+        RApp plain = a;
+        plain.keepTogether = false;
+        for (RApp& ov : plain.overlays)
+            if (!ov.keepApart) inheritOverlayColor(ov, a.hasTint, a.tr, a.tg, a.tb, a.alpha);
+        placeApp(plain, baseX, baseY, tileH, parentPlane, parentLayer, hasParent, out, inheritedXf);
+        const double pl = resolvePlane(a.plane, hasParent ? parentPlane : 0.0);
+        const double ly = (hasParent && a.layer < 0) ? parentLayer : a.layer;
+        // No group to draw in: the image is a layer of its own, as without the flag.
+        for (const RApp& g : a.groupImages) {
+            RApp c = g;
+            inheritOverlayColor(c, a.hasTint, a.tr, a.tg, a.tb, a.alpha);
+            const size_t n0 = out.size();
+            placeApp(c, baseX + a.px, baseY - a.py, tileH, pl, ly, true, out, inheritedXf);
+            for (size_t k = n0; k < out.size(); k++) out[k].hitVisible = false;
+        }
+        return true;
+    };
+    if (!a.relay.empty()) return ordinary();
+    const double plane = resolvePlane(a.plane, hasParent ? parentPlane : 0.0);
+    const double layer = (hasParent && a.layer < 0) ? parentLayer : a.layer;
+    const bool hasX = inheritedXf ? true : a.hasXform;
+    const std::array<float, 6> xf = inheritedXf ? *inheritedXf : a.xf;
+    static const std::array<float, 6> kIdentity{1, 0, 0, 0, 1, 0};
+    const bool xformed =
+        g_sceneMutation != 54 && hasX && xf != kIdentity;  // 54: test-only, each part takes the transform itself
+
+    RApp inner = a;
+    inner.keepTogether = false;
+    inner.blend = kBlendDefault;
+    inner.hasTint = false;
+    inner.tr = inner.tg = inner.tb = 255;
+    inner.alpha = 255;
+    inner.cmat = nullptr;
+    inner.overlays.clear();
+    std::vector<RApp> apart;  // placed on their own after the group, with the appearance's transform
+    bool together = false;
+    for (const RApp& ov : a.overlays) {
+        if (ov.keepApart)
+            apart.push_back(ov);
+        else if (g_sceneMutation != 52 &&
+                 resolvePlane(ov.plane, plane) != plane) {  // 52: test-only, every overlay joins the group
+            apart.push_back(ov);
+            inheritOverlayColor(apart.back(), a.hasTint, a.tr, a.tg, a.tb, a.alpha);
+        } else {
+            inner.overlays.push_back(ov);
+            together = true;
+        }
+    }
+    if (!a.groupImages.empty()) together = true;
+    if (!together) return ordinary();
+    // The composed parts carry no transform of the appearance's: it applies to the image as a whole, below.
+    RApp flat = inner;
+    if (g_sceneMutation != 54) flat.hasXform = false;
+    std::vector<Placed> parts;
+    // A KEEP_APART overlay nested inside the group leaves the outermost group.
+    const bool outermost = apartSink_ == nullptr;
+    std::vector<Placed> sink;
+    if (outermost && g_sceneMutation != 53) apartSink_ = &sink;  // 53: test-only, nested KEEP_APART stays in the group
+    placeApp(flat, baseX, baseY, tileH, parentPlane, parentLayer, hasParent, parts,
+             g_sceneMutation == 54 ? inheritedXf : nullptr);
+    // The parent's client.images join the group after its overlays (a tie at one layer goes to the image) and answer no mouse
+    // here: their own hit-only entries do.
+    for (const RApp& g : a.groupImages) {
+        const size_t n0 = parts.size();
+        placeApp(g, baseX + a.px, baseY - a.py, tileH, plane, layer, true, parts, nullptr);
+        for (size_t k = n0; k < parts.size(); k++) parts[k].hitVisible = false;
+    }
+    std::vector<Placed>
+        hitParts;  // the same parts under the appearance's transform, answering the mouse where they are drawn
+    if (xformed && !failed_) {
+        std::vector<Placed> discard;
+        std::vector<Placed>* saved = apartSink_;
+        apartSink_ = &discard;
+        placeApp(inner, baseX, baseY, tileH, parentPlane, parentLayer, hasParent, hitParts, inheritedXf);
+        apartSink_ = saved;
+    }
+    if (outermost) apartSink_ = nullptr;
+    if (failed_) return true;
+    std::vector<size_t> drawn;
+    int x0 = INT_MAX, y0 = INT_MAX, x1 = INT_MIN, y1 = INT_MIN;
+    for (size_t i = 0; i < parts.size(); i++) {
+        const Placed& p = parts[i];
+        if (!p.layer.relay.empty()) return ordinary();
+        if (p.footprint || p.noDraw || !p.layer.sprite) continue;
+        drawn.push_back(i);
+        x0 = std::min(x0, p.layer.x);
+        y0 = std::min(y0, p.layer.y);
+        x1 = std::max(x1, p.layer.x + p.layer.sprite->w);
+        y1 = std::max(y1, p.layer.y + p.layer.sprite->h);
+    }
+    std::stable_sort(drawn.begin(), drawn.end(), [&](size_t i, size_t j) {
+        const Placed &p = parts[i], &q = parts[j];
+        if (p.plane != q.plane) return p.plane < q.plane;
+        if (p.sortLayer != q.sortLayer) return p.sortLayer < q.sortLayer;
+        return g_sceneMutation == 51 && p.layer.blend != q.layer.blend &&
+               q.layer.blend == kBlendAdd;  // 51: test-only, ADD last
+    });
+    Placed group;
+    if (!drawn.empty()) {
+        auto sp = std::make_shared<Sprite>();
+        int ox = x0, oy = y0;
+        if (xformed) {
+            // Pad the canvas so the appearance's own icon centre is its centre, then transform about it.
+            bool own = false;
+            SpritePtr psp = sprite(a, own);
+            if (failed_) return true;
+            const int pw = own ? psp->w : tileH, ph = own ? psp->h : tileH;
+            const int cx2 = 2 * (baseX + a.px) + pw, cy2 = 2 * (baseY + (tileH - ph) - a.py) + ph;
+            int hx2 = std::max(cx2 - 2 * x0, 2 * x1 - cx2), hy2 = std::max(cy2 - 2 * y0, 2 * y1 - cy2);
+            if (((cx2 - hx2) & 1) != 0) hx2++;
+            if (((cy2 - hy2) & 1) != 0) hy2++;
+            ox = (cx2 - hx2) / 2;
+            oy = (cy2 - hy2) / 2;
+            sp->w = hx2;
+            sp->h = hy2;
+        } else {
+            sp->w = x1 - x0;
+            sp->h = y1 - y0;
+        }
+        sp->px.assign(size_t(sp->w) * size_t(sp->h) * 4, 0);
+        for (size_t i : drawn) {
+            DrawLayer l = parts[i].layer;
+            l.x -= ox;
+            l.y -= oy;
+            blendLayerOver(sp->px.data(), sp->w, sp->h, l);
+        }
+        SpritePtr img = sp;
+        int gx = ox, gy = oy;
+        if (xformed) {
+            img = applyTransform(*sp, dmMatrixToImage(xf), Sampling::Bilinear);
+            gx = ox + int(gomath::round(double(sp->w - img->w) / 2));
+            gy = oy + int(gomath::round(double(sp->h - img->h) / 2));
+        }
+        group.layer.sprite = img;
+        group.layer.x = gx;
+        group.layer.y = gy;
+        group.layer.blend = a.blend;
+        group.layer.hasTint = a.hasTint;
+        group.layer.tintR = a.tr;
+        group.layer.tintG = a.tg;
+        group.layer.tintB = a.tb;
+        group.layer.alpha = a.alpha;
+        group.layer.cmat = a.cmat;
+        group.plane = plane;
+        group.sortLayer = layer;
+        group.atom = curAtom_;
+        group.frame = curFrame_;
+        group.hitVisible = false;
+    }
+    for (Placed& p : xformed ? hitParts : parts) {
+        p.noDraw = true;
+        p.seq = int(out.size());
+        out.push_back(std::move(p));
+    }
+    if (group.layer.sprite) {
+        group.seq = int(out.size());
+        out.push_back(std::move(group));
+    }
+    // The apart parts nested in the group, then the top-level ones (into the outer group's sink when this one is nested).
+    for (Placed& p : sink) {
+        p.seq = int(out.size());
+        out.push_back(std::move(p));
+    }
+    std::vector<Placed>* dest = apartSink_ ? apartSink_ : &out;
+    for (const RApp& ov : apart) {
+        std::vector<Placed>* saved = apartSink_;
+        apartSink_ = nullptr;
+        placeApp(ov, baseX + a.px, baseY - a.py, tileH, plane, layer, true, *dest, hasX ? &xf : nullptr);
+        apartSink_ = saved;
+        if (failed_) return true;
+    }
+    return true;
+}
 
 // Places an appearance (relays and maptext included). atom.transform is applied to the icon's own pixels about its own
 // centre BEFORE the tile-anchor placement; the anchor is computed from the native (pre-transform) size and the grown or
 // shrunk image is re-centred on it (as stock DreamSeeker does). `inheritedXf` is the parent's transform, copied over
 // every overlay's own, identity included.
-void Assembler::placeApp(const RApp& a, int baseX, int baseY, int tileH, double parentPlane, double parentLayer, bool hasParent, std::vector<Placed>& out,
-                         const std::array<float, 6>* inheritedXf) {
+void Assembler::placeApp(const RApp& a, int baseX, int baseY, int tileH, double parentPlane, double parentLayer,
+                         bool hasParent, std::vector<Placed>& out, const std::array<float, 6>* inheritedXf) {
+    if (apartSink_ && a.keepApart && hasParent) {
+        std::vector<Placed>* sink = apartSink_;
+        apartSink_ = nullptr;
+        placeApp(a, baseX, baseY, tileH, parentPlane, parentLayer, hasParent, *sink, inheritedXf);
+        apartSink_ = sink;
+        return;
+    }
+    if (a.keepTogether && g_sceneMutation != 50 &&
+        placeKeptTogether(a, baseX, baseY, tileH, parentPlane, parentLayer, hasParent, out, inheritedXf))
+        return;
     double plane = a.plane, layer = a.layer;
     double base = hasParent ? parentPlane : 0.0;
     plane = resolvePlane(plane, base);
-    if (hasParent && layer < 0) layer = parentLayer;   // a FLOAT_LAYER overlay sorts with its parent
+    if (hasParent && layer < 0) layer = parentLayer;  // a FLOAT_LAYER overlay sorts with its parent
     // Test-only hook: an overlay keeps its own transform instead of taking its parent's.
     const bool hasX = (inheritedXf && g_sceneMutation != 8) ? true : a.hasXform;
     const std::array<float, 6> xf = (inheritedXf && g_sceneMutation != 8) ? *inheritedXf : a.xf;
     static const std::array<float, 6> kIdentity{1, 0, 0, 0, 1, 0};
-    if (!hasParent && !a.target.empty() && a.target[0] == '*') return;   // drawn only where it is relayed
+    if (!hasParent && !a.target.empty() && a.target[0] == '*') return;  // drawn only where it is relayed
     if (!hasParent) {
         // The atom's icon frame (hittest.h HitFrame): its own icon, anchored exactly as the untransformed sprite below, plus
         // its transform. Its overlays and underlays are placed with this same frame, since stock DreamSeeker names a click on
@@ -1477,7 +1928,10 @@ void Assembler::placeApp(const RApp& a, int baseX, int baseY, int tileH, double 
         fr.h = own ? a.icon->height : tileH;
         fr.x = baseX + a.px;
         fr.y = baseY + (tileH - fr.h) - a.py;
-        if (hasX && xf != kIdentity) { fr.hasXf = true; fr.m = dmMatrixToImage(xf); }
+        if (hasX && xf != kIdentity) {
+            fr.hasXf = true;
+            fr.m = dmMatrixToImage(xf);
+        }
         curFrame_ = fr;
     }
 
@@ -1514,10 +1968,10 @@ void Assembler::placeApp(const RApp& a, int baseX, int baseY, int tileH, double 
         SpritePtr img = sp;
         if (hasX && xf != kIdentity) img = applyTransform(*sp, dmMatrixToImage(xf), Sampling::Bilinear);
         int dxNative = baseX + a.px;
-        int dyNative = baseY + (tileH - sp->h) - a.py;   // bottom-anchored; +pixel_y is north = -Y
+        int dyNative = baseY + (tileH - sp->h) - a.py;  // bottom-anchored; +pixel_y is north = -Y
         Placed p;
         p.layer.sprite = img;
-        if (g_sceneMutation == 4) {   // test-only: anchor the transformed image by its own corner, not its centre
+        if (g_sceneMutation == 4) {  // test-only: anchor the transformed image by its own corner, not its centre
             p.layer.x = dxNative;
             p.layer.y = dyNative;
         } else {
@@ -1537,7 +1991,8 @@ void Assembler::placeApp(const RApp& a, int baseX, int baseY, int tileH, double 
         SpritePtr& blank = blankCache_[{curFrame_.w, curFrame_.h}];
         if (!blank) {
             auto b = std::make_shared<Sprite>();
-            b->w = curFrame_.w; b->h = curFrame_.h;
+            b->w = curFrame_.w;
+            b->h = curFrame_.h;
             b->px.assign(size_t(b->w) * size_t(b->h) * 4, 0);
             blank = b;
         }
@@ -1591,10 +2046,12 @@ void Assembler::placeApp(const RApp& a, int baseX, int baseY, int tileH, double 
 // A relay of an atom render target: the source atom's image (its icon, overlays and underlays, in their own order) drawn
 // at the relay's tile with its pixel offsets, as one item of the relay's plane and layer. The relay's colour and alpha
 // multiply into every layer, and its blend mode replaces theirs.
-void Assembler::placeRelayed(const RApp& relay, const Target& src, int baseX, int baseY, int tileH, double plane, double layer, std::vector<Placed>& out) {
+void Assembler::placeRelayed(const RApp& relay, const Target& src, int baseX, int baseY, int tileH, double plane,
+                             double layer, std::vector<Placed>& out) {
     RApp s = src.app;
     s.target.clear();
-    if (relay.hasTint || relay.alpha != 255) inheritOverlayColor(s, relay.hasTint, relay.tr, relay.tg, relay.tb, relay.alpha);
+    if (relay.hasTint || relay.alpha != 255)
+        inheritOverlayColor(s, relay.hasTint, relay.tr, relay.tg, relay.tb, relay.alpha);
     std::vector<Placed> img;
     const int atom = curAtom_;
     const HitFrame frame = curFrame_;
@@ -1623,7 +2080,11 @@ void Assembler::placeRelayed(const RApp& relay, const Target& src, int baseX, in
         if (pass) {
             p.atom = src.app.hitAtom;
             p.passMouse = true;
-            if (src.hasOrigin) { p.frame.hasVisOrigin = true; p.frame.visLeft = src.left; p.frame.visBottom = src.bottom; }
+            if (src.hasOrigin) {
+                p.frame.hasVisOrigin = true;
+                p.frame.visLeft = src.left;
+                p.frame.visBottom = src.bottom;
+            }
         } else {
             p.atom = curAtom_;
             p.frame = frame;
@@ -1649,8 +2110,8 @@ void Assembler::flatten(const RApp& a, int w, int h, std::vector<FlatLayer>& out
     if (drawable) {
         FlatLayer f;
         f.l.sprite = sp;
-        f.l.x = a.px;       // +px east, +py north (= -Y)
-        f.l.y = (bottom ? h - sp->h : 0) - a.py;   // bottom: anchored at the w x h cell's bottom-left, as on the map
+        f.l.x = a.px;                             // +px east, +py north (= -Y)
+        f.l.y = (bottom ? h - sp->h : 0) - a.py;  // bottom: anchored at the w x h cell's bottom-left, as on the map
         setFx(f.l, a);
         if (a.cmat) {
             // The layer is a fresh TRANSPARENT canvas (w x h, or with `bottom` joined with the sprite's rectangle): a colour
@@ -1663,7 +2124,8 @@ void Assembler::flatten(const RApp& a, int w, int h, std::vector<FlatLayer>& out
                 ch = std::max(h, f.l.y + sp->h) - cy0;
             }
             auto cv = std::make_shared<Sprite>();
-            cv->w = cw; cv->h = ch;
+            cv->w = cw;
+            cv->h = ch;
             cv->px.assign(size_t(cw) * size_t(ch) * 4, 0);
             for (int sy = 0; sy < sp->h; sy++) {
                 int dy = f.l.y + sy - cy0;
@@ -1671,7 +2133,8 @@ void Assembler::flatten(const RApp& a, int w, int h, std::vector<FlatLayer>& out
                 for (int sx = 0; sx < sp->w; sx++) {
                     int dx = f.l.x + sx - cx0;
                     if (dx < 0 || dx >= cw) continue;
-                    std::memcpy(&cv->px[(size_t(dy) * size_t(cw) + size_t(dx)) * 4], &sp->px[(size_t(sy) * size_t(sp->w) + size_t(sx)) * 4], 4);
+                    std::memcpy(&cv->px[(size_t(dy) * size_t(cw) + size_t(dx)) * 4],
+                                &sp->px[(size_t(sy) * size_t(sp->w) + size_t(sx)) * 4], 4);
                 }
             }
             f.l.sprite = cv;
@@ -1715,15 +2178,19 @@ bool Assembler::appearanceIcon(uint32_t appid, int dir, int& w, int& h, std::vec
     // Stock DreamSeeker: no colour (scalar, matrix, inherited or an overlay's own), no alpha, no transform (flatten never
     // applies one), and no pixel offset, neither the atom's own nor an overlay's (an image() overlay with pixel_x = 8 sits at 0).
     std::function<void(RApp&)> raw = [&](RApp& r) {
-        r.hasTint = false; r.tr = r.tg = r.tb = 255; r.alpha = 255; r.cmat = nullptr;
-        r.px = 0; r.py = 0;
+        r.hasTint = false;
+        r.tr = r.tg = r.tb = 255;
+        r.alpha = 255;
+        r.cmat = nullptr;
+        r.px = 0;
+        r.py = 0;
         for (auto& o : r.overlays) raw(o);
     };
-    if (g_sceneMutation != 19) raw(ra);   // test-only: draw it the way the MAP does - colour, alpha and offsets kept
+    if (g_sceneMutation != 19) raw(ra);  // test-only: draw it the way the MAP does - colour, alpha and offsets kept
     // flatten keeps an overlay's raw layer, which sorts an image() overlay (layer FLOAT_LAYER = -1) beneath its parent.
     // Stock DreamSeeker draws such an overlay over the atom's own sprite in the menu icon.
     ra.plane = resolvePlane(ra.plane, 0);
-    if (g_sceneMutation != 20) resolveFloat(ra);   // test-only: flatten's raw overlay layers
+    if (g_sceneMutation != 20) resolveFloat(ra);  // test-only: flatten's raw overlay layers
     // The canvas is the atom's own icon; an iconless atom still shows its overlays (as stock DreamSeeker does), on the first icon found.
     std::function<const Icon*(const RApp&)> firstIcon = [&](const RApp& r) -> const Icon* {
         if (r.icon) return r.icon;
@@ -1775,8 +2242,7 @@ void Assembler::collectTargets(int cols, int rows, int tw, int th) {
     for (uint32_t id : w_.hudOrder) {
         auto slotIt = w_.hud.find(id);
         if (slotIt == w_.hud.end()) continue;
-        uint32_t slotAppid;
-        try { slotAppid = model::parseJson(slotIt->second)["appid"].u32(); } catch (const std::exception&) { continue; }
+        uint32_t slotAppid = slotIt->second.appid;
         const Ap* app = ap(slotAppid);
         if (!app || app->renderTarget.empty() || app->planeMaster() || app->screenLoc.empty()) continue;
         if (w_.haveSeeInvisible && app->invisibility > int(w_.seeInvisible)) continue;
@@ -1813,13 +2279,13 @@ void Assembler::placeHud(int cols, int rows, int tw, int th, std::vector<Placed>
     for (uint32_t id : w_.hudOrder) {
         auto slotIt = w_.hud.find(id);
         if (slotIt == w_.hud.end()) continue;
-        uint32_t slotAppid;
-        try { slotAppid = model::parseJson(slotIt->second)["appid"].u32(); } catch (const std::exception&) { continue; }
+        uint32_t slotAppid = slotIt->second.appid;
         const Ap* app = ap(slotAppid);
         if (!app || app->screenLoc.empty()) continue;
         if (w_.haveSeeInvisible && app->invisibility > int(w_.seeInvisible)) continue;
-        if (app->planeMaster()) continue;   // A master's icon is never drawn; the plane pass consumes the master instead.
-        if (!app->renderTarget.empty() && app->renderTarget[0] == '*') continue;   // drawn only where it is relayed
+        if (app->planeMaster())
+            continue;  // A master's icon is never drawn; the plane pass consumes the master instead.
+        if (!app->renderTarget.empty() && app->renderTarget[0] == '*') continue;  // drawn only where it is relayed
         // An iconless screen atom must not become a grey square.
         std::function<bool(uint32_t, std::set<uint32_t>&)> resolved = [&](uint32_t aid, std::set<uint32_t>& vis) {
             if (vis.count(aid)) return false;
@@ -1827,16 +2293,21 @@ void Assembler::placeHud(int cols, int rows, int tw, int th, std::vector<Placed>
             if (!a) return false;
             vis.insert(aid);
             bool r = false;
-            if (a->iconResID != kNoIcon && a->iconResID < w_.resources.size() && res_.iconResolved(w_.resources[a->iconResID].first, w_.resources)) r = true;
-            for (uint32_t u : a->underlays) if (!r && resolved(u, vis)) r = true;
-            for (uint32_t o : a->overlays) if (!r && resolved(o, vis)) r = true;
+            if (a->iconResID != kNoIcon && a->iconResID < w_.resources.size() &&
+                res_.iconResolved(w_.resources[a->iconResID].first, w_.resources))
+                r = true;
+            for (uint32_t u : a->underlays)
+                if (!r && resolved(u, vis)) r = true;
+            for (uint32_t o : a->overlays)
+                if (!r && resolved(o, vis)) r = true;
             vis.erase(aid);
             return r;
         };
         std::set<uint32_t> vis0;
         // A relay is iconless on purpose. An iconless atom is still in the hit sidecar, by its cell (HitHud::layers empty).
         const bool iconless = app->renderSource.empty() && !imgsOn_.count(id) && !resolved(slotAppid, vis0);
-        if (iconless && !hit_) continue;
+        auto vc = w_.visContents.find(id);
+        if (iconless && !hit_ && (vc == w_.visContents.end() || vc->second.empty())) continue;
 
         RApp ra;
         auto atom = w_.atoms.find(id);
@@ -1854,7 +2325,7 @@ void Assembler::placeHud(int cols, int rows, int tw, int th, std::vector<Placed>
         markParticles(ra, id);
 
         static const std::array<float, 6> kIdentity{1, 0, 0, 0, 1, 0};
-        const bool warp = ra.hasXform && ra.xf != kIdentity;   // placeWarpedScreenObj below
+        const bool warp = ra.hasXform && ra.xf != kIdentity;  // placeWarpedScreenObj below
         if (!iconless && atom != w_.atoms.end() && atom->second.animating) st_.animatedAtoms++;
 
         ParsedScreenLoc p;
@@ -1884,8 +2355,28 @@ void Assembler::placeHud(int cols, int rows, int tw, int th, std::vector<Placed>
                     curAtom_ = -1;
                     placeApp(ra, baseX, baseY, th, 0, 0, false, placed);
                     if (failed_) return;
-                    for (size_t k = n0; k < placed.size(); k++) { placed[k].hitVisible = false; placed[k].screen = true; }
+                    for (size_t k = n0; k < placed.size(); k++) {
+                        placed[k].hitVisible = false;
+                        placed[k].screen = true;
+                    }
                 }
+        }
+        // A screen object's vis_contents (tg's parallax_home, iconless) draw at its first cell. Stock DreamSeeker 516
+        // does not carry the holder's pixel offsets to them (planefilters-world, row 4).
+        std::vector<RApp> kids;
+        if (g_sceneMutation != 61) {
+            std::set<uint32_t> visitedV;
+            visContents(id, visitedV, kids, &ra);
+        }
+        for (RApp& k : kids) {
+            const size_t n0 = placed.size();
+            curAtom_ = -1;
+            placeApp(k, p.x, rows * th - p.y - th, th, 0, 0, false, placed);
+            if (failed_) return;
+            for (size_t i = n0; i < placed.size(); i++) {
+                placed[i].hitVisible = false;
+                placed[i].screen = true;
+            }
         }
         if (!hit_) continue;
         // The hit canvas is the cell joined with every layer's rectangle: a screen object is clicked whole, never clipped.
@@ -1904,20 +2395,26 @@ void Assembler::placeHud(int cols, int rows, int tw, int th, std::vector<Placed>
             if (fl[a].plane != fl[b].plane) return fl[a].plane < fl[b].plane;
             const DrawKey ka = drawKey(fl[a].layer, true, -1), kb = drawKey(fl[b].layer, true, -1);
             if (ka != kb) return ka < kb;
-            return (fl[a].l.blend == kBlendAdd ? 1 : 0) < (fl[b].l.blend == kBlendAdd ? 1 : 0);   // ADD after non-ADD at a tie
+            return (fl[a].l.blend == kBlendAdd ? 1 : 0) <
+                   (fl[b].l.blend == kBlendAdd ? 1 : 0);  // ADD after non-ADD at a tie
         });
         int bx0 = 0, by0 = 0, bx1 = tw, by1 = th;
         for (const FlatLayer& f : fl) {
             if (!f.l.sprite) continue;
-            bx0 = std::min(bx0, f.l.x); by0 = std::min(by0, f.l.y);
-            bx1 = std::max(bx1, f.l.x + f.l.sprite->w); by1 = std::max(by1, f.l.y + f.l.sprite->h);
+            bx0 = std::min(bx0, f.l.x);
+            by0 = std::min(by0, f.l.y);
+            bx1 = std::max(bx1, f.l.x + f.l.sprite->w);
+            by1 = std::max(by1, f.l.y + f.l.sprite->h);
         }
         if (footprint) {
-            bx0 = std::min(bx0, ra.px); by0 = std::min(by0, -ra.py);
-            bx1 = std::max(bx1, ra.px + tw); by1 = std::max(by1, th - ra.py);
+            bx0 = std::min(bx0, ra.px);
+            by0 = std::min(by0, -ra.py);
+            bx1 = std::max(bx1, ra.px + tw);
+            by1 = std::max(by1, th - ra.py);
         }
         HitHud hh;
-        hh.tileW = bx1 - bx0; hh.tileH = by1 - by0;
+        hh.tileW = bx1 - bx0;
+        hh.tileH = by1 - by0;
         for (int cx = 0; cx < spanC; cx++)
             for (int cy = 0; cy < spanR; cy++) {
                 int destX = p.x + cx * tw + bx0;
@@ -1928,9 +2425,11 @@ void Assembler::placeHud(int cols, int rows, int tw, int th, std::vector<Placed>
         if (hh.dests.empty()) continue;
         // The HUD ref is named by its id; the appearance drawn answers for name/opacity.
         auto shared = screenTargetHit_.find(id);
-        hh.atom = shared != screenTargetHit_.end() ? shared->second : newHitAtom(ra.appid, (id & kRegistryA) ? kAtomMob : kAtomObj, id & ~kRegistryA, true);
+        hh.atom = shared != screenTargetHit_.end()
+                      ? shared->second
+                      : newHitAtom(ra.appid, (id & kRegistryA) ? kAtomMob : kAtomObj, id & ~kRegistryA, true);
         hit_->atoms[size_t(hh.atom)].dir = ra.dir;
-        hh.plane = hr.plane;   // the screen atom's own plane/layer order it in the hit test
+        hh.plane = hr.plane;  // the screen atom's own plane/layer order it in the hit test
         hh.layer = ra.layer;
         hh.originX = ra.px - bx0;
         hh.originY = th - ra.py - by0;
@@ -1938,7 +2437,8 @@ void Assembler::placeHud(int cols, int rows, int tw, int th, std::vector<Placed>
             SpritePtr& blank = blankCache_[{tw, th}];
             if (!blank) {
                 auto b = std::make_shared<Sprite>();
-                b->w = tw; b->h = th;
+                b->w = tw;
+                b->h = th;
                 b->px.assign(size_t(tw) * size_t(th) * 4, 0);
                 blank = b;
             }
@@ -1963,7 +2463,8 @@ void Assembler::placeHud(int cols, int rows, int tw, int th, std::vector<Placed>
 // canvas, sampling nearest with
 // floor(half + d + 0.5); a fully transparent sample is left unwritten. The result is placed with alpha 255, the
 // object's own blend mode and layer, plane resolvePlane(plane, 0).
-void Assembler::placeWarpedScreenObj(const RApp& ra, double anchorX, double anchorBottomY, int canvasW, int canvasH, std::vector<Placed>& placed) {
+void Assembler::placeWarpedScreenObj(const RApp& ra, double anchorX, double anchorBottomY, int canvasW, int canvasH,
+                                     std::vector<Placed>& placed) {
     bool drawable;
     SpritePtr native = sprite(ra, drawable);
     if (failed_ || !drawable || !native || native->w <= 0 || native->h <= 0) return;
@@ -1990,9 +2491,9 @@ void Assembler::placeWarpedScreenObj(const RApp& ra, double anchorX, double anch
     const double a_ = double(ra.xf[0]), b_ = double(ra.xf[1]), c_ = double(ra.xf[2]);
     const double d_ = double(ra.xf[3]), e_ = double(ra.xf[4]), f_ = double(ra.xf[5]);
     const double det = a_ * e_ - b_ * d_;
-    if (det == 0) return;   // degenerate: draws nothing
+    if (det == 0) return;  // degenerate: draws nothing
     const double inv00 = e_ / det, inv01 = -b_ / det, inv10 = -d_ / det, inv11 = a_ / det;
-    const double tx = c_, ty = -f_;   // DM +y is up; image +y is down
+    const double tx = c_, ty = -f_;  // DM +y is up; image +y is down
     const double halfW = double(ow) / 2, halfH = double(oh) / 2;
 
     // The destination window: the forward image of the source rect, clipped to the canvas.
@@ -2006,17 +2507,22 @@ void Assembler::placeWarpedScreenObj(const RApp& ra, double anchorX, double anch
             double dyDmP = d_ * dxDm + e_ * dyDm;
             double x = centerX + tx + dxDmP;
             double y = centerY + ty - dyDmP;
-            minX = std::min(minX, x); maxX = std::max(maxX, x);
-            minY = std::min(minY, y); maxY = std::max(maxY, y);
+            minX = std::min(minX, x);
+            maxX = std::max(maxX, x);
+            minY = std::min(minY, y);
+            maxY = std::max(maxY, y);
         }
         if (!(std::isinf(minX) || std::isnan(minX) || std::isnan(minY) || std::isnan(maxX) || std::isnan(maxY))) {
             const int pad = 2;
             int bx0 = int(std::floor(minX)) - pad, by0 = int(std::floor(minY)) - pad;
             int bx1 = int(std::ceil(maxX)) + pad + 1, by1 = int(std::ceil(maxY)) + pad + 1;
-            sx0 = std::max(bx0, 0); sy0 = std::max(by0, 0); sx1 = std::min(bx1, canvasW); sy1 = std::min(by1, canvasH);
+            sx0 = std::max(bx0, 0);
+            sy0 = std::max(by0, 0);
+            sx1 = std::min(bx1, canvasW);
+            sy1 = std::min(by1, canvasH);
         }
     }
-    if (sx0 >= sx1 || sy0 >= sy1) return;   // lands entirely off-canvas
+    if (sx0 >= sx1 || sy0 >= sy1) return;  // lands entirely off-canvas
 
     auto out = std::make_shared<Sprite>();
     out->w = sx1 - sx0;
@@ -2063,11 +2569,20 @@ bool filterParam(const Ap::Flt& f, uint32_t bit, const uint8_t*& data, size_t& l
         if (!(f.mask & b)) continue;
         int w;
         switch (b) {
-            case 0x1: case 0x2: case 0x4: case 0x8: case 0x10: case 0x40: case 0x100: case 0x800: case 0x1000: w = 4; break;
+            case 0x1:
+            case 0x2:
+            case 0x4:
+            case 0x8:
+            case 0x10:
+            case 0x40:
+            case 0x100:
+            case 0x800:
+            case 0x1000: w = 4; break;
             case 0x20: w = 2; break;
             case 0x400: w = 80; break;
-            case 0x2000: case 0x4000: w = 1; break;
-            default: return false;   // 0x200 (cstr) or a bit the table does not know
+            case 0x2000:
+            case 0x4000: w = 1; break;
+            default: return false;  // 0x200 (cstr) or a bit the table does not know
         }
         if (b == bit) {
             if (off + size_t(w) > f.params.size()) return false;
@@ -2080,7 +2595,8 @@ bool filterParam(const Ap::Flt& f, uint32_t bit, const uint8_t*& data, size_t& l
     return false;
 }
 bool filterFloat(const Ap::Flt& f, uint32_t bit, double& out) {
-    const uint8_t* d; size_t n;
+    const uint8_t* d;
+    size_t n;
     if (!filterParam(f, bit, d, n) || n != 4) return false;
     uint32_t b = uint32_t(d[0]) | uint32_t(d[1]) << 8 | uint32_t(d[2]) << 16 | uint32_t(d[3]) << 24;
     float fl;
@@ -2089,9 +2605,13 @@ bool filterFloat(const Ap::Flt& f, uint32_t bit, double& out) {
     return true;
 }
 bool filterRGBA(const Ap::Flt& f, uint8_t& r, uint8_t& g, uint8_t& b, uint8_t& a) {
-    const uint8_t* d; size_t n;
+    const uint8_t* d;
+    size_t n;
     if (!filterParam(f, 0x2, d, n) || n != 4) return false;
-    r = d[0]; g = d[1]; b = d[2]; a = d[3];
+    r = d[0];
+    g = d[1];
+    b = d[2];
+    a = d[3];
     return true;
 }
 }  // namespace
@@ -2112,38 +2632,115 @@ void Assembler::collectMasters(uint32_t appid, std::set<uint32_t>& seen) {
     sp.renderTarget = a->renderTarget;
     if (a->hasPlane) m.plane = truePlane(a->plane);
     m.hideFromMouse = a->mouseOpacity() == kMouseOpacityNone && g_sceneMutation != 23;
-    if (a->hasColor) { sp.hasColor = true; sp.r = uint8_t(a->cr); sp.g = uint8_t(a->cg); sp.b = uint8_t(a->cb); sp.alpha = a->ca; }
+    if (a->hasColor) {
+        sp.hasColor = true;
+        sp.r = uint8_t(a->cr);
+        sp.g = uint8_t(a->cg);
+        sp.b = uint8_t(a->cb);
+        sp.alpha = a->ca;
+    }
     sp.cmat = a->cmat;
-    if (a->hasTransform) { sp.hasXform = true; sp.xf = a->transform; }
+    if (a->hasTransform) {
+        sp.hasXform = true;
+        sp.xf = a->transform;
+    }
     if (a->hasBlend) sp.blend = blendModeOfWire(a->blend);
     for (const Ap::Flt& f : a->filters) {
         double v;
         switch (f.type) {
-            case 1: {   // blur
-                if (!filterFloat(f, 0x1, v)) { sp.unappliedFilters++; break; }
-                FilterSpec fs; fs.kind = FilterSpec::Blur; fs.size = v;
+            case 1: {  // blur
+                if (!filterFloat(f, 0x1, v)) {
+                    sp.unappliedFilters++;
+                    break;
+                }
+                FilterSpec fs;
+                fs.kind = FilterSpec::Blur;
+                fs.size = v;
                 sp.filters.push_back(fs);
                 break;
             }
-            case 2: {   // outline: DM's defaults size 1, colour black
-                FilterSpec fs; fs.kind = FilterSpec::Outline; fs.size = 1; fs.alpha = 255;
+            case 2: {  // outline: DM's defaults size 1, colour black
+                FilterSpec fs;
+                fs.kind = FilterSpec::Outline;
+                fs.size = 1;
+                fs.alpha = 255;
                 if (filterFloat(f, 0x1, v)) fs.size = v;
                 uint8_t r, g, b, al;
-                if (filterRGBA(f, r, g, b, al)) { fs.r = r; fs.g = g; fs.b = b; fs.alpha = al; }
-                const uint8_t* d; size_t n;
+                if (filterRGBA(f, r, g, b, al)) {
+                    fs.r = r;
+                    fs.g = g;
+                    fs.b = b;
+                    fs.alpha = al;
+                }
+                const uint8_t* d;
+                size_t n;
                 if (filterParam(f, 0x20, d, n) && n == 2) fs.flags = uint16_t(d[0] | d[1] << 8);
-                if (fs.size <= 0 || fs.alpha == 0) { sp.unappliedFilters++; break; }
+                if (fs.size <= 0 || fs.alpha == 0) {
+                    sp.unappliedFilters++;
+                    break;
+                }
                 sp.filters.push_back(fs);
                 break;
             }
-            case 3: {   // drop_shadow: DM's defaults x=1, y=-1, size=1, offset=0, colour black
-                FilterSpec fs; fs.kind = FilterSpec::DropShadow; fs.x = 1; fs.y = -1; fs.size = 1; fs.alpha = 255;
+            case 3: {  // drop_shadow: DM's defaults x=1, y=-1, size=1, offset=0, colour black
+                FilterSpec fs;
+                fs.kind = FilterSpec::DropShadow;
+                fs.x = 1;
+                fs.y = -1;
+                fs.size = 1;
+                fs.alpha = 255;
                 if (filterFloat(f, 0x4, v)) fs.x = int(v);
-                if (filterFloat(f, 0x8, v)) fs.y = -int(v);   // DM's +y is NORTH, image space's +y is DOWN
+                if (filterFloat(f, 0x8, v)) fs.y = -int(v);  // DM's +y is NORTH, image space's +y is DOWN
                 if (filterFloat(f, 0x1, v)) fs.size = v;
                 if (filterFloat(f, 0x10, v)) fs.offset = v;
                 uint8_t r, g, b, al;
-                if (filterRGBA(f, r, g, b, al)) { fs.r = r; fs.g = g; fs.b = b; fs.alpha = al; }
+                if (filterRGBA(f, r, g, b, al)) {
+                    fs.r = r;
+                    fs.g = g;
+                    fs.b = b;
+                    fs.alpha = al;
+                }
+                sp.filters.push_back(fs);
+                break;
+            }
+            case 7: {  // alpha, by render_source only (icon 0xffff = none); DM's +y is NORTH
+                const uint8_t* d;
+                size_t n;
+                const bool icon =
+                    filterParam(f, 0x100, d, n) && n == 4 &&
+                    (uint32_t(d[0]) | uint32_t(d[1]) << 8 | uint32_t(d[2]) << 16 | uint32_t(d[3]) << 24) != 0xffff;
+                if (!(f.mask & 0x200) || icon || f.str.empty()) {
+                    sp.unappliedFilters++;
+                    break;
+                }
+                FilterSpec fs;
+                fs.kind = FilterSpec::AlphaMask;
+                fs.source = f.str;
+                if (filterFloat(f, 0x4, v)) fs.x = int(v);
+                if (filterFloat(f, 0x8, v)) fs.y = -int(v);
+                if (filterParam(f, 0x20, d, n) && n == 2) fs.flags = uint16_t(d[0] | d[1] << 8);
+                sp.filters.push_back(fs);
+                break;
+            }
+            case 9: {  // color, RGB space only; the matrix is 20 floats in the appearance matrix's layout
+                const uint8_t* d;
+                size_t n;
+                if (filterParam(f, 0x20, d, n) && n == 2 && (d[0] | d[1] << 8) != 0) {
+                    sp.unappliedFilters++;
+                    break;
+                }
+                if (!filterParam(f, 0x400, d, n) || n != 80) break;  // no matrix: the identity
+                auto cm = std::make_shared<ColorMatrix>();
+                for (size_t k = 0; k < 20; k++) {
+                    uint32_t u = uint32_t(d[4 * k]) | uint32_t(d[4 * k + 1]) << 8 | uint32_t(d[4 * k + 2]) << 16 |
+                                 uint32_t(d[4 * k + 3]) << 24;
+                    float fl;
+                    std::memcpy(&fl, &u, 4);
+                    (*cm)[k] = double(fl);
+                }
+                FilterSpec fs;
+                fs.kind = FilterSpec::ColorMatrix;
+                fs.cmat = std::move(cm);
                 sp.filters.push_back(fs);
                 break;
             }
@@ -2155,7 +2752,10 @@ void Assembler::collectMasters(uint32_t appid, std::set<uint32_t>& seen) {
     kids.insert(kids.end(), a->overlays.begin(), a->overlays.end());
     for (uint32_t oid : kids) {
         const Ap* o = ap(oid);
-        if (o && o->planeMaster()) { collectMasters(oid, seen); continue; }
+        if (o && o->planeMaster()) {
+            collectMasters(oid, seen);
+            continue;
+        }
         std::set<uint32_t> vis;
         RApp ra;
         if (buildApp(oid, vis, ra)) m.overlays.push_back(std::move(ra));
@@ -2165,14 +2765,19 @@ void Assembler::collectMasters(uint32_t appid, std::set<uint32_t>& seen) {
 
 // BYOND's blackness: one opaque black tile per hidden cell on plane 0, and only when a plane-0 master
 // exists. `sight = SEE_PIXELS` is not modelled: visibility is per tile here, where stock DreamSeeker computes it per pixel.
-void Assembler::appendBlackness(std::vector<Placed>& placed, int originX, int originY, int extentW, int extentH, int tw, int th) {
+void Assembler::appendBlackness(std::vector<Placed>& placed, int originX, int originY, int extentW, int extentH, int tw,
+                                int th) {
     if (hidden_.empty()) return;
     bool hasPlane0 = false;
     for (const MasterRec& m : masters_)
-        if (resolvePlane(m.plane, 0) == 0) { hasPlane0 = true; break; }
+        if (resolvePlane(m.plane, 0) == 0) {
+            hasPlane0 = true;
+            break;
+        }
     if (!hasPlane0) return;
     auto black = std::make_shared<Sprite>();
-    black->w = tw; black->h = th;
+    black->w = tw;
+    black->h = th;
     black->px.assign(size_t(tw) * size_t(th) * 4, 0);
     for (size_t i = 3; i < black->px.size(); i += 4) black->px[i] = 255;
     // The margin ring matches run()'s shifted placement: a shifted frame reveals tiles beyond the region, and
@@ -2185,7 +2790,7 @@ void Assembler::appendBlackness(std::vector<Placed>& placed, int originX, int or
             Placed p;
             p.layer.sprite = black;
             p.layer.x = vc * tw + dx;
-            p.layer.y = (eh - 1 - vr) * th + dy;   // y-flip, as run() does
+            p.layer.y = (eh - 1 - vr) * th + dy;  // y-flip, as run() does
             p.plane = 0;
             p.sortLayer = 0;
             p.seq = int(placed.size());
@@ -2196,7 +2801,10 @@ void Assembler::appendBlackness(std::vector<Placed>& placed, int originX, int or
 
 bool Assembler::run(DrawList& dl, std::string* err) {
     int originX = 0, originY = 0, winW = 0, winH = 0, extentW = 0, extentH = 0, a = 0, b = 0;
-    if (!buildGrid(originX, originY, winW, winH, extentW, extentH, a, b)) { if (err) *err = err_; return false; }
+    if (!buildGrid(originX, originY, winW, winH, extentW, extentH, a, b)) {
+        if (err) *err = err_;
+        return false;
+    }
     int tw, th;
     tileSize(tw, th);
     dl.outW = extentW * tw;
@@ -2222,21 +2830,34 @@ bool Assembler::run(DrawList& dl, std::string* err) {
                 curAtom_ = ra.hitAtom;
                 if (hit_ && ra.hitAtom >= 0 && !ra.borrowsHit) {
                     HitAtom& ha = hit_->atoms[size_t(ra.hitAtom)];
-                    ha.worldX = x; ha.worldY = y;
-                    ha.dir = ra.dir;   // the facing it is DRAWN with (a movable's own dir, not its appearance's)
+                    ha.worldX = x;
+                    ha.worldY = y;
+                    ha.dir = ra.dir;  // the facing it is DRAWN with (a movable's own dir, not its appearance's)
                 }
                 const size_t n0 = placed.size();
                 placeApp(ra, baseX, baseY, th, 0, 0, false, placed);
-                if (failed_) { if (err) *err = err_; return false; }
+                if (failed_) {
+                    if (err) *err = err_;
+                    return false;
+                }
+                if (ra.hitOnly)
+                    for (size_t k = n0; k < placed.size(); k++) placed[k].noDraw = true;
                 // Its draw key's cell: its own, or the one its pixel offset reaches into to the west or south.
-                const int cell = mapCell(x - originX + 1 + std::min(0, floorDivI(ra.px, tw)), y - originY + 1 + std::min(0, floorDivI(ra.py, th)));
+                const int cell = mapCell(x - originX + 1 + std::min(0, floorDivI(ra.px, tw)),
+                                         y - originY + 1 + std::min(0, floorDivI(ra.py, th)));
                 for (size_t k = n0; k < placed.size(); k++) placed[k].cell = cell;
             }
         }
     st_.eyeScroll = scrollX_ != 0 || scrollY_ != 0;
     if (ring_ > 0) {
         const int dx = shiftX_ - ring_ * tw, dy = shiftY_ - ring_ * th;
-        for (Placed& p : placed) { p.layer.x += dx; p.layer.y += dy; p.layer.relayBottomY += dy; p.frame.x += dx; p.frame.y += dy; }
+        for (Placed& p : placed) {
+            p.layer.x += dx;
+            p.layer.y += dy;
+            p.layer.relayBottomY += dy;
+            p.frame.x += dx;
+            p.frame.y += dy;
+        }
     }
     st_.layers = int(placed.size());
 
@@ -2246,23 +2867,34 @@ bool Assembler::run(DrawList& dl, std::string* err) {
         for (uint32_t id : w_.hudOrder) {
             auto slotIt = w_.hud.find(id);
             if (slotIt == w_.hud.end()) continue;
-            uint32_t appid;
-            try { appid = model::parseJson(slotIt->second)["appid"].u32(); } catch (const std::exception&) { continue; }
+            uint32_t appid = slotIt->second.appid;
             if (!mastersFor(appid)) continue;
             collectMasters(appid, seen);
-            if (failed_) { if (err) *err = err_; return false; }
+            if (failed_) {
+                if (err) *err = err_;
+                return false;
+            }
         }
     }
     appendBlackness(placed, originX, originY, extentW, extentH, tw, th);
     placeHud(extentW, extentH, tw, th, placed);
-    if (failed_) { if (err) *err = err_; return false; }
+    if (failed_) {
+        if (err) *err = err_;
+        return false;
+    }
 
-    if (!compositePlanes(placed, dl, th)) { if (err) *err = err_; return false; }
+    if (!compositePlanes(placed, dl, th)) {
+        if (err) *err = err_;
+        return false;
+    }
 
     if (hit_) {
-        hit_->tileW = tw; hit_->tileH = th;
-        hit_->cols = extentW; hit_->rows = extentH;
-        hit_->originX = originX; hit_->originY = originY;
+        hit_->tileW = tw;
+        hit_->tileH = th;
+        hit_->cols = extentW;
+        hit_->rows = extentH;
+        hit_->originX = originX;
+        hit_->originY = originY;
         finishHit(dl);
     }
     return true;
@@ -2281,7 +2913,8 @@ bool Assembler::compositePlanes(std::vector<Placed>& placed, DrawList& dl, int t
     for (auto& p : placed) byPlane[p.plane].push_back(std::move(p));
     std::map<double, const MasterRec*> masterOf;
     for (const MasterRec& m : masters_) {
-        double mp = resolvePlane(m.plane, 0);   // a FLOAT_PLANE-relative master plane must be resolved to match its layers
+        double mp =
+            resolvePlane(m.plane, 0);  // a FLOAT_PLANE-relative master plane must be resolved to match its layers
         masterOf[mp] = &m;
         if (!byPlane.count(mp) && (!m.overlays.empty() || !m.spec->renderTarget.empty())) byPlane[mp];
     }
@@ -2294,11 +2927,16 @@ bool Assembler::compositePlanes(std::vector<Placed>& placed, DrawList& dl, int t
                 curAtom_ = -1;
                 placeApp(ov, 0, 0, th, plane, 0, true, grp);
                 if (failed_) return false;
-                for (Placed& g : grp) { g.seq = int(ls.size()); g.hitVisible = false; ls.push_back(std::move(g)); }
+                for (Placed& g : grp) {
+                    g.seq = int(ls.size());
+                    g.hitVisible = false;
+                    ls.push_back(std::move(g));
+                }
             }
         }
         auto addRank = [](const Placed& p) { return p.layer.blend == kBlendAdd ? 1 : 0; };
-        for (Placed& p : ls) p.key = g_sceneMutation == 41 ? drawKey(p.sortLayer, p.screen, -1) : drawKey(p.sortLayer, p.screen, p.cell);
+        for (Placed& p : ls)
+            p.key = g_sceneMutation == 41 ? drawKey(p.sortLayer, p.screen, -1) : drawKey(p.sortLayer, p.screen, p.cell);
         if (g_sceneMutation == 2) {
             // test-only: break the arrival-order tie rule (equal layers drawn in reverse arrival)
             std::stable_sort(ls.begin(), ls.end(), [&](const Placed& a, const Placed& b) {
@@ -2322,8 +2960,9 @@ bool Assembler::compositePlanes(std::vector<Placed>& placed, DrawList& dl, int t
         const bool mouseHidden = mit != masterOf.end() && mit->second->hideFromMouse;
         for (auto& p : ls) {
             if (hit_ && p.hitVisible && p.layer.sprite && !mouseHidden)
-                hit_->world.push_back(HitLayer{p.layer.sprite, p.layer.x, p.layer.y, p.atom, p.frame, p.own, plane, p.maptext, p.footprint, p.key, p.passMouse});
-            if (!p.footprint) pp.layers.push_back(std::move(p.layer));
+                hit_->world.push_back(HitLayer{p.layer.sprite, p.layer.x, p.layer.y, p.atom, p.frame, p.own, plane,
+                                               p.maptext, p.footprint, p.key, p.passMouse});
+            if (!p.footprint && !p.noDraw) pp.layers.push_back(std::move(p.layer));
         }
         dl.planes.push_back(std::move(pp));
     }
@@ -2334,7 +2973,8 @@ bool Assembler::compositePlanes(std::vector<Placed>& placed, DrawList& dl, int t
 static bool ieqAscii(std::string_view a, std::string_view b) {
     if (a.size() != b.size()) return false;
     for (size_t i = 0; i < a.size(); i++)
-        if (std::tolower(static_cast<unsigned char>(a[i])) != std::tolower(static_cast<unsigned char>(b[i]))) return false;
+        if (std::tolower(static_cast<unsigned char>(a[i])) != std::tolower(static_cast<unsigned char>(b[i])))
+            return false;
     return true;
 }
 
@@ -2367,37 +3007,58 @@ bool Assembler::mastersFor(uint32_t appid) {
 // screen_loc.
 bool Assembler::runSecondary(std::string_view mapName, DrawList& dl, std::string* err) {
     mapName_ = std::string(mapName);
-    maxX_ = w_.bounds.maxX; maxY_ = w_.bounds.maxY;
+    maxX_ = w_.bounds.maxX;
+    maxY_ = w_.bounds.maxY;
     const int tw = model::iconSizeOf(w_), th = tw;
-    int cols = 2 * kDefaultViewRange + 1, rows = cols;   // only a keyword (CENTER, EAST...) consults them
-    if (w_.bounds.viewW > 0 && w_.bounds.viewH > 0) { cols = w_.bounds.viewW; rows = w_.bounds.viewH; }
-    else if (w_.bounds.view > 0) cols = rows = 2 * w_.bounds.view + 1;
+    int cols = 2 * kDefaultViewRange + 1, rows = cols;  // only a keyword (CENTER, EAST...) consults them
+    if (w_.bounds.viewW > 0 && w_.bounds.viewH > 0) {
+        cols = w_.bounds.viewW;
+        rows = w_.bounds.viewH;
+    } else if (w_.bounds.view > 0)
+        cols = rows = 2 * w_.bounds.view + 1;
     collectImages();
 
-    struct Obj { uint32_t id, appid; ParsedScreenLoc p; bool keyword; };
+    struct Obj {
+        uint32_t id, appid;
+        ParsedScreenLoc p;
+        bool keyword;
+    };
     std::vector<Obj> objs;
     std::set<uint32_t> seen;
     for (uint32_t id : w_.hudOrder) {
         auto slotIt = w_.hud.find(id);
         if (slotIt == w_.hud.end()) continue;
-        uint32_t appid;
-        try { appid = model::parseJson(slotIt->second)["appid"].u32(); } catch (const std::exception&) { continue; }
+        uint32_t appid = slotIt->second.appid;
         const Ap* app = ap(appid);
         if (!app || !ieqAscii(screenLocMap(app->screenLoc), mapName_)) continue;
-        if (app->planeMaster()) { collectMasters(appid, seen); if (failed_) break; continue; }
+        if (app->planeMaster()) {
+            collectMasters(appid, seen);
+            if (failed_) break;
+            continue;
+        }
         if (w_.haveSeeInvisible && app->invisibility > int(w_.seeInvisible)) continue;
         Obj o{id, appid, {}, false};
         if (!parseScreenLoc(app->screenLoc, cols, rows, tw, th, o.p)) continue;
         // A position that moves with the view size (CENTER, EAST, NORTH...) is relative to the box, not part of it.
         ParsedScreenLoc wider;
-        o.keyword = parseScreenLoc(app->screenLoc, cols + 10, rows + 10, tw, th, wider) && (wider.x != o.p.x || wider.y != o.p.y);
+        o.keyword = parseScreenLoc(app->screenLoc, cols + 10, rows + 10, tw, th, wider) &&
+                    (wider.x != o.p.x || wider.y != o.p.y);
         objs.push_back(o);
     }
-    if (failed_) { if (err) *err = err_; return false; }
+    if (failed_) {
+        if (err) *err = err_;
+        return false;
+    }
     dl.groundBlack = true;
-    if (hit_) { hit_->secondary = true; hit_->tileW = tw; hit_->tileH = th; hit_->cols = hit_->rows = 1; }
-    if (objs.empty()) {   // a map with nothing on it: black
-        dl.outW = tw; dl.outH = th;
+    if (hit_) {
+        hit_->secondary = true;
+        hit_->tileW = tw;
+        hit_->tileH = th;
+        hit_->cols = hit_->rows = 1;
+    }
+    if (objs.empty()) {  // a map with nothing on it: black
+        dl.outW = tw;
+        dl.outH = th;
         if (hit_) finishHit(dl);
         return true;
     }
@@ -2408,18 +3069,24 @@ bool Assembler::runSecondary(std::string_view mapName, DrawList& dl, std::string
     int x0 = INT_MAX, y0 = INT_MAX, x1 = INT_MIN, y1 = INT_MIN;
     for (const Obj& o : objs) {
         if (anyNumeric && o.keyword) continue;
-        x0 = std::min(x0, o.p.x); y0 = std::min(y0, o.p.y);
+        x0 = std::min(x0, o.p.x);
+        y0 = std::min(y0, o.p.y);
         x1 = std::max(x1, o.p.x + std::max(o.p.spanCols, 1) * tw);
         y1 = std::max(y1, o.p.y + std::max(o.p.spanRows, 1) * th);
     }
     const int W = x1 - x0, H = y1 - y0;
-    dl.outW = W; dl.outH = H;
+    dl.outW = W;
+    dl.outH = H;
     if (anyNumeric)
         for (Obj& o : objs) {
             if (!o.keyword) continue;
             const Ap* app = ap(o.appid);
             ParsedScreenLoc q;
-            if (app && parseScreenLoc(app->screenLoc, W / tw, H / th, tw, th, q)) { q.x += x0; q.y += y0; o.p = q; }
+            if (app && parseScreenLoc(app->screenLoc, W / tw, H / th, tw, th, q)) {
+                q.x += x0;
+                q.y += y0;
+                o.p = q;
+            }
         }
 
     // What stands on each turf (only built when some holder shows turfs).
@@ -2428,7 +3095,7 @@ bool Assembler::runSecondary(std::string_view mapName, DrawList& dl, std::string
     for (const Obj& o : objs) anyTurfs = anyTurfs || w_.visTurfs.count(o.id);
     if (anyTurfs)
         for (const auto& [aid, m] : w_.atoms)
-            if (m.hasPos) onTurf[{m.x, m.y, m.z}].push_back(aid);   // ascending id, as the default map
+            if (m.hasPos) onTurf[{m.x, m.y, m.z}].push_back(aid);  // ascending id, as the default map
 
     std::vector<Placed> placed;
     // The default map's z: a turf on any other is named by its id. CellGrid::viewZ is 1 when the refresh grid is not in
@@ -2442,7 +3109,8 @@ bool Assembler::runSecondary(std::string_view mapName, DrawList& dl, std::string
             if (!buildApp(atom->second.appid, visited, ra)) continue;
             ra.px += int(atom->second.pixelX);
             ra.py += int(atom->second.pixelY);
-        } else if (!buildApp(o.appid, visited, ra)) continue;
+        } else if (!buildApp(o.appid, visited, ra))
+            continue;
         applyIconAnimation(ra, hudIconStart(o.id));
         const int spanC = std::max(o.p.spanCols, 1), spanR = std::max(o.p.spanRows, 1);
         const int holder = newHitAtom(ra.appid, (o.id & kRegistryA) ? kAtomMob : kAtomObj, o.id & ~kRegistryA, true);
@@ -2451,23 +3119,32 @@ bool Assembler::runSecondary(std::string_view mapName, DrawList& dl, std::string
             for (int cy = 0; cy < spanR; cy++) {
                 curAtom_ = holder;
                 placeApp(ra, o.p.x - x0 + cx * tw, H - (o.p.y - y0 + cy * th) - th, th, 0, 0, false, placed);
-                if (failed_) { if (err) *err = err_; return false; }
+                if (failed_) {
+                    if (err) *err = err_;
+                    return false;
+                }
             }
-        const int hx = o.p.x - x0, hy = H - (o.p.y - y0) - th;   // the holder's (first) cell, top-left
+        const int hx = o.p.x - x0, hy = H - (o.p.y - y0) - th;  // the holder's (first) cell, top-left
         std::vector<RApp> kids;
         std::set<uint32_t> visitedV;
         visContents(o.id, visitedV, kids, &ra);
-        for (const RApp& k : kids) { curAtom_ = k.hitAtom; placeApp(k, hx, hy, th, 0, 0, false, placed); }
+        for (const RApp& k : kids) {
+            curAtom_ = k.hitAtom;
+            placeApp(k, hx, hy, th, 0, 0, false, placed);
+        }
         auto vt = w_.visTurfs.find(o.id);
         if (vt == w_.visTurfs.end() || maxX_ <= 0 || maxY_ <= 0) continue;
         const uint32_t mx = uint32_t(maxX_), my = uint32_t(maxY_);
         if (viewZ == 0) viewZ = s_.cells().viewZ;
         int minX = INT32_MAX, minY = INT32_MAX;
-        for (uint32_t c : vt->second) { minX = std::min(minX, int(c % mx)); minY = std::min(minY, int(c / mx % my)); }
+        for (uint32_t c : vt->second) {
+            minX = std::min(minX, int(c % mx));
+            minY = std::min(minY, int(c / mx % my));
+        }
         for (uint32_t c : vt->second) {
             const int tx = int(c % mx), ty = int(c / mx % my), tz = int(c / (mx * my));
             const int bx = hx + (tx - minX) * tw, by = hy - (ty - minY) * th;
-            if (bx >= W || by >= H || bx + tw <= 0 || by + th <= 0) continue;   // outside the box: clipped
+            if (bx >= W || by >= H || bx + tw <= 0 || by + th <= 0) continue;  // outside the box: clipped
             auto t = w_.tiles.find({uint16_t(tx), uint16_t(ty), uint16_t(tz)});
             if (t != w_.tiles.end() && !hiddenFromClient(t->second)) {
                 RApp tr;
@@ -2477,8 +3154,10 @@ bool Assembler::runSecondary(std::string_view mapName, DrawList& dl, std::string
                     curAtom_ = newHitAtom(t->second, kAtomTurf, 0, false);
                     if (curAtom_ >= 0) {
                         HitAtom& ha = hit_->atoms[size_t(curAtom_)];
-                        ha.worldX = tx + 1; ha.worldY = ty + 1;
-                        ha.byId = tz + 1 != viewZ; ha.turfId = c;
+                        ha.worldX = tx + 1;
+                        ha.worldY = ty + 1;
+                        ha.byId = tz + 1 != viewZ;
+                        ha.turfId = c;
                     }
                     placeApp(tr, bx, by, th, 0, 0, false, placed);
                 }
@@ -2493,26 +3172,42 @@ bool Assembler::runSecondary(std::string_view mapName, DrawList& dl, std::string
                 ma.dir = m.dir;
                 for (auto& ov : ma.overlays) applyOverlayDir(ov, m.dir);
                 int gx = int(m.pixelX) + int(m.pixelW), gy = int(m.pixelY) + int(m.pixelZ);
-                ma.px += gx; ma.py += gy;
+                ma.px += gx;
+                ma.py += gy;
                 std::vector<RApp> attached;
                 std::set<uint32_t> va;
                 visContents(aid, va, attached, &ma);
                 curAtom_ = newHitAtom(m.appid, (aid & kRegistryA) ? kAtomMob : kAtomObj, aid & ~kRegistryA, false);
                 if (curAtom_ >= 0) {
                     HitAtom& ha = hit_->atoms[size_t(curAtom_)];
-                    ha.worldX = tx + 1; ha.worldY = ty + 1; ha.dir = m.dir;
+                    ha.worldX = tx + 1;
+                    ha.worldY = ty + 1;
+                    ha.dir = m.dir;
                 }
                 placeApp(ma, bx, by, th, 0, 0, false, placed);
-                for (auto& a : attached) { a.px += gx; a.py += gy; curAtom_ = a.hitAtom; placeApp(a, bx, by, th, 0, 0, false, placed); }
+                for (auto& a : attached) {
+                    a.px += gx;
+                    a.py += gy;
+                    curAtom_ = a.hitAtom;
+                    placeApp(a, bx, by, th, 0, 0, false, placed);
+                }
             }
-            if (failed_) { if (err) *err = err_; return false; }
+            if (failed_) {
+                if (err) *err = err_;
+                return false;
+            }
         }
     }
     st_.layers = int(placed.size());
-    if (!compositePlanes(placed, dl, th)) { if (err) *err = err_; return false; }
+    if (!compositePlanes(placed, dl, th)) {
+        if (err) *err = err_;
+        return false;
+    }
     if (hit_) {
-        hit_->cols = std::max(1, (W + tw - 1) / tw); hit_->rows = std::max(1, (H + th - 1) / th);
-        hit_->screenX0 = floorDivI(x0, tw); hit_->screenY0 = floorDivI(y0, th);
+        hit_->cols = std::max(1, (W + tw - 1) / tw);
+        hit_->rows = std::max(1, (H + th - 1) / th);
+        hit_->screenX0 = floorDivI(x0, tw);
+        hit_->screenY0 = floorDivI(y0, th);
         finishHit(dl);
     }
     return true;
@@ -2541,15 +3236,23 @@ const Icon* ResStore::icon(uint32_t id) {
     if (c != icons_.end()) return c->second.get();
     if (bad_.count(id)) return nullptr;
     auto b = bytes_.find(id);
-    if (b == bytes_.end()) { wanted_.insert(id); return nullptr; }
+    if (b == bytes_.end()) {
+        wanted_.insert(id);
+        return nullptr;
+    }
     // A DDMI recipe holds no raster: it cannot be parsed as an icon and must NOT poison bad_ (iconResolved owns it).
     if (isDdmi(b->second.data(), b->second.size())) return nullptr;
     ParseResult r = parseIcon(b->second.data(), b->second.size());
     if (!r.ok()) {
         bad_[id] = true;
         std::string head;
-        for (size_t i = 0; i < std::min<size_t>(8, b->second.size()); i++) { char x[3]; std::snprintf(x, sizeof x, "%02x", b->second[i]); head += x; }
-        refused_[id] = "icon parse: " + r.errClass + " " + r.errDetail + " (" + std::to_string(b->second.size()) + " bytes, head " + head + ")";
+        for (size_t i = 0; i < std::min<size_t>(8, b->second.size()); i++) {
+            char x[3];
+            std::snprintf(x, sizeof x, "%02x", b->second[i]);
+            head += x;
+        }
+        refused_[id] = "icon parse: " + r.errClass + " " + r.errDetail + " (" + std::to_string(b->second.size()) +
+                       " bytes, head " + head + ")";
         return nullptr;
     }
     const Icon* p = r.icon.get();
@@ -2559,44 +3262,79 @@ const Icon* ResStore::icon(uint32_t id) {
 
 // Recipe resolution. PENDING (an operand whose bytes or whose ordinal has not arrived yet) and PERMANENT (a refused
 // shape, a missing icon_state, an operand that is not an icon, a cycle) are different failures and only the second may poison.
-ResStore::RStat ResStore::resolveOne(uint32_t id, const std::vector<std::pair<uint32_t, uint8_t>>& ordinals, std::set<uint32_t>& inProgress,
-                                     const Icon*& out) {
+ResStore::RStat ResStore::resolveOne(uint32_t id, const std::vector<std::pair<uint32_t, uint8_t>>& ordinals,
+                                     std::set<uint32_t>& inProgress, const Icon*& out) {
     out = nullptr;
-    if (auto r = recipeIcon_.find(id); r != recipeIcon_.end()) { out = r->second; return RStat::Ok; }
-    if (const Icon* ic = (icons_.count(id) ? icons_[id].get() : nullptr)) { out = ic; return RStat::Ok; }
+    if (auto r = recipeIcon_.find(id); r != recipeIcon_.end()) {
+        out = r->second;
+        return RStat::Ok;
+    }
+    if (const Icon* ic = (icons_.count(id) ? icons_[id].get() : nullptr)) {
+        out = ic;
+        return RStat::Ok;
+    }
     if (bad_.count(id)) return RStat::Permanent;
     auto b = bytes_.find(id);
-    if (b == bytes_.end()) { wanted_.insert(id); return RStat::Pending; }
+    if (b == bytes_.end()) {
+        wanted_.insert(id);
+        return RStat::Pending;
+    }
     if (!isDdmi(b->second.data(), b->second.size())) {
         // An ordinary icon reached here as somebody's operand: resolve it as the plain path would.
         const Icon* ic = icon(id);
-        if (ic) { out = ic; return RStat::Ok; }
+        if (ic) {
+            out = ic;
+            return RStat::Ok;
+        }
         return bad_.count(id) ? RStat::Permanent : RStat::Pending;
     }
-    if (inProgress.count(id)) { bad_[id] = true; refused_[id] = "DDMI recipe cycle"; return RStat::Permanent; }   // a cycle can never be broken
+    if (inProgress.count(id)) {
+        bad_[id] = true;
+        refused_[id] = "DDMI recipe cycle";
+        return RStat::Permanent;
+    }  // a cycle can never be broken
     DdmiRecipe rec;
     std::string perr;
-    if (!parseDdmi(b->second.data(), b->second.size(), rec, &perr)) { bad_[id] = true; refused_[id] = perr; return RStat::Permanent; }
+    if (!parseDdmi(b->second.data(), b->second.size(), rec, &perr)) {
+        bad_[id] = true;
+        refused_[id] = perr;
+        return RStat::Permanent;
+    }
     inProgress.insert(id);
-    struct Guard { std::set<uint32_t>& s; uint32_t id; ~Guard() { s.erase(id); } } guard{inProgress, id};
+    struct Guard {
+        std::set<uint32_t>& s;
+        uint32_t id;
+        ~Guard() { s.erase(id); }
+    } guard{inProgress, id};
     std::vector<const Icon*> ops;
     for (const DdmiRef& ref : rec.refs) {
-        if (ddmiRefIsEmptyIcon(ref)) { ops.push_back(nullptr); continue; }
-        if (ref.ordinal >= ordinals.size()) return RStat::Pending;   // the offer list GROWS mid-session
+        if (ddmiRefIsEmptyIcon(ref)) {
+            ops.push_back(nullptr);
+            continue;
+        }
+        if (ref.ordinal >= ordinals.size()) return RStat::Pending;  // the offer list GROWS mid-session
         const Icon* op = nullptr;
         switch (resolveOne(ordinals[ref.ordinal].first, ordinals, inProgress, op)) {
             case RStat::Pending: return RStat::Pending;
-            case RStat::Permanent: bad_[id] = true; refused_[id] = "a DDMI operand is permanently unresolvable"; return RStat::Permanent;
+            case RStat::Permanent:
+                bad_[id] = true;
+                refused_[id] = "a DDMI operand is permanently unresolvable";
+                return RStat::Permanent;
             case RStat::Ok: break;
         }
         ops.push_back(op);
     }
     DdmiResult r = evalDdmi(rec, ops);
     if (!r.icon()) {
-        bad_[id] = true; refused_[id] = r.err; return RStat::Permanent;
+        bad_[id] = true;
+        refused_[id] = r.err;
+        return RStat::Permanent;
     }
-    if (r.owned) { recipeIcon_[id] = r.owned.get(); recipeOwned_[id] = std::move(r.owned); }
-    else recipeIcon_[id] = r.alias;
+    if (r.owned) {
+        recipeIcon_[id] = r.owned.get();
+        recipeOwned_[id] = std::move(r.owned);
+    } else
+        recipeIcon_[id] = r.alias;
     out = recipeIcon_[id];
     return RStat::Ok;
 }
@@ -2611,8 +3349,12 @@ const Icon* ResStore::iconResolved(uint32_t id, const std::vector<std::pair<uint
 std::string SceneStats::summary() const {
     std::ostringstream o;
     o << "layers=" << layers;
-    auto f = [&](const char* n, int v) { if (v) o << " unmodeled:" << n << "=" << v; };
-    f("maptext", maptext); f("animate_chain", animatedAtoms); f("images", images);
+    auto f = [&](const char* n, int v) {
+        if (v) o << " unmodeled:" << n << "=" << v;
+    };
+    f("maptext", maptext);
+    f("animate_chain", animatedAtoms);
+    f("images", images);
     if (masters) o << " masters=" << masters;
     if (unappliedFilters) o << " unapplied_filters=" << unappliedFilters;
     if (eyeScroll) o << " eye_scroll=1";
@@ -2621,37 +3363,39 @@ std::string SceneStats::summary() const {
 
 void setSceneMutation(int m) {
     g_sceneMutation = m;
-    if (m == 10 || m == 11 || m == 12 || m == 13 || m == 14 || m == 16) setPipelineMutation(m);
+    if (m == 10 || m == 11 || m == 12 || m == 13 || m == 14 || m == 16 || m == 60) setPipelineMutation(m);
     if (m == 17 || m == 18) setDdmiMutation(m);
 }
 
-bool assembleMapControl(const model::Session& session, ResStore& res, int64_t clockNs, DrawList& out, SceneStats& stats, std::string* err,
-                        bool withHit, std::string_view mapStyle, SceneCache* cache) {
+bool assembleMapControl(const model::Session& session, ResStore& res, int64_t clockNs, DrawList& out, SceneStats& stats,
+                        std::string* err, bool withHit, std::string_view mapStyle, SceneCache* cache) {
     Assembler a(session, res, clockNs, stats, withHit, mapStyle, cache ? cache->impl_.get() : nullptr);
     return a.run(out, err);
 }
 
-bool assembleSecondaryMap(const model::Session& session, ResStore& res, int64_t clockNs, std::string_view mapName, DrawList& out,
-                          SceneStats& stats, std::string* err, std::string_view mapStyle, SceneCache* cache, bool withHit) {
+bool assembleSecondaryMap(const model::Session& session, ResStore& res, int64_t clockNs, std::string_view mapName,
+                          DrawList& out, SceneStats& stats, std::string* err, std::string_view mapStyle,
+                          SceneCache* cache, bool withHit) {
     Assembler a(session, res, clockNs, stats, withHit, mapStyle, cache ? cache->impl_.get() : nullptr);
     return a.runSecondary(mapName, out, err);
 }
 
-bool appearanceIcon(const model::Session& session, ResStore& res, uint32_t appid, int dir, int& w, int& h, std::vector<uint8_t>& rgba,
-                    int64_t clockNs, int64_t startNs) {
+bool appearanceIcon(const model::Session& session, ResStore& res, uint32_t appid, int dir, int& w, int& h,
+                    std::vector<uint8_t>& rgba, int64_t clockNs, int64_t startNs) {
     SceneStats st;
     Assembler a(session, res, clockNs, st);
     return a.appearanceIcon(appid, dir, w, h, rgba, startNs);
 }
 
-bool statRowIcon(const model::Session& session, ResStore& res, uint32_t appid, int cell, int64_t clockNs, std::vector<uint8_t>& rgba,
-                 int64_t startNs) {
+bool statRowIcon(const model::Session& session, ResStore& res, uint32_t appid, int cell, int64_t clockNs,
+                 std::vector<uint8_t>& rgba, int64_t startNs) {
     int w = 0, h = 0;
     std::vector<uint8_t> src;
     if (cell <= 0 || !appearanceIcon(session, res, appid, -1, w, h, src, clockNs, startNs)) return false;
     rgba.assign(size_t(cell) * size_t(cell) * 4, 0);
     if (w <= cell && h <= cell) {  // native size, top-left
-        for (int y = 0; y < h; y++) std::memcpy(&rgba[size_t(y) * size_t(cell) * 4], &src[size_t(y) * size_t(w) * 4], size_t(w) * 4);
+        for (int y = 0; y < h; y++)
+            std::memcpy(&rgba[size_t(y) * size_t(cell) * 4], &src[size_t(y) * size_t(w) * 4], size_t(w) * 4);
         return true;
     }
     // Shrunk into the cell: each destination pixel is the premultiplied average of the source pixels it covers. Uniform
@@ -2666,11 +3410,18 @@ bool statRowIcon(const model::Session& session, ResStore& res, uint32_t appid, i
             for (int sy = y0; sy < y1; sy++)
                 for (int sx = x0; sx < x1; sx++) {
                     const uint8_t* p = &src[(size_t(sy) * size_t(w) + size_t(sx)) * 4];
-                    r += uint64_t(p[0]) * p[3]; g += uint64_t(p[1]) * p[3]; b += uint64_t(p[2]) * p[3]; a += p[3]; n++;
+                    r += uint64_t(p[0]) * p[3];
+                    g += uint64_t(p[1]) * p[3];
+                    b += uint64_t(p[2]) * p[3];
+                    a += p[3];
+                    n++;
                 }
             uint8_t* d = &rgba[(size_t(y) * size_t(cell) + size_t(x)) * 4];
             if (a == 0) continue;
-            d[0] = uint8_t((r + a / 2) / a); d[1] = uint8_t((g + a / 2) / a); d[2] = uint8_t((b + a / 2) / a); d[3] = uint8_t((a + n / 2) / n);
+            d[0] = uint8_t((r + a / 2) / a);
+            d[1] = uint8_t((g + a / 2) / a);
+            d[2] = uint8_t((b + a / 2) / a);
+            d[3] = uint8_t((a + n / 2) / n);
         }
     }
     return true;

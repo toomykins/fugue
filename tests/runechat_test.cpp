@@ -34,7 +34,7 @@ std::string slurp(const std::string& p) {
 constexpr int64_t kT0 = 1'000'000'000'000'000'000;
 constexpr int64_t kTick = 100'000'000;  // world.fps = 10
 constexpr uint32_t kGold = 0xffd700;
-}
+}  // namespace
 
 class Runechat : public QObject {
     Q_OBJECT
@@ -69,7 +69,10 @@ class Runechat : public QObject {
         }
     }
 
-    struct Scene { render::DrawList dl; std::shared_ptr<const render::HitScene> hit; };
+    struct Scene {
+        render::DrawList dl;
+        std::shared_ptr<const render::HitScene> hit;
+    };
     Scene assemble(const model::Session& s, int64_t clock) {
         Scene sc;
         render::SceneStats st;
@@ -106,7 +109,8 @@ private slots:
         while (std::getline(f, line)) {
             QVERIFY(line.rfind("0x", 0) == 0);
             size_t sp = line.find(' ', line.find("len="));
-            frames_.push_back({uint16_t(std::stoul(line.substr(2, 4), nullptr, 16)), sp == std::string::npos ? Bytes{} : unhex(line.substr(sp + 1))});
+            frames_.push_back({uint16_t(std::stoul(line.substr(2, 4), nullptr, 16)),
+                               sp == std::string::npos ? Bytes{} : unhex(line.substr(sp + 1))});
         }
         QCOMPARE(int(frames_.size()), 89);
         // The default map control's style, verbatim from the world's skin.
@@ -160,8 +164,8 @@ private slots:
 
         const render::DrawLayer* mt = onPlane(sc.dl, 25, 96, 16);
         QVERIFY2(mt, "no runechat maptext box on plane 25");
-        QCOMPARE(mt->x, nx - 32);              // maptext_x = (96 - 32) * -0.5
-        QCOMPARE(mt->y, ny + 32 - 30 - 16);    // pixel_y = 32 * 0.95 = 30 up, box 16 high
+        QCOMPARE(mt->x, nx - 32);            // maptext_x = (96 - 32) * -0.5
+        QCOMPARE(mt->y, ny + 32 - 30 - 16);  // pixel_y = 32 * 0.95 = 30 up, box 16 high
         QCOMPARE(mt->alpha, 255);
         // Ink: the line is flush with the box bottom (rows 5..15 of 16: the 9 rows above the baseline are glyph), centred.
         const render::Sprite& sp = *mt->sprite;
@@ -169,7 +173,12 @@ private slots:
         for (int y = 0; y < 16; y++)
             for (int x = 0; x < 96; x++) {
                 uint32_t c = rgb(sp, x, y);
-                if (c == kGold) { minX = std::min(minX, x); maxX = std::max(maxX, x); minY = std::min(minY, y); maxY = std::max(maxY, y); }
+                if (c == kGold) {
+                    minX = std::min(minX, x);
+                    maxX = std::max(maxX, x);
+                    minY = std::min(minY, y);
+                    maxY = std::max(maxY, y);
+                }
                 if (c == 0) black++;
             }
         QVERIFY2(maxX >= 0, "no gold text in the box");
@@ -177,9 +186,9 @@ private slots:
         QCOMPARE(maxY, 16 - 11 + 9 - 1);
         render::DsLayout L = render::dsLayoutMaptext(
             "<span class='center maptext black_outline' style='color: #ffd700;'>Hello there 1</span>", mapStyle_, 96);
-        QCOMPARE(minX, (96 - L.lines[0].width) / 2);   // centred: the first glyph sits half the slack in
+        QCOMPARE(minX, (96 - L.lines[0].width) / 2);  // centred: the first glyph sits half the slack in
         QVERIFY2(black > 0, "no black outline");
-        QCOMPARE(rgb(sp, minX - 1, minY), 0u);   // the halo's left edge
+        QCOMPARE(rgb(sp, minX - 1, minY), 0u);  // the halo's left edge
         // And it reaches the executed frame: gold pixels above the NPC's tile.
         render::RgbaImage img = render::execute(sc.dl);
         int gold = 0;
@@ -212,7 +221,7 @@ private slots:
         auto keep = frames_;
         const std::string hello = "Hello there 1";
         for (auto& [type, body] : frames_) {
-            if (type != 0x0026) continue;
+            if (type != S2C::Appearance) continue;
             auto at = std::search(body.begin(), body.end(), hello.begin(), hello.end());
             if (at != body.end()) body.insert(at, {0xff, 0x16});
         }

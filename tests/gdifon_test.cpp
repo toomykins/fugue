@@ -15,8 +15,9 @@ namespace {
 
 // The face the layout gives Small Fonts at `px` (bold/italic as asked).
 DsFace smallFonts(int px, const std::string& extra = "") {
-    DsLayout L = dsLayoutMaptext("<span style=\"font-family:'Small Fonts';font-size:" + std::to_string(px) + "px;" + extra +
-                                 "\">A</span>", "", 0);
+    DsLayout L = dsLayoutMaptext(
+        "<span style=\"font-family:'Small Fonts';font-size:" + std::to_string(px) + "px;" + extra + "\">A</span>", "",
+        0);
     return L.faces.at(0);
 }
 
@@ -62,7 +63,7 @@ private slots:
         a.h = 4;
         a.ascent = 3;
         a.il = 1;
-        a.widths = {3, 9};   // 'B' spans two bitmap columns
+        a.widths = {3, 9};  // 'B' spans two bitmap columns
         a.ink = [](unsigned c, unsigned x, unsigned y) { return c == 'B' ? (y == 0 || x == 8) : x == y; };
         fontfile::Strike a72 = a;
         a72.dpi = 72;
@@ -73,9 +74,19 @@ private slots:
         QCOMPARE(ss[0].defaultChar, int('B'));
         QCOMPARE(int(ss[0].glyphs.size()), 2);
         QCOMPARE(ss[0].glyphs[1].w, 9);
-        auto bits = [](const FonStrike::Glyph& g) { std::string s; for (uint8_t b : g.bits) s += b ? '#' : '.'; return s; };
-        QCOMPARE(QString::fromStdString(bits(ss[0].glyphs[0])), QString("#.." ".#." "..#" "..."));
-        QCOMPARE(QString::fromStdString(bits(ss[0].glyphs[1])), QString("#########" "........#" "........#" "........#"));
+        auto bits = [](const FonStrike::Glyph& g) {
+            std::string s;
+            for (uint8_t b : g.bits) s += b ? '#' : '.';
+            return s;
+        };
+        QCOMPARE(QString::fromStdString(bits(ss[0].glyphs[0])), QString("#.."
+                                                                        ".#."
+                                                                        "..#"
+                                                                        "..."));
+        QCOMPARE(QString::fromStdString(bits(ss[0].glyphs[1])), QString("#########"
+                                                                        "........#"
+                                                                        "........#"
+                                                                        "........#"));
         QVERIFY(parseFon("not a font").empty());
         QVERIFY(parseFon(fontfile::fon({a}).substr(0, 0x120)).empty());
     }
@@ -88,9 +99,9 @@ private slots:
         QVERIFY(fonGlyph(ss, smallFonts(7), U'A', m));
         QCOMPARE(QString::fromStdString(rows(m)), QString::fromStdString(expected(s, 'A', false)));
         QCOMPARE(m.left, 0);
-        QVERIFY(fonGlyph(ss, smallFonts(7), U'€', m));   // the euro sign is cp1252 byte 0x80
+        QVERIFY(fonGlyph(ss, smallFonts(7), U'€', m));  // the euro sign is cp1252 byte 0x80
         QCOMPARE(QString::fromStdString(rows(m)), QString::fromStdString(expected(s, 0x80, false)));
-        QVERIFY(fonGlyph(ss, smallFonts(7), U'Ā', m));   // outside the code page: the default char
+        QVERIFY(fonGlyph(ss, smallFonts(7), U'Ā', m));  // outside the code page: the default char
         QCOMPARE(QString::fromStdString(rows(m)), QString::fromStdString(expected(s, s.defaultChar, false)));
         // Bold overstrikes 1 px to the right; italic draws 1 px to the left.
         QVERIFY(fonGlyph(ss, smallFonts(7, "font-weight:bold"), U'g', m));
@@ -117,7 +128,8 @@ private slots:
         QVERIFY(!fonGlyph(ss, smallFonts(7), U'A', m));
         QVERIFY(!fonGlyph(ss, smallFonts(7), U'x', m));
         s = layoutStrike();
-        while (s.widths[s.defaultChar - s.first] == s.widths[128 - s.first]) s.defaultChar++;   // a default char of another width
+        while (s.widths[s.defaultChar - s.first] == s.widths[128 - s.first])
+            s.defaultChar++;  // a default char of another width
         QVERIFY(!fonGlyph(parseFon(fontfile::fon({s})), smallFonts(7), U'A', m));
         s = layoutStrike();
         s.ascent = 8;
