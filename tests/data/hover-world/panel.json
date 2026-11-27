@@ -1,0 +1,1875 @@
+{
+ "schema": 1,
+ "method": "tools/stockprobe/hoverprobe.py --world tests/data/hover-world --wire: the real pointer moved over stock DreamSeeker (SetCursorPos), real presses and keys, a relay between stock and DreamDaemon. Per action the lines the world logged while it lasted ('logged') and the plaintext bodies stock sent ('sent', hex): input commands (c2s 0x0002), and stat tab selections prefixed '006b '. Before each case the pointer goes outside the window for a second; what was logged or sent then is not kept. A run is one server and one client, its cases in order. 'replay' is what DreamDaemon sent stock before the first case, read by the same relay (0x009f resource frames left out).",
+ "runs": [
+  {
+   "run": "panel1",
+   "date": "2026-11-26",
+   "stock": "516.1689",
+   "switches": [
+    "EXTRA",
+    "PANEL"
+   ],
+   "params": "",
+   "replay": "panel.txt",
+   "cases": [
+    {
+     "case": "layout",
+     "actions": [
+      {
+       "action": "shot:layout",
+       "at": 0.0,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "112,16",
+       "at": 0.081,
+       "logged": [
+        "57.5 ENTER both loc=the floor ctl=main.map icon-x=17;icon-y=16;screen-loc=3:17,7:16"
+       ],
+       "sent": [
+        "0800ffff010900000003000302000600026d61696e2e6d6170000269636f6e2d783d31373b69636f6e2d793d31363b73637265656e2d6c6f633d333a31372c373a313600"
+       ]
+      },
+      {
+       "action": "350,80",
+       "at": 0.432,
+       "logged": [
+        "61 EXIT both loc=the floor ctl=main.map icon-x=17;icon-y=16;screen-loc=3:17,7:16",
+        "61 ENTER statrow loc=Probe ctl=main.info icon-x=5;icon-y=16",
+        "61 EXIT statrow loc=Probe ctl=main.info icon-x=5;icon-y=16"
+       ],
+       "sent": [
+        "0800ffff0100000000030250726f626500026d61696e2e696e666f000269636f6e2d783d353b69636f6e2d793d313600",
+        "0800ffff00ffff0000030000ffff00000000ffff00000200"
+       ]
+      },
+      {
+       "action": "351,80",
+       "at": 0.783,
+       "logged": [
+        "64.5 ENTER statrow loc=Probe ctl=main.info icon-x=6;icon-y=16"
+       ],
+       "sent": [
+        "0800ffff0100000000030250726f626500026d61696e2e696e666f000269636f6e2d783d363b69636f6e2d793d313600"
+       ]
+      },
+      {
+       "action": "390,75",
+       "at": 1.133,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "560,80",
+       "at": 1.484,
+       "logged": [
+        "71.5 EXIT statrow loc=Probe ctl=main.info icon-x=6;icon-y=16"
+       ],
+       "sent": [
+        "0800ffff00ffff0000030250726f626500026d61696e2e696e666f000200"
+       ]
+      },
+      {
+       "action": "350,112",
+       "at": 1.834,
+       "logged": [
+        "75 ENTER both loc=Probe ctl=main.info icon-x=5;icon-y=17"
+       ],
+       "sent": [
+        "0800ffff0109000000030250726f626500026d61696e2e696e666f000269636f6e2d783d353b69636f6e2d793d313700"
+       ]
+      },
+      {
+       "action": "320,75",
+       "at": 2.185,
+       "logged": [
+        "78.5 EXIT both loc=Probe ctl=main.info icon-x=5;icon-y=17"
+       ],
+       "sent": [
+        "0800ffff00ffff0000030250726f626500026d61696e2e696e666f000200"
+       ]
+      },
+      {
+       "action": "450,35",
+       "at": 2.536,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "-80,112",
+       "at": 2.887,
+       "logged": [],
+       "sent": []
+      }
+     ]
+    },
+    {
+     "case": "grid",
+     "actions": [
+      {
+       "action": "112,16",
+       "at": 0.0,
+       "logged": [
+        "99.5 ENTER both loc=the floor ctl=main.map icon-x=17;icon-y=16;screen-loc=3:17,7:16"
+       ],
+       "sent": [
+        "0800ffff010900000003000302000600026d61696e2e6d6170000269636f6e2d783d31373b69636f6e2d793d31363b73637265656e2d6c6f633d333a31372c373a313600"
+       ]
+      },
+      {
+       "action": "20,248",
+       "at": 0.351,
+       "logged": [
+        "103 EXIT both loc=the floor ctl=main.map icon-x=17;icon-y=16;screen-loc=3:17,7:16",
+        "103 ENTER gridrow loc=1,1 ctl=main.grid icon-x=17;icon-y=16;vis-x=0;vis-y=0;cell=1,1",
+        "103 EXIT gridrow loc=1,1 ctl=main.grid icon-x=17;icon-y=16;vis-x=0;vis-y=0;cell=1,1"
+       ],
+       "sent": [
+        "0800ffff01010000000302312c3100026d61696e2e67726964000269636f6e2d783d31373b69636f6e2d793d31363b7669732d783d303b7669732d793d303b63656c6c3d312c3100",
+        "0800ffff00ffff0000030000ffff00000000ffff00000200"
+       ]
+      },
+      {
+       "action": "21,248",
+       "at": 0.702,
+       "logged": [
+        "106.5 ENTER gridrow loc=1,1 ctl=main.grid icon-x=18;icon-y=16;vis-x=0;vis-y=0;cell=1,1"
+       ],
+       "sent": [
+        "0800ffff01010000000302312c3100026d61696e2e67726964000269636f6e2d783d31383b69636f6e2d793d31363b7669732d783d303b7669732d793d303b63656c6c3d312c3100"
+       ]
+      },
+      {
+       "action": "60,248",
+       "at": 1.052,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "20,280",
+       "at": 1.403,
+       "logged": [
+        "113.5 EXIT gridrow loc=1,1 ctl=main.grid icon-x=18;icon-y=16;vis-x=0;vis-y=0;cell=1,1",
+        "113.5 ENTER both loc=1,2 ctl=main.grid icon-x=17;icon-y=17;vis-x=0;vis-y=0;cell=1,2"
+       ],
+       "sent": [
+        "0800ffff01090000000302312c3200026d61696e2e67726964000269636f6e2d783d31373b69636f6e2d793d31373b7669732d783d303b7669732d793d303b63656c6c3d312c3200"
+       ]
+      },
+      {
+       "action": "21,280",
+       "at": 1.754,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "112,16",
+       "at": 2.104,
+       "logged": [
+        "120.5 MOVE both loc=the floor ctl=main.map icon-x=17;icon-y=16;screen-loc=3:17,7:16",
+        "120.5 EXIT both loc=1,2 ctl=main.grid icon-x=17;icon-y=17;vis-x=0;vis-y=0;cell=1,2"
+       ],
+       "sent": [
+        "0800ffff010900000003000302000600026d61696e2e6d6170000269636f6e2d783d31373b69636f6e2d793d31363b73637265656e2d6c6f633d333a31372c373a313600",
+        "0800ffff00ffff0000030000ffff00000000ffff00000200"
+       ]
+      },
+      {
+       "action": "-80,112",
+       "at": 2.455,
+       "logged": [],
+       "sent": []
+      }
+     ]
+    },
+    {
+     "case": "keys",
+     "actions": [
+      {
+       "action": "350,80",
+       "at": 0.0,
+       "logged": [
+        "137.5 ENTER statrow loc=Probe ctl=main.info icon-x=5;icon-y=16"
+       ],
+       "sent": [
+        "0800ffff0100000000030250726f626500026d61696e2e696e666f000269636f6e2d783d353b69636f6e2d793d313600"
+       ]
+      },
+      {
+       "action": "key:f2",
+       "at": 0.351,
+       "logged": [
+        "140.5 FLIP Other",
+        "141 EXIT statrow loc=Probe ctl=main.info icon-x=5;icon-y=16",
+        "141 ENTER other loc=Other ctl=main.info icon-x=6;icon-y=16"
+       ],
+       "sent": [
+        "02000f00080000000000",
+        "0800ffff010400000003024f7468657200026d61696e2e696e666f000269636f6e2d783d363b69636f6e2d793d313600"
+       ]
+      },
+      {
+       "action": "wait:1",
+       "at": 0.702,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "shot:other",
+       "at": 1.723,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "key:f2",
+       "at": 1.774,
+       "logged": [
+        "155 FLIP Probe",
+        "155.5 EXIT other loc=Other ctl=main.info icon-x=6;icon-y=16",
+        "155.5 ENTER statrow loc=Probe ctl=main.info icon-x=5;icon-y=16"
+       ],
+       "sent": [
+        "02000f00080000000000",
+        "0800ffff0100000000030250726f626500026d61696e2e696e666f000269636f6e2d783d353b69636f6e2d793d313600"
+       ]
+      },
+      {
+       "action": "wait:1",
+       "at": 2.126,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "key:f4",
+       "at": 3.127,
+       "logged": [
+        "168.5 TICK 1"
+       ],
+       "sent": [
+        "02001100080000000000"
+       ]
+      },
+      {
+       "action": "wait:1",
+       "at": 3.478,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "shot:ticking",
+       "at": 4.478,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "key:f4",
+       "at": 4.531,
+       "logged": [
+        "182.5 TICK 0"
+       ],
+       "sent": [
+        "02001100080000000000"
+       ]
+      },
+      {
+       "action": "-80,112",
+       "at": 4.882,
+       "logged": [
+        "186 EXIT statrow loc=Probe ctl=main.info icon-x=5;icon-y=16"
+       ],
+       "sent": [
+        "0800ffff00ffff0000030000ffff00000000ffff00000200"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "run": "panel",
+   "date": "2026-11-26",
+   "stock": "516.1689",
+   "switches": [
+    "EXTRA",
+    "PANEL"
+   ],
+   "params": "",
+   "replay": "panel.txt",
+   "cases": [
+    {
+     "case": "parts",
+     "actions": [
+      {
+       "action": "350,80",
+       "at": 0.0,
+       "logged": [
+        "56.5 ENTER statrow loc=Probe ctl=main.info icon-x=5;icon-y=16"
+       ],
+       "sent": [
+        "0800ffff0100000000030250726f626500026d61696e2e696e666f000269636f6e2d783d353b69636f6e2d793d313600"
+       ]
+      },
+      {
+       "action": "351,80",
+       "at": 0.351,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "400,75",
+       "at": 0.701,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "401,75",
+       "at": 1.052,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "500,80",
+       "at": 1.403,
+       "logged": [
+        "71 EXIT statrow loc=Probe ctl=main.info icon-x=5;icon-y=16"
+       ],
+       "sent": [
+        "0800ffff00ffff0000030250726f626500026d61696e2e696e666f000200"
+       ]
+      },
+      {
+       "action": "501,80",
+       "at": 1.754,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "400,75",
+       "at": 2.105,
+       "logged": [
+        "78 ENTER statrow loc=Probe ctl=main.info icon-x=55;icon-y=21"
+       ],
+       "sent": [
+        "0800ffff0100000000030250726f626500026d61696e2e696e666f000269636f6e2d783d35353b69636f6e2d793d323100"
+       ]
+      },
+      {
+       "action": "335,80",
+       "at": 2.455,
+       "logged": [
+        "81 EXIT statrow loc=Probe ctl=main.info icon-x=55;icon-y=21"
+       ],
+       "sent": [
+        "0800ffff00ffff0000030250726f626500026d61696e2e696e666f000200"
+       ]
+      },
+      {
+       "action": "315,75",
+       "at": 2.806,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "316,75",
+       "at": 3.156,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "350,80",
+       "at": 3.507,
+       "logged": [
+        "91.5 ENTER statrow loc=Probe ctl=main.info icon-x=5;icon-y=16"
+       ],
+       "sent": [
+        "0800ffff0100000000030250726f626500026d61696e2e696e666f000269636f6e2d783d353b69636f6e2d793d313600"
+       ]
+      },
+      {
+       "action": "350,95",
+       "at": 3.858,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "350,96",
+       "at": 4.208,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "360,50",
+       "at": 4.559,
+       "logged": [
+        "102.5 EXIT statrow loc=Probe ctl=main.info icon-x=5;icon-y=16"
+       ],
+       "sent": [
+        "0800ffff00ffff0000030000ffff00000000ffff00000200"
+       ]
+      },
+      {
+       "action": "361,50",
+       "at": 4.91,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "350,80",
+       "at": 5.26,
+       "logged": [
+        "109.5 ENTER statrow loc=Probe ctl=main.info icon-x=5;icon-y=16"
+       ],
+       "sent": [
+        "0800ffff0100000000030250726f626500026d61696e2e696e666f000269636f6e2d783d353b69636f6e2d793d313600"
+       ]
+      },
+      {
+       "action": "450,35",
+       "at": 5.611,
+       "logged": [
+        "113 EXIT statrow loc=Probe ctl=main.info icon-x=5;icon-y=16"
+       ],
+       "sent": [
+        "0800ffff00ffff0000030000ffff00000000ffff00000200"
+       ]
+      },
+      {
+       "action": "-80,112",
+       "at": 5.961,
+       "logged": [],
+       "sent": []
+      }
+     ]
+    },
+    {
+     "case": "plain",
+     "actions": [
+      {
+       "action": "112,16",
+       "at": 0.0,
+       "logged": [
+        "130 ENTER both loc=the floor ctl=main.map icon-x=17;icon-y=16;screen-loc=3:17,7:16"
+       ],
+       "sent": [
+        "0800ffff010900000003000302000600026d61696e2e6d6170000269636f6e2d783d31373b69636f6e2d793d31363b73637265656e2d6c6f633d333a31372c373a313600"
+       ]
+      },
+      {
+       "action": "350,145",
+       "at": 0.351,
+       "logged": [
+        "133.5 EXIT both loc=the floor ctl=main.map icon-x=17;icon-y=16;screen-loc=3:17,7:16"
+       ],
+       "sent": [
+        "0800ffff0102000000030250726f626500026d61696e2e696e666f000269636f6e2d783d353b69636f6e2d793d313700"
+       ]
+      },
+      {
+       "action": "351,145",
+       "at": 0.701,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "400,140",
+       "at": 1.052,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "350,112",
+       "at": 1.403,
+       "logged": [
+        "144 ENTER both loc=Probe ctl=main.info icon-x=5;icon-y=17"
+       ],
+       "sent": [
+        "0800ffff0109000000030250726f626500026d61696e2e696e666f000269636f6e2d783d353b69636f6e2d793d313700"
+       ]
+      },
+      {
+       "action": "350,145",
+       "at": 1.753,
+       "logged": [
+        "147.5 EXIT both loc=Probe ctl=main.info icon-x=5;icon-y=17"
+       ],
+       "sent": [
+        "0800ffff0102000000030250726f626500026d61696e2e696e666f000269636f6e2d783d353b69636f6e2d793d313700"
+       ]
+      },
+      {
+       "action": "315,140",
+       "at": 2.104,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "-80,112",
+       "at": 2.455,
+       "logged": [],
+       "sent": []
+      }
+     ]
+    },
+    {
+     "case": "plainonly",
+     "actions": [
+      {
+       "action": "350,145",
+       "at": 0.0,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "351,145",
+       "at": 0.351,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "400,140",
+       "at": 0.701,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "500,145",
+       "at": 1.052,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "-80,112",
+       "at": 1.402,
+       "logged": [],
+       "sent": []
+      }
+     ]
+    },
+    {
+     "case": "bare",
+     "actions": [
+      {
+       "action": "350,112",
+       "at": 0.0,
+       "logged": [
+        "195.5 ENTER both loc=Probe ctl=main.info icon-x=5;icon-y=17"
+       ],
+       "sent": [
+        "0800ffff0109000000030250726f626500026d61696e2e696e666f000269636f6e2d783d353b69636f6e2d793d313700"
+       ]
+      },
+      {
+       "action": "355,170",
+       "at": 0.351,
+       "logged": [
+        "199 EXIT both loc=Probe ctl=main.info icon-x=5;icon-y=17",
+        "199 ENTER bare loc=Probe ctl=main.info "
+       ],
+       "sent": [
+        "0800ffff0103000000030250726f626500026d61696e2e696e666f000200"
+       ]
+      },
+      {
+       "action": "356,170",
+       "at": 0.701,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "400,170",
+       "at": 1.052,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "330,170",
+       "at": 1.402,
+       "logged": [
+        "209.5 EXIT bare loc=Probe ctl=main.info "
+       ],
+       "sent": [
+        "0800ffff00ffff0000030250726f626500026d61696e2e696e666f000200"
+       ]
+      },
+      {
+       "action": "355,170",
+       "at": 1.753,
+       "logged": [
+        "213 ENTER bare loc=Probe ctl=main.info "
+       ],
+       "sent": [
+        "0800ffff0103000000030250726f626500026d61696e2e696e666f000200"
+       ]
+      },
+      {
+       "action": "-80,112",
+       "at": 2.104,
+       "logged": [
+        "216.5 EXIT bare loc=Probe ctl=main.info "
+       ],
+       "sent": [
+        "0800ffff00ffff0000030000ffff00000000ffff00000200"
+       ]
+      }
+     ]
+    },
+    {
+     "case": "text",
+     "actions": [
+      {
+       "action": "350,112",
+       "at": 0.0,
+       "logged": [
+        "230 ENTER both loc=Probe ctl=main.info icon-x=5;icon-y=17"
+       ],
+       "sent": [
+        "0800ffff0109000000030250726f626500026d61696e2e696e666f000269636f6e2d783d353b69636f6e2d793d313700"
+       ]
+      },
+      {
+       "action": "355,189",
+       "at": 0.351,
+       "logged": [
+        "233.5 EXIT both loc=Probe ctl=main.info icon-x=5;icon-y=17"
+       ],
+       "sent": [
+        "0800ffff00ffff0000030250726f626500026d61696e2e696e666f000200"
+       ]
+      },
+      {
+       "action": "356,189",
+       "at": 0.702,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "450,189",
+       "at": 1.052,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "355,170",
+       "at": 1.403,
+       "logged": [
+        "244 ENTER bare loc=Probe ctl=main.info "
+       ],
+       "sent": [
+        "0800ffff0103000000030250726f626500026d61696e2e696e666f000200"
+       ]
+      },
+      {
+       "action": "355,189",
+       "at": 1.753,
+       "logged": [
+        "247.5 EXIT bare loc=Probe ctl=main.info "
+       ],
+       "sent": [
+        "0800ffff00ffff0000030250726f626500026d61696e2e696e666f000200"
+       ]
+      },
+      {
+       "action": "-80,112",
+       "at": 2.104,
+       "logged": [],
+       "sent": []
+      }
+     ]
+    },
+    {
+     "case": "swap",
+     "actions": [
+      {
+       "action": "350,215",
+       "at": 0.0,
+       "logged": [
+        "264.5 ENTER swapa loc=Probe ctl=main.info icon-x=5;icon-y=18"
+       ],
+       "sent": [
+        "0800ffff0105000000030250726f626500026d61696e2e696e666f000269636f6e2d783d353b69636f6e2d793d313800"
+       ]
+      },
+      {
+       "action": "351,215",
+       "at": 0.351,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "key:f3",
+       "at": 0.701,
+       "logged": [
+        "271.5 SWAP 1"
+       ],
+       "sent": [
+        "0200100008386e6d0400"
+       ]
+      },
+      {
+       "action": "wait:1",
+       "at": 1.052,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "key:f3",
+       "at": 2.053,
+       "logged": [
+        "285 SWAP 0"
+       ],
+       "sent": [
+        "0200100008386e6d0400"
+       ]
+      },
+      {
+       "action": "wait:1",
+       "at": 2.404,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "351,215",
+       "at": 3.405,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "-80,112",
+       "at": 3.755,
+       "logged": [
+        "302 EXIT swapa loc=Probe ctl=main.info icon-x=5;icon-y=18"
+       ],
+       "sent": [
+        "0800ffff00ffff0000030000ffff00000000ffff00000200"
+       ]
+      }
+     ]
+    },
+    {
+     "case": "tabempty",
+     "actions": [
+      {
+       "action": "355,170",
+       "at": 0.0,
+       "logged": [
+        "315.5 ENTER bare loc=Probe ctl=main.info "
+       ],
+       "sent": [
+        "0800ffff0103000000030250726f626500026d61696e2e696e666f000200"
+       ]
+      },
+      {
+       "action": "key:f2",
+       "at": 0.351,
+       "logged": [
+        "319 FLIP Other",
+        "319.5 EXIT bare loc=Probe ctl=main.info "
+       ],
+       "sent": [
+        "02000f0008309f7c1000",
+        "0800ffff00ffff000003024f7468657200026d61696e2e696e666f000200"
+       ]
+      },
+      {
+       "action": "wait:1",
+       "at": 0.701,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "356,170",
+       "at": 1.702,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "key:f2",
+       "at": 2.053,
+       "logged": [
+        "336 FLIP Probe",
+        "336.5 ENTER bare loc=Probe ctl=main.info "
+       ],
+       "sent": [
+        "02000f0008309f7c1000",
+        "0800ffff0103000000030250726f626500026d61696e2e696e666f000200"
+       ]
+      },
+      {
+       "action": "wait:1",
+       "at": 2.403,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "357,170",
+       "at": 3.404,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "-80,112",
+       "at": 3.754,
+       "logged": [
+        "353 EXIT bare loc=Probe ctl=main.info "
+       ],
+       "sent": [
+        "0800ffff00ffff0000030000ffff00000000ffff00000200"
+       ]
+      }
+     ]
+    },
+    {
+     "case": "tabclick",
+     "actions": [
+      {
+       "action": "350,80",
+       "at": 0.0,
+       "logged": [
+        "366.5 ENTER statrow loc=Probe ctl=main.info icon-x=5;icon-y=16"
+       ],
+       "sent": [
+        "0800ffff0100000000030250726f626500026d61696e2e696e666f000269636f6e2d783d353b69636f6e2d793d313600"
+       ]
+      },
+      {
+       "action": "360,50",
+       "at": 0.351,
+       "logged": [
+        "370.5 EXIT statrow loc=Probe ctl=main.info icon-x=5;icon-y=16"
+       ],
+       "sent": [
+        "0800ffff00ffff0000030000ffff00000000ffff00000200"
+       ]
+      },
+      {
+       "action": "tap",
+       "at": 0.701,
+       "logged": [],
+       "sent": [
+        "006b 0100014f7468657200"
+       ]
+      },
+      {
+       "action": "wait:1",
+       "at": 1.069,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "361,50",
+       "at": 2.069,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "350,80",
+       "at": 2.419,
+       "logged": [
+        "391 ENTER other loc=Other ctl=main.info icon-x=6;icon-y=16"
+       ],
+       "sent": [
+        "0800ffff010400000003024f7468657200026d61696e2e696e666f000269636f6e2d783d363b69636f6e2d793d313600"
+       ]
+      },
+      {
+       "action": "351,80",
+       "at": 2.77,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "335,50",
+       "at": 3.12,
+       "logged": [
+        "398 EXIT other loc=Other ctl=main.info icon-x=6;icon-y=16"
+       ],
+       "sent": [
+        "0800ffff00ffff0000030000ffff00000000ffff00000200"
+       ]
+      },
+      {
+       "action": "tap",
+       "at": 3.471,
+       "logged": [],
+       "sent": [
+        "006b 00000250726f626500"
+       ]
+      },
+      {
+       "action": "wait:1",
+       "at": 3.837,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "336,50",
+       "at": 4.837,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "350,80",
+       "at": 5.188,
+       "logged": [
+        "418.5 ENTER statrow loc=Probe ctl=main.info icon-x=5;icon-y=16"
+       ],
+       "sent": [
+        "0800ffff0100000000030250726f626500026d61696e2e696e666f000269636f6e2d783d353b69636f6e2d793d313600"
+       ]
+      },
+      {
+       "action": "-80,112",
+       "at": 5.539,
+       "logged": [
+        "422 EXIT statrow loc=Probe ctl=main.info icon-x=5;icon-y=16"
+       ],
+       "sent": [
+        "0800ffff00ffff0000030000ffff00000000ffff00000200"
+       ]
+      }
+     ]
+    },
+    {
+     "case": "tick",
+     "actions": [
+      {
+       "action": "355,245",
+       "at": 0.0,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "key:f4",
+       "at": 0.351,
+       "logged": [
+        "439 TICK 1"
+       ],
+       "sent": [
+        "0200110008309f7c1000"
+       ]
+      },
+      {
+       "action": "wait:1",
+       "at": 0.702,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "356,245",
+       "at": 1.702,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "357,245",
+       "at": 2.053,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "350,80",
+       "at": 2.403,
+       "logged": [
+        "459.5 ENTER statrow loc=Probe ctl=main.info icon-x=5;icon-y=16"
+       ],
+       "sent": [
+        "0800ffff0100000000030250726f626500026d61696e2e696e666f000269636f6e2d783d353b69636f6e2d793d313600"
+       ]
+      },
+      {
+       "action": "key:f4",
+       "at": 2.754,
+       "logged": [
+        "463 TICK 0"
+       ],
+       "sent": [
+        "0200110008309f7c1000"
+       ]
+      },
+      {
+       "action": "wait:1",
+       "at": 3.105,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "351,80",
+       "at": 4.106,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "-80,112",
+       "at": 4.457,
+       "logged": [
+        "480 EXIT statrow loc=Probe ctl=main.info icon-x=5;icon-y=16"
+       ],
+       "sent": [
+        "0800ffff00ffff0000030000ffff00000000ffff00000200"
+       ]
+      }
+     ]
+    },
+    {
+     "case": "pclick",
+     "actions": [
+      {
+       "action": "350,80",
+       "at": 0.0,
+       "logged": [
+        "493.5 ENTER statrow loc=Probe ctl=main.info icon-x=5;icon-y=16"
+       ],
+       "sent": [
+        "0800ffff0100000000030250726f626500026d61696e2e696e666f000269636f6e2d783d353b69636f6e2d793d313600"
+       ]
+      },
+      {
+       "action": "tap",
+       "at": 0.351,
+       "logged": [
+        "497 DOWN statrow loc=Probe ctl=main.info icon-x=5;icon-y=16;left=1;button=left",
+        "497 UP statrow loc=Probe ctl=main.info icon-x=5;icon-y=16;left=1;button=left",
+        "497 CLICK statrow loc=Probe ctl=main.info icon-x=5;icon-y=16;left=1;button=left"
+       ],
+       "sent": [
+        "0600ffff0100000000030250726f626500026d61696e2e696e666f000269636f6e2d783d353b69636f6e2d793d31363b6c6566743d313b627574746f6e3d6c65667400",
+        "0500ffff0100000000030250726f626500026d61696e2e696e666f000269636f6e2d783d353b69636f6e2d793d31363b6c6566743d313b627574746f6e3d6c65667400",
+        "0300ffff0100000000030250726f626500026d61696e2e696e666f000269636f6e2d783d353b69636f6e2d793d31363b6c6566743d313b627574746f6e3d6c65667400"
+       ]
+      },
+      {
+       "action": "wait:0.5",
+       "at": 0.707,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "351,80",
+       "at": 1.207,
+       "logged": [
+        "506 MOVE statrow loc=Probe ctl=main.info icon-x=6;icon-y=16"
+       ],
+       "sent": [
+        "0800ffff0100000000030250726f626500026d61696e2e696e666f000269636f6e2d783d363b69636f6e2d793d313600"
+       ]
+      },
+      {
+       "action": "352,80",
+       "at": 1.558,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "tap",
+       "at": 1.908,
+       "logged": [
+        "513 DOWN statrow loc=Probe ctl=main.info icon-x=7;icon-y=16;left=1;button=left",
+        "513 UP statrow loc=Probe ctl=main.info icon-x=7;icon-y=16;left=1;button=left",
+        "513 CLICK statrow loc=Probe ctl=main.info icon-x=7;icon-y=16;left=1;button=left"
+       ],
+       "sent": [
+        "0600ffff0100000000030250726f626500026d61696e2e696e666f000269636f6e2d783d373b69636f6e2d793d31363b6c6566743d313b627574746f6e3d6c65667400",
+        "0500ffff0100000000030250726f626500026d61696e2e696e666f000269636f6e2d783d373b69636f6e2d793d31363b6c6566743d313b627574746f6e3d6c65667400",
+        "0300ffff0100000000030250726f626500026d61696e2e696e666f000269636f6e2d783d373b69636f6e2d793d31363b6c6566743d313b627574746f6e3d6c65667400"
+       ]
+      },
+      {
+       "action": "wait:0.5",
+       "at": 2.272,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "-80,112",
+       "at": 2.773,
+       "logged": [],
+       "sent": []
+      }
+     ]
+    },
+    {
+     "case": "leaves",
+     "actions": [
+      {
+       "action": "350,80",
+       "at": 0.0,
+       "logged": [
+        "535 MOVE statrow loc=Probe ctl=main.info icon-x=5;icon-y=16"
+       ],
+       "sent": [
+        "0800ffff0100000000030250726f626500026d61696e2e696e666f000269636f6e2d783d353b69636f6e2d793d313600"
+       ]
+      },
+      {
+       "action": "450,35",
+       "at": 0.351,
+       "logged": [
+        "538.5 EXIT statrow loc=Probe ctl=main.info icon-x=5;icon-y=16"
+       ],
+       "sent": [
+        "0800ffff00ffff0000030000ffff00000000ffff00000200"
+       ]
+      },
+      {
+       "action": "350,80",
+       "at": 0.701,
+       "logged": [
+        "542 ENTER statrow loc=Probe ctl=main.info icon-x=5;icon-y=16"
+       ],
+       "sent": [
+        "0800ffff0100000000030250726f626500026d61696e2e696e666f000269636f6e2d783d353b69636f6e2d793d313600"
+       ]
+      },
+      {
+       "action": "330,16",
+       "at": 1.052,
+       "logged": [
+        "545.5 EXIT statrow loc=Probe ctl=main.info icon-x=5;icon-y=16",
+        "545.5 ENTER hud2 loc=map2 ctl=main.map2 icon-x=31;icon-y=16;screen-loc=map2:1:31,1:16",
+        "545.5 EXIT hud2 loc=map2 ctl=main.map2 icon-x=31;icon-y=16;screen-loc=map2:1:31,1:16"
+       ],
+       "sent": [
+        "0800ffff011800000003026d61703200026d61696e2e6d617032000269636f6e2d783d33313b69636f6e2d793d31363b73637265656e2d6c6f633d6d6170323a313a33312c313a313600",
+        "0800ffff00ffff0000030000ffff00000000ffff00000200"
+       ]
+      },
+      {
+       "action": "350,80",
+       "at": 1.403,
+       "logged": [
+        "549 ENTER statrow loc=Probe ctl=main.info icon-x=5;icon-y=16",
+        "549 EXIT statrow loc=Probe ctl=main.info icon-x=5;icon-y=16"
+       ],
+       "sent": [
+        "0800ffff0100000000030250726f626500026d61696e2e696e666f000269636f6e2d783d353b69636f6e2d793d313600",
+        "0800ffff00ffff0000030000ffff00000000ffff00000200"
+       ]
+      },
+      {
+       "action": "112,16",
+       "at": 1.753,
+       "logged": [
+        "552.5 ENTER both loc=the floor ctl=main.map icon-x=17;icon-y=16;screen-loc=3:17,7:16",
+        "552.5 EXIT both loc=the floor ctl=main.map icon-x=17;icon-y=16;screen-loc=3:17,7:16"
+       ],
+       "sent": [
+        "0800ffff010900000003000302000600026d61696e2e6d6170000269636f6e2d783d31373b69636f6e2d793d31363b73637265656e2d6c6f633d333a31372c373a313600",
+        "0800ffff00ffff0000030000ffff00000000ffff00000200"
+       ]
+      },
+      {
+       "action": "350,80",
+       "at": 2.104,
+       "logged": [
+        "556 ENTER statrow loc=Probe ctl=main.info icon-x=5;icon-y=16",
+        "556 EXIT statrow loc=Probe ctl=main.info icon-x=5;icon-y=16"
+       ],
+       "sent": [
+        "0800ffff0100000000030250726f626500026d61696e2e696e666f000269636f6e2d783d353b69636f6e2d793d313600",
+        "0800ffff00ffff0000030000ffff00000000ffff00000200"
+       ]
+      },
+      {
+       "action": "20,248",
+       "at": 2.454,
+       "logged": [
+        "559.5 ENTER gridrow loc=1,1 ctl=main.grid icon-x=17;icon-y=16;vis-x=0;vis-y=0;cell=1,1",
+        "559.5 EXIT gridrow loc=1,1 ctl=main.grid icon-x=17;icon-y=16;vis-x=0;vis-y=0;cell=1,1"
+       ],
+       "sent": [
+        "0800ffff01010000000302312c3100026d61696e2e67726964000269636f6e2d783d31373b69636f6e2d793d31363b7669732d783d303b7669732d793d303b63656c6c3d312c3100",
+        "0800ffff00ffff0000030000ffff00000000ffff00000200"
+       ]
+      },
+      {
+       "action": "350,80",
+       "at": 2.805,
+       "logged": [
+        "563 ENTER statrow loc=Probe ctl=main.info icon-x=5;icon-y=16",
+        "563 EXIT statrow loc=Probe ctl=main.info icon-x=5;icon-y=16"
+       ],
+       "sent": [
+        "0800ffff0100000000030250726f626500026d61696e2e696e666f000269636f6e2d783d353b69636f6e2d793d313600",
+        "0800ffff00ffff0000030000ffff00000000ffff00000200"
+       ]
+      },
+      {
+       "action": "650,80",
+       "at": 3.156,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "-80,112",
+       "at": 3.506,
+       "logged": [],
+       "sent": []
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "run": "panel2",
+   "date": "2026-11-26",
+   "stock": "516.1689",
+   "switches": [
+    "EXTRA",
+    "PANEL"
+   ],
+   "params": "",
+   "replay": "panel.txt",
+   "cases": [
+    {
+     "case": "swap2",
+     "actions": [
+      {
+       "action": "350,215",
+       "at": 0.0,
+       "logged": [
+        "56 ENTER swapa loc=Probe ctl=main.info icon-x=5;icon-y=18"
+       ],
+       "sent": [
+        "0800ffff0105000000030250726f626500026d61696e2e696e666f000269636f6e2d783d353b69636f6e2d793d313800"
+       ]
+      },
+      {
+       "action": "key:f3",
+       "at": 0.351,
+       "logged": [
+        "59 SWAP 1"
+       ],
+       "sent": [
+        "020010000858ee3d0100"
+       ]
+      },
+      {
+       "action": "wait:1",
+       "at": 0.701,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "351,215",
+       "at": 1.702,
+       "logged": [
+        "73 EXIT swapa loc=Probe ctl=main.info icon-x=5;icon-y=18",
+        "73 ENTER swapb loc=Probe ctl=main.info icon-x=6;icon-y=18"
+       ],
+       "sent": [
+        "0800ffff0106000000030250726f626500026d61696e2e696e666f000269636f6e2d783d363b69636f6e2d793d313800"
+       ]
+      },
+      {
+       "action": "key:f3",
+       "at": 2.053,
+       "logged": [
+        "76 SWAP 0"
+       ],
+       "sent": [
+        "020010000858ee3d0100"
+       ]
+      },
+      {
+       "action": "wait:1",
+       "at": 2.403,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "352,215",
+       "at": 3.404,
+       "logged": [
+        "90 EXIT swapb loc=Probe ctl=main.info icon-x=6;icon-y=18",
+        "90 ENTER swapa loc=Probe ctl=main.info icon-x=7;icon-y=18"
+       ],
+       "sent": [
+        "0800ffff0105000000030250726f626500026d61696e2e696e666f000269636f6e2d783d373b69636f6e2d793d313800"
+       ]
+      },
+      {
+       "action": "-80,112",
+       "at": 3.755,
+       "logged": [
+        "93.5 EXIT swapa loc=Probe ctl=main.info icon-x=7;icon-y=18"
+       ],
+       "sent": [
+        "0800ffff00ffff0000030000ffff00000000ffff00000200"
+       ]
+      }
+     ]
+    },
+    {
+     "case": "bareext",
+     "actions": [
+      {
+       "action": "355,170",
+       "at": 0.0,
+       "logged": [
+        "107 ENTER bare loc=Probe ctl=main.info "
+       ],
+       "sent": [
+        "0800ffff0103000000030250726f626500026d61696e2e696e666f000200"
+       ]
+      },
+      {
+       "action": "380,170",
+       "at": 0.351,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "390,170",
+       "at": 0.701,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "400,170",
+       "at": 1.052,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "410,170",
+       "at": 1.402,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "420,170",
+       "at": 1.753,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "440,170",
+       "at": 2.104,
+       "logged": [
+        "128 EXIT bare loc=Probe ctl=main.info "
+       ],
+       "sent": [
+        "0800ffff00ffff0000030250726f626500026d61696e2e696e666f000200"
+       ]
+      },
+      {
+       "action": "355,170",
+       "at": 2.454,
+       "logged": [
+        "131.5 ENTER bare loc=Probe ctl=main.info "
+       ],
+       "sent": [
+        "0800ffff0103000000030250726f626500026d61696e2e696e666f000200"
+       ]
+      },
+      {
+       "action": "-80,112",
+       "at": 2.805,
+       "logged": [
+        "135 EXIT bare loc=Probe ctl=main.info "
+       ],
+       "sent": [
+        "0800ffff00ffff0000030000ffff00000000ffff00000200"
+       ]
+      }
+     ]
+    },
+    {
+     "case": "gridempty",
+     "actions": [
+      {
+       "action": "20,248",
+       "at": 0.0,
+       "logged": [
+        "148.5 ENTER gridrow loc=1,1 ctl=main.grid icon-x=17;icon-y=16;vis-x=0;vis-y=0;cell=1,1"
+       ],
+       "sent": [
+        "0800ffff01010000000302312c3100026d61696e2e67726964000269636f6e2d783d31373b69636f6e2d793d31363b7669732d783d303b7669732d793d303b63656c6c3d312c3100"
+       ]
+      },
+      {
+       "action": "200,248",
+       "at": 0.351,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "20,320",
+       "at": 0.701,
+       "logged": [
+        "155.5 EXIT gridrow loc=1,1 ctl=main.grid icon-x=17;icon-y=16;vis-x=0;vis-y=0;cell=1,1"
+       ],
+       "sent": [
+        "0800ffff00ffff0000030200026d61696e2e67726964000269636f6e2d783d303b69636f6e2d793d3000"
+       ]
+      },
+      {
+       "action": "21,320",
+       "at": 1.052,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "20,248",
+       "at": 1.403,
+       "logged": [
+        "162.5 ENTER gridrow loc=1,1 ctl=main.grid icon-x=17;icon-y=16;vis-x=0;vis-y=0;cell=1,1"
+       ],
+       "sent": [
+        "0800ffff01010000000302312c3100026d61696e2e67726964000269636f6e2d783d31373b69636f6e2d793d31363b7669732d783d303b7669732d793d303b63656c6c3d312c3100"
+       ]
+      },
+      {
+       "action": "-80,112",
+       "at": 1.753,
+       "logged": [
+        "166 EXIT gridrow loc=1,1 ctl=main.grid icon-x=17;icon-y=16;vis-x=0;vis-y=0;cell=1,1"
+       ],
+       "sent": [
+        "0800ffff00ffff0000030000ffff00000000ffff00000200"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "run": "pboth",
+   "date": "2026-11-26",
+   "stock": "516.1689",
+   "switches": [
+    "CLIENT_ENTER",
+    "CLIENT_MOVE",
+    "EXTRA",
+    "PANEL"
+   ],
+   "params": "",
+   "replay": "pboth.txt",
+   "cases": [
+    {
+     "case": "steps",
+     "actions": [
+      {
+       "action": "350,80",
+       "at": 0.0,
+       "logged": [
+        "56.5 C-ENTER statrow loc=Probe ctl=main.info icon-x=5;icon-y=16",
+        "56.5 ENTER statrow loc=Probe ctl=main.info icon-x=5;icon-y=16"
+       ],
+       "sent": [
+        "0800ffff0100000000030250726f626500026d61696e2e696e666f000269636f6e2d783d353b69636f6e2d793d313600"
+       ]
+      },
+      {
+       "action": "351,80",
+       "at": 0.351,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "351,81",
+       "at": 0.701,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "400,75",
+       "at": 1.052,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "401,75",
+       "at": 1.402,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "500,80",
+       "at": 1.753,
+       "logged": [
+        "74.5 C-EXIT statrow loc=Probe ctl=main.info icon-x=5;icon-y=16",
+        "74.5 EXIT statrow loc=Probe ctl=main.info icon-x=5;icon-y=16"
+       ],
+       "sent": [
+        "0800ffff00ffff0000030250726f626500026d61696e2e696e666f000200"
+       ]
+      },
+      {
+       "action": "501,80",
+       "at": 2.103,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "315,75",
+       "at": 2.454,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "316,75",
+       "at": 2.804,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "350,145",
+       "at": 3.155,
+       "logged": [
+        "88.5 C-ENTER plain loc=Probe ctl=main.info icon-x=5;icon-y=17"
+       ],
+       "sent": [
+        "0800ffff0102000000030250726f626500026d61696e2e696e666f000269636f6e2d783d353b69636f6e2d793d313700"
+       ]
+      },
+      {
+       "action": "351,145",
+       "at": 3.505,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "355,170",
+       "at": 3.856,
+       "logged": [
+        "95.5 C-EXIT plain loc=Probe ctl=main.info icon-x=5;icon-y=17",
+        "95.5 C-ENTER bare loc=Probe ctl=main.info ",
+        "95.5 ENTER bare loc=Probe ctl=main.info "
+       ],
+       "sent": [
+        "0800ffff0103000000030250726f626500026d61696e2e696e666f000200"
+       ]
+      },
+      {
+       "action": "356,170",
+       "at": 4.206,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "355,189",
+       "at": 4.557,
+       "logged": [
+        "102.5 C-EXIT bare loc=Probe ctl=main.info ",
+        "102.5 EXIT bare loc=Probe ctl=main.info "
+       ],
+       "sent": [
+        "0800ffff00ffff0000030250726f626500026d61696e2e696e666f000200"
+       ]
+      },
+      {
+       "action": "356,189",
+       "at": 4.907,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "360,50",
+       "at": 5.258,
+       "logged": [],
+       "sent": [
+        "0800ffff00ffff0000030000ffff00000000ffff00000200"
+       ]
+      },
+      {
+       "action": "361,50",
+       "at": 5.609,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "450,35",
+       "at": 5.959,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "-80,112",
+       "at": 6.31,
+       "logged": [],
+       "sent": []
+      }
+     ]
+    },
+    {
+     "case": "tabs",
+     "actions": [
+      {
+       "action": "350,80",
+       "at": 0.0,
+       "logged": [
+        "133.5 C-ENTER statrow loc=Probe ctl=main.info icon-x=5;icon-y=16",
+        "133.5 ENTER statrow loc=Probe ctl=main.info icon-x=5;icon-y=16"
+       ],
+       "sent": [
+        "0800ffff0100000000030250726f626500026d61696e2e696e666f000269636f6e2d783d353b69636f6e2d793d313600"
+       ]
+      },
+      {
+       "action": "key:f2",
+       "at": 0.351,
+       "logged": [
+        "136.5 FLIP Other",
+        "137 C-EXIT statrow loc=Probe ctl=main.info icon-x=5;icon-y=16",
+        "137 EXIT statrow loc=Probe ctl=main.info icon-x=5;icon-y=16",
+        "137 C-ENTER other loc=Other ctl=main.info icon-x=6;icon-y=16",
+        "137 ENTER other loc=Other ctl=main.info icon-x=6;icon-y=16"
+       ],
+       "sent": [
+        "02001200080000000000",
+        "0800ffff010400000003024f7468657200026d61696e2e696e666f000269636f6e2d783d363b69636f6e2d793d313600"
+       ]
+      },
+      {
+       "action": "wait:1",
+       "at": 0.702,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "351,80",
+       "at": 1.703,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "key:f2",
+       "at": 2.053,
+       "logged": [
+        "153.5 FLIP Probe",
+        "154 C-EXIT other loc=Other ctl=main.info icon-x=6;icon-y=16",
+        "154 EXIT other loc=Other ctl=main.info icon-x=6;icon-y=16",
+        "154 C-ENTER statrow loc=Probe ctl=main.info icon-x=6;icon-y=16",
+        "154 ENTER statrow loc=Probe ctl=main.info icon-x=6;icon-y=16"
+       ],
+       "sent": [
+        "02001200080000000000",
+        "0800ffff0100000000030250726f626500026d61696e2e696e666f000269636f6e2d783d363b69636f6e2d793d313600"
+       ]
+      },
+      {
+       "action": "wait:1",
+       "at": 2.404,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "355,170",
+       "at": 3.405,
+       "logged": [
+        "167.5 C-EXIT statrow loc=Probe ctl=main.info icon-x=6;icon-y=16",
+        "167.5 EXIT statrow loc=Probe ctl=main.info icon-x=6;icon-y=16",
+        "167.5 C-ENTER bare loc=Probe ctl=main.info ",
+        "167.5 ENTER bare loc=Probe ctl=main.info "
+       ],
+       "sent": [
+        "0800ffff0103000000030250726f626500026d61696e2e696e666f000200"
+       ]
+      },
+      {
+       "action": "key:f2",
+       "at": 3.756,
+       "logged": [
+        "171 FLIP Other",
+        "171.5 C-EXIT bare loc=Probe ctl=main.info ",
+        "171.5 EXIT bare loc=Probe ctl=main.info "
+       ],
+       "sent": [
+        "02001200080000000000",
+        "0800ffff00ffff000003024f7468657200026d61696e2e696e666f000200"
+       ]
+      },
+      {
+       "action": "wait:1",
+       "at": 4.106,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "key:f2",
+       "at": 5.107,
+       "logged": [
+        "184.5 FLIP Probe",
+        "185 C-ENTER bare loc=Probe ctl=main.info ",
+        "185 ENTER bare loc=Probe ctl=main.info "
+       ],
+       "sent": [
+        "02001200080000000000",
+        "0800ffff0103000000030250726f626500026d61696e2e696e666f000200"
+       ]
+      },
+      {
+       "action": "wait:1",
+       "at": 5.458,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "-80,112",
+       "at": 6.459,
+       "logged": [
+        "198 C-EXIT bare loc=Probe ctl=main.info ",
+        "198 EXIT bare loc=Probe ctl=main.info "
+       ],
+       "sent": [
+        "0800ffff00ffff0000030000ffff00000000ffff00000200"
+       ]
+      }
+     ]
+    },
+    {
+     "case": "swap",
+     "actions": [
+      {
+       "action": "350,215",
+       "at": 0.0,
+       "logged": [
+        "211.5 C-ENTER swapa loc=Probe ctl=main.info icon-x=5;icon-y=18",
+        "211.5 ENTER swapa loc=Probe ctl=main.info icon-x=5;icon-y=18"
+       ],
+       "sent": [
+        "0800ffff0105000000030250726f626500026d61696e2e696e666f000269636f6e2d783d353b69636f6e2d793d313800"
+       ]
+      },
+      {
+       "action": "key:f3",
+       "at": 0.351,
+       "logged": [
+        "215 SWAP 1"
+       ],
+       "sent": [
+        "020013000890a72d0500"
+       ]
+      },
+      {
+       "action": "wait:1",
+       "at": 0.702,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "351,215",
+       "at": 1.703,
+       "logged": [
+        "228.5 C-EXIT swapa loc=Probe ctl=main.info icon-x=5;icon-y=18",
+        "228.5 EXIT swapa loc=Probe ctl=main.info icon-x=5;icon-y=18",
+        "228.5 C-ENTER swapb loc=Probe ctl=main.info icon-x=6;icon-y=18",
+        "228.5 ENTER swapb loc=Probe ctl=main.info icon-x=6;icon-y=18"
+       ],
+       "sent": [
+        "0800ffff0106000000030250726f626500026d61696e2e696e666f000269636f6e2d783d363b69636f6e2d793d313800"
+       ]
+      },
+      {
+       "action": "key:f3",
+       "at": 2.053,
+       "logged": [
+        "232 SWAP 0"
+       ],
+       "sent": [
+        "020013000890a72d0500"
+       ]
+      },
+      {
+       "action": "wait:1",
+       "at": 2.405,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "-80,112",
+       "at": 3.405,
+       "logged": [
+        "245.5 C-EXIT swapb loc=Probe ctl=main.info icon-x=6;icon-y=18",
+        "245.5 EXIT swapb loc=Probe ctl=main.info icon-x=6;icon-y=18"
+       ],
+       "sent": [
+        "0800ffff00ffff0000030000ffff00000000ffff00000200"
+       ]
+      }
+     ]
+    },
+    {
+     "case": "grid",
+     "actions": [
+      {
+       "action": "20,248",
+       "at": 0.0,
+       "logged": [
+        "259 C-ENTER gridrow loc=1,1 ctl=main.grid icon-x=17;icon-y=16;vis-x=0;vis-y=0;cell=1,1",
+        "259 ENTER gridrow loc=1,1 ctl=main.grid icon-x=17;icon-y=16;vis-x=0;vis-y=0;cell=1,1"
+       ],
+       "sent": [
+        "0800ffff01010000000302312c3100026d61696e2e67726964000269636f6e2d783d31373b69636f6e2d793d31363b7669732d783d303b7669732d793d303b63656c6c3d312c3100"
+       ]
+      },
+      {
+       "action": "21,248",
+       "at": 0.351,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "60,248",
+       "at": 0.701,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "61,248",
+       "at": 1.051,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "200,248",
+       "at": 1.402,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "20,320",
+       "at": 1.752,
+       "logged": [
+        "276.5 C-EXIT gridrow loc=1,1 ctl=main.grid icon-x=17;icon-y=16;vis-x=0;vis-y=0;cell=1,1",
+        "276.5 EXIT gridrow loc=1,1 ctl=main.grid icon-x=17;icon-y=16;vis-x=0;vis-y=0;cell=1,1"
+       ],
+       "sent": [
+        "0800ffff00ffff0000030200026d61696e2e67726964000269636f6e2d783d303b69636f6e2d793d3000"
+       ]
+      },
+      {
+       "action": "21,320",
+       "at": 2.103,
+       "logged": [],
+       "sent": []
+      },
+      {
+       "action": "112,16",
+       "at": 2.453,
+       "logged": [
+        "283.5 C-ENTER both loc=the floor ctl=main.map icon-x=17;icon-y=16;screen-loc=3:17,7:16",
+        "283.5 ENTER both loc=the floor ctl=main.map icon-x=17;icon-y=16;screen-loc=3:17,7:16",
+        "283.5 C-EXIT both loc=the floor ctl=main.map icon-x=17;icon-y=16;screen-loc=3:17,7:16",
+        "283.5 EXIT both loc=the floor ctl=main.map icon-x=17;icon-y=16;screen-loc=3:17,7:16"
+       ],
+       "sent": [
+        "0800ffff010900000003000302000600026d61696e2e6d6170000269636f6e2d783d31373b69636f6e2d793d31363b73637265656e2d6c6f633d333a31372c373a313600",
+        "0800ffff00ffff0000030000ffff00000000ffff00000200"
+       ]
+      },
+      {
+       "action": "-80,112",
+       "at": 2.804,
+       "logged": [],
+       "sent": []
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,762 @@
+{
+ "schema": 1,
+ "stock": "DreamSeeker/DreamDaemon 516.1688",
+ "date": "2026-11-14",
+ "method": "native 1:1 grab of the MAP; facts read from fixed probe pixels per case tile by compare.py",
+ "sets": {
+  "a": [
+   {
+    "case": "obj-turf",
+    "turf": false,
+    "thing": false,
+    "npc": false,
+    "kid": false
+   },
+   {
+    "case": "obj-turf-om",
+    "turf": false,
+    "thing": true,
+    "npc": true,
+    "kid": false
+   },
+   {
+    "case": "obj-turf-px",
+    "turf": false,
+    "thing": true,
+    "npc": false,
+    "kid": false
+   },
+   {
+    "case": "turf-turf",
+    "turf": false,
+    "thing": true,
+    "npc": true,
+    "kid": false
+   },
+   {
+    "case": "obj-mob",
+    "turf": false,
+    "thing": false,
+    "npc": true,
+    "kid": false
+   },
+   {
+    "case": "turf-mob",
+    "turf": false,
+    "thing": false,
+    "npc": true,
+    "kid": false
+   },
+   {
+    "case": "obj-turf-vis",
+    "turf": false,
+    "thing": false,
+    "npc": false,
+    "kid": true
+   },
+   {
+    "case": "obj-mix",
+    "turf": false,
+    "thing": true,
+    "npc": false,
+    "kid": true
+   },
+   {
+    "case": "obj-kid-turf",
+    "turf": false,
+    "thing": true,
+    "npc": false,
+    "kid": true
+   },
+   {
+    "case": "obj-turf-layer",
+    "turf": false,
+    "thing": true,
+    "npc": false,
+    "kid": false
+   },
+   {
+    "case": "obj-mob-turf",
+    "turf": false,
+    "thing": false,
+    "npc": true,
+    "kid": false
+   },
+   {
+    "case": "turf-plain",
+    "turf": false,
+    "thing": false,
+    "npc": false,
+    "kid": false
+   },
+   {
+    "case": "obj-turf-bare",
+    "turf": true,
+    "thing": true,
+    "npc": false,
+    "kid": false
+   },
+   {
+    "case": "obj-turf-high",
+    "turf": true,
+    "thing": false,
+    "npc": false,
+    "kid": false
+   },
+   {
+    "case": "obj-turf-plane",
+    "turf": true,
+    "thing": false,
+    "npc": false,
+    "kid": false
+   },
+   {
+    "case": "obj-turf-south",
+    "turf": true,
+    "thing": false,
+    "npc": false,
+    "kid": false
+   },
+   {
+    "case": "obj-l2-north",
+    "turf": false,
+    "thing": false,
+    "npc": false,
+    "kid": false
+   },
+   {
+    "case": "obj-l2-south",
+    "turf": false,
+    "thing": false,
+    "npc": false,
+    "kid": true
+   },
+   {
+    "case": "obj-l2-null",
+    "turf": false,
+    "thing": false,
+    "npc": false,
+    "kid": true
+   },
+   {
+    "case": "mob-holder",
+    "turf": false,
+    "thing": false,
+    "npc": true,
+    "kid": true
+   },
+   {
+    "case": "mob-holder-id",
+    "turf": false,
+    "thing": false,
+    "npc": true,
+    "kid": true
+   }
+  ],
+  "b": [
+   {
+    "case": "none",
+    "drawn": true,
+    "look": "kid.b",
+    "dir": "south",
+    "overWall": false,
+    "overHolder": false
+   },
+   {
+    "case": "icon",
+    "drawn": true,
+    "look": "holder.b",
+    "dir": "south",
+    "overWall": true,
+    "overHolder": true
+   },
+   {
+    "case": "state",
+    "drawn": true,
+    "look": "kid.a",
+    "dir": "south",
+    "overWall": true,
+    "overHolder": true
+   },
+   {
+    "case": "dir",
+    "drawn": true,
+    "look": "kid.b",
+    "dir": "east",
+    "overWall": true,
+    "overHolder": true
+   },
+   {
+    "case": "layer",
+    "drawn": true,
+    "look": "kid.b",
+    "dir": "south",
+    "overWall": true,
+    "overHolder": true
+   },
+   {
+    "case": "plane",
+    "drawn": true,
+    "look": "kid.b",
+    "dir": "south",
+    "overWall": false,
+    "overHolder": false
+   },
+   {
+    "case": "plane+layer",
+    "drawn": true,
+    "look": "kid.b",
+    "dir": "south",
+    "overWall": true,
+    "overHolder": true
+   },
+   {
+    "case": "id",
+    "drawn": true,
+    "look": "kid.b",
+    "dir": "south",
+    "overWall": true,
+    "overHolder": true
+   },
+   {
+    "case": "underlay",
+    "drawn": true,
+    "look": "kid.b",
+    "dir": "south",
+    "overWall": true,
+    "overHolder": true
+   },
+   {
+    "case": "underlay-l3",
+    "drawn": true,
+    "look": "kid.b",
+    "dir": "south",
+    "overWall": false,
+    "overHolder": false
+   },
+   {
+    "case": "underlay+layer",
+    "drawn": true,
+    "look": "kid.b",
+    "dir": "south",
+    "overWall": true,
+    "overHolder": false
+   },
+   {
+    "case": "float",
+    "drawn": true,
+    "look": "kid.b",
+    "dir": "south",
+    "overWall": true,
+    "overHolder": true
+   },
+   {
+    "case": "underlay-float",
+    "drawn": true,
+    "look": "kid.b",
+    "dir": "south",
+    "overWall": true,
+    "overHolder": false
+   },
+   {
+    "case": "hide",
+    "drawn": false
+   },
+   {
+    "case": "all-inherit",
+    "drawn": true,
+    "look": "holder.a",
+    "dir": "east",
+    "overWall": true,
+    "overHolder": null
+   },
+   {
+    "case": "plane-holder",
+    "drawn": true,
+    "look": "kid.b",
+    "dir": "south",
+    "overWall": true,
+    "overHolder": false
+   },
+   {
+    "case": "hide-grand",
+    "drawn": true,
+    "look": "kid.b",
+    "dir": "south",
+    "overWall": true,
+    "overHolder": true
+   }
+  ],
+  "c": [
+   {
+    "case": "rot90",
+    "kid": {
+     "cx": 23.7,
+     "cy": 11.5,
+     "w": 16,
+     "h": 16,
+     "notch": 180,
+     "blended": false
+    },
+    "holder": {
+     "cx": 12.7,
+     "cy": 17.6,
+     "w": 24,
+     "h": 24,
+     "notch": 240
+    }
+   },
+   {
+    "case": "scale2",
+    "kid": {
+     "cx": 23.6,
+     "cy": 10.8,
+     "w": 30,
+     "h": 30,
+     "notch": 90,
+     "blended": true
+    },
+    "holder": {
+     "cx": 7.8,
+     "cy": 19.0,
+     "w": 46,
+     "h": 46,
+     "notch": 60
+    }
+   },
+   {
+    "case": "rot45",
+    "kid": {
+     "cx": 23.7,
+     "cy": 11.3,
+     "w": 20,
+     "h": 20,
+     "notch": 135,
+     "blended": true
+    },
+    "holder": {
+     "cx": 12.4,
+     "cy": 16.5,
+     "w": 32,
+     "h": 32,
+     "notch": 75
+    }
+   },
+   {
+    "case": "rot90-px",
+    "kid": {
+     "cx": 29.7,
+     "cy": 11.5,
+     "w": 16,
+     "h": 16,
+     "notch": 180,
+     "blended": false
+    },
+    "holder": {
+     "cx": 18.7,
+     "cy": 17.6,
+     "w": 24,
+     "h": 24,
+     "notch": 240
+    }
+   },
+   {
+    "case": "kid-own",
+    "kid": {
+     "cx": 23.7,
+     "cy": 11.5,
+     "w": 8,
+     "h": 8,
+     "notch": 195,
+     "blended": false
+    },
+    "holder": {
+     "cx": 14.7,
+     "cy": 16.0,
+     "w": 24,
+     "h": 24,
+     "notch": 195
+    }
+   },
+   {
+    "case": "shift",
+    "kid": {
+     "cx": 31.5,
+     "cy": 7.3,
+     "w": 16,
+     "h": 16,
+     "notch": 90,
+     "blended": false
+    },
+    "holder": {
+     "cx": 20.4,
+     "cy": 13.3,
+     "w": 24,
+     "h": 24,
+     "notch": 45
+    }
+   },
+   {
+    "case": "nested",
+    "kid": {
+     "cx": 25.8,
+     "cy": 16.5,
+     "w": 20,
+     "h": 26,
+     "notch": 180,
+     "blended": false
+    },
+    "holder": {
+     "cx": 10.5,
+     "cy": 16.3,
+     "w": 16,
+     "h": 24,
+     "notch": 345
+    }
+   },
+   {
+    "case": "kid-reset",
+    "kid": {
+     "cx": 23.5,
+     "cy": 11.3,
+     "w": 16,
+     "h": 16,
+     "notch": 90,
+     "blended": false
+    },
+    "holder": {
+     "cx": 12.7,
+     "cy": 17.6,
+     "w": 24,
+     "h": 24,
+     "notch": 240
+    }
+   },
+   {
+    "case": "kid-ps",
+    "kid": {
+     "cx": 23.6,
+     "cy": 11.3,
+     "w": 22,
+     "h": 22,
+     "notch": 120,
+     "blended": false
+    },
+    "holder": {
+     "cx": 12.4,
+     "cy": 16.5,
+     "w": 25,
+     "h": 30,
+     "notch": 45
+    }
+   },
+   {
+    "case": "holder-ps",
+    "kid": {
+     "cx": 23.7,
+     "cy": 11.2,
+     "w": 20,
+     "h": 20,
+     "notch": 120,
+     "blended": true
+    },
+    "holder": {
+     "cx": 12.1,
+     "cy": 16.7,
+     "w": 26,
+     "h": 32,
+     "notch": 75
+    }
+   },
+   {
+    "case": "turf-rot",
+    "holder": {
+     "cx": 15.7,
+     "cy": 15.5,
+     "w": 24,
+     "h": 24,
+     "notch": 180
+    },
+    "thing": {
+     "cx": 5.6,
+     "cy": 25.4,
+     "w": 11,
+     "h": 11
+    }
+   },
+   {
+    "case": "scale-half",
+    "kid": {
+     "cx": 31.5,
+     "cy": 15.3,
+     "w": 8,
+     "h": 8,
+     "notch": 105,
+     "blended": false
+    },
+    "holder": {
+     "cx": 15.5,
+     "cy": 15.4,
+     "w": 12,
+     "h": 12,
+     "notch": 90
+    }
+   }
+  ],
+  "d": [
+   {
+    "case": "obj-turf",
+    "turf": false,
+    "thing": false,
+    "npc": false,
+    "kid": false
+   },
+   {
+    "case": "obj-turf-om",
+    "turf": false,
+    "thing": true,
+    "npc": true,
+    "kid": false
+   },
+   {
+    "case": "obj-turf-px",
+    "turf": false,
+    "thing": true,
+    "npc": false,
+    "kid": false
+   },
+   {
+    "case": "turf-turf",
+    "turf": false,
+    "thing": true,
+    "npc": true,
+    "kid": false
+   },
+   {
+    "case": "obj-mob",
+    "turf": false,
+    "thing": false,
+    "npc": true,
+    "kid": false
+   },
+   {
+    "case": "turf-mob",
+    "turf": false,
+    "thing": false,
+    "npc": true,
+    "kid": false
+   },
+   {
+    "case": "obj-turf-vis",
+    "turf": false,
+    "thing": false,
+    "npc": false,
+    "kid": true
+   },
+   {
+    "case": "obj-mix",
+    "turf": false,
+    "thing": true,
+    "npc": false,
+    "kid": true
+   },
+   {
+    "case": "obj-kid-turf",
+    "turf": false,
+    "thing": true,
+    "npc": false,
+    "kid": true
+   },
+   {
+    "case": "obj-turf-layer",
+    "turf": false,
+    "thing": true,
+    "npc": false,
+    "kid": false
+   },
+   {
+    "case": "obj-mob-turf",
+    "turf": false,
+    "thing": false,
+    "npc": true,
+    "kid": false
+   },
+   {
+    "case": "turf-plain",
+    "turf": false,
+    "thing": false,
+    "npc": false,
+    "kid": false
+   },
+   {
+    "case": "obj-turf-bare",
+    "turf": true,
+    "thing": true,
+    "npc": false,
+    "kid": false
+   },
+   {
+    "case": "obj-turf-high",
+    "turf": true,
+    "thing": false,
+    "npc": false,
+    "kid": false
+   },
+   {
+    "case": "obj-turf-plane",
+    "turf": true,
+    "thing": false,
+    "npc": false,
+    "kid": false
+   },
+   {
+    "case": "obj-turf-south",
+    "turf": true,
+    "thing": false,
+    "npc": false,
+    "kid": false
+   },
+   {
+    "case": "obj-l2-north",
+    "turf": false,
+    "thing": false,
+    "npc": false,
+    "kid": false
+   },
+   {
+    "case": "obj-l2-south",
+    "turf": false,
+    "thing": false,
+    "npc": false,
+    "kid": true
+   },
+   {
+    "case": "obj-l2-null",
+    "turf": false,
+    "thing": false,
+    "npc": false,
+    "kid": true
+   },
+   {
+    "case": "mob-holder",
+    "turf": false,
+    "thing": false,
+    "npc": true,
+    "kid": true
+   },
+   {
+    "case": "mob-holder-id",
+    "turf": false,
+    "thing": false,
+    "npc": true,
+    "kid": true
+   }
+  ],
+  "e": [
+   {
+    "case": "turf-underlay-float",
+    "kidInk": 0,
+    "whiteInk": 0,
+    "holderInk": 0,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "turf-underlay-inherit",
+    "kidInk": 0,
+    "whiteInk": 0,
+    "holderInk": 0,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "turf-underlay-obj",
+    "kidInk": 0,
+    "whiteInk": 0,
+    "holderInk": 0,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "turf-float",
+    "kidInk": 247,
+    "whiteInk": 9,
+    "holderInk": 0,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "nested-underlay",
+    "kidInk": 374,
+    "whiteInk": 27,
+    "holderInk": 327,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "nested-float",
+    "kidInk": 383,
+    "whiteInk": 18,
+    "holderInk": 327,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "anim-kid-layer",
+    "kidInk": 247,
+    "whiteInk": 18,
+    "holderInk": 455,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "anim-kid-id",
+    "kidInk": 0,
+    "whiteInk": 9,
+    "holderInk": 503,
+    "fugueDiffOver8": 256,
+    "fugueMaxDiff": 12
+   },
+   {
+    "case": "anim-kid-underlay",
+    "kidInk": 135,
+    "whiteInk": 18,
+    "holderInk": 567,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "anim-kid-icon",
+    "kidInk": 0,
+    "whiteInk": 15,
+    "holderInk": 354,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "anim-holder-turn",
+    "kidInk": 210,
+    "whiteInk": 8,
+    "holderInk": 348,
+    "fugueDiffOver8": 190,
+    "fugueMaxDiff": 207
+   },
+   {
+    "case": "anim-holder-scale",
+    "kidInk": 461,
+    "whiteInk": 18,
+    "holderInk": 563,
+    "fugueDiffOver8": 456,
+    "fugueMaxDiff": 87
+   },
+   {
+    "case": "anim-holder-pixel",
+    "kidInk": 247,
+    "whiteInk": 18,
+    "holderInk": 375,
+    "fugueDiffOver8": 76,
+    "fugueMaxDiff": 215
+   }
+  ]
+ }
+}

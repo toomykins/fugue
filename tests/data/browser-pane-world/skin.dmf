@@ -1,0 +1,30 @@
+window "main"
+    elem "main"
+        type = MAIN
+        size = 400x300
+        is-default = true
+    elem "split"
+        type = CHILD
+        size = 400x300
+        anchor1 = 0,0
+        anchor2 = 100,100
+        left = "legacy"
+window "legacy"
+    elem "legacy"
+        type = MAIN
+        size = 400x300
+        is-pane = true
+    elem "waiting"
+        type = LABEL
+        size = 400x300
+        text = "Waiting for unattached browser to initialize"
+window "chatpane"
+    elem "chatpane"
+        type = MAIN
+        size = 400x300
+        is-pane = true
+    elem "chatbrowser"
+        type = BROWSER
+        size = 400x300
+        anchor1 = 0,0
+        anchor2 = 100,100

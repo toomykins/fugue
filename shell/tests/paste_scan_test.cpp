@@ -12,6 +12,7 @@
 #include <QRegularExpression>
 #include <QTextStream>
 #include <QtTest>
+#include "tests/testmain.h"
 
 namespace {
 struct Finding {
@@ -119,5 +120,5 @@ private slots:
     }
 };
 
-QTEST_APPLESS_MAIN(PasteScan)
+FUGUE_TEST_APPLESS_MAIN(PasteScan)
 #include "paste_scan_test.moc"

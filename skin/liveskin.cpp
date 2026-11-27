@@ -19,13 +19,38 @@ std::string dims(int w, int h) { return std::to_string(w) + "x" + std::to_string
 
 // The winset keys stored as properties (applyPropLocked); macro, focus, parent, type and splitter have their own arms.
 bool storedKey(const std::string& k) {
-    static const char* keys[] = {
-        "is-visible",     "is-disabled",  "is-checked",   "right-click", "pos",
-        "size",           "left",         "right",        "text",        "background-color",
-        "text-color",     "on-close",     "title",        "use-title",   "style",
-        "command",        "icon-size",    "zoom",         "zoom-mode",   "letterbox",
-        "icon",           "font-family",  "font-size",    "font-style",  "tab-background-color",
-        "tab-text-color", "prefix-color", "suffix-color", "anchor1",     "anchor2"};
+    static const char* keys[] = {"is-visible",
+                                 "is-disabled",
+                                 "is-checked",
+                                 "right-click",
+                                 "pos",
+                                 "size",
+                                 "left",
+                                 "right",
+                                 "text",
+                                 "background-color",
+                                 "inner-background-color",
+                                 "text-color",
+                                 "on-close",
+                                 "title",
+                                 "use-title",
+                                 "style",
+                                 "command",
+                                 "icon-size",
+                                 "zoom",
+                                 "zoom-mode",
+                                 "letterbox",
+                                 "icon",
+                                 "font-family",
+                                 "font-size",
+                                 "font-style",
+                                 "anchor1",
+                                 "anchor2",
+                                 "tab-background-color",
+                                 "tab-text-color",
+                                 "prefix-color",
+                                 "suffix-color",
+                                 "is-maximized"};
     for (const char* s : keys)
         if (k == s) return true;
     return false;
@@ -210,13 +235,13 @@ bool LiveSkin::isMenuTarget(const std::string& name) const { return !menuElemLoc
 
 LiveSkin::Kind LiveSkin::resolveLocked(const std::string& name) const {
     if (name.empty()) return Kind::Unknown;
+    if (runtimeLocked(name)) return Kind::Runtime;
     if (tree_.byName(name)) return Kind::Control;
     // A control the skin declares but the layout does not place is still a control.
     if (declaresLocked(name)) return Kind::Control;
     if (knownPopupLocked(name)) return Kind::Popup;
     if (windowLocked(name)) return Kind::Window;  // (E2) a skin window: macro / title / focus targets
     if (isMenuTarget(name)) return Kind::Menu;
-    if (runtimeLocked(name)) return Kind::Runtime;
     size_t i;
     if (macroElemLocked(name, i)) return Kind::Macro;
     return Kind::Unknown;
@@ -228,22 +253,28 @@ bool LiveSkin::hasConsumerLocked(Kind kind, const WinsetPair& p) const {
     const std::string& k = p.key;
     if (k == "is-visible" || k == "pos" || k == "size") {
         if (kind == Kind::Control || kind == Kind::Popup || kind == Kind::Runtime) return true;
-        // A skin window's `pos` is consumed by winget only. The main window's is its real screen place, which the GUI
-        // publishes, so a winset of it is not stored.
-        if (k == "pos" && kind == Kind::Window) return file_ && windowLocked(p.target) != findMainWindow(*file_);
-        // A floating window (layout.h Tree::floats) is shown, hidden and sized by shell/skinwindow.
+        // A skin window's `pos` is consumed by winget; the main window's moves it (applyPropLocked).
+        if (k == "pos" && kind == Kind::Window) return file_ != nullptr;
+        // A floating window (layout.h Tree::floats) is shown, hidden and sized by shell/skinwindow. The main window's
+        // `size` is its client area (applyPropLocked), which shell/skinwindow gives its window. A pane's `size` is
+        // answered by winget while the pane is shown nowhere (wingetLocked).
         if (kind == Kind::Window && file_)
-            if (const Block* w = windowLocked(p.target)) return isFloatingWindow(*file_, *w);
+            if (const Block* w = windowLocked(p.target)) return isFloatingWindow(*file_, *w) || k == "size";
         return false;
     }
-    // A runtime control (runtime_): winget is the consumer, and shell/skinwindow for a BROWSER's anchors.
-    if (kind == Kind::Runtime) return k == "is-disabled" || k == "text" || k == "anchor1" || k == "anchor2";
+    if (k == "is-maximized") return kind == Kind::Window && file_ && windowLocked(p.target) == findMainWindow(*file_);
+    // Runtime controls are queryable; supported BROWSERs also consume these in layout.
+    if (kind == Kind::Runtime)
+        return k == "is-disabled" || k == "text" || k == "anchor1" || k == "anchor2" || k == "background-color" ||
+               k == "inner-background-color" || k == "use-title" ||
+               (runtimeLocked(p.target)->type == "MAP" &&
+                (k == "icon-size" || k == "zoom" || k == "zoom-mode" || k == "letterbox"));
     if (k == "is-disabled") return kind == Kind::Control || kind == Kind::Menu;
     // A menu item's is-checked is flipped by a click before its command runs, and the command reads it back in a
     // condition. Written by shell/skinwindow, consumed by menuLocked and winget.
     if (k == "is-checked")
         return (kind == Kind::Control && controlTypeLocked(p.target) == "BUTTON") || kind == Kind::Menu;
-    // A MAP's scaling properties. Consumed by shell/skinwindow (MapWidget::setMapScale).
+    // A MAP's scaling properties, retained for winset/winget.
     if (k == "icon-size" || k == "zoom" || k == "zoom-mode" || k == "letterbox")
         return kind == Kind::Control && controlTypeLocked(p.target) == "MAP";
     if (k == "left" || k == "right") return kind == Kind::Control && controlTypeLocked(p.target) == "CHILD";
@@ -251,12 +282,12 @@ bool LiveSkin::hasConsumerLocked(Kind kind, const WinsetPair& p) const {
     if (k == "title") return kind == Kind::Popup || kind == Kind::Window;
     // A window's `icon`, consumed by mainIcon() (skin/winicon.h) and by shell/skinwindow's setSkinIcon.
     if (k == "icon") return kind == Kind::Window;
+    if (k == "inner-background-color") return kind == Kind::Control && controlTypeLocked(p.target) == "BROWSER";
     if (k == "background-color")
         return kind == Kind::Control || kind == Kind::Window;  // a window's fills its box (shell/skinwindow)
     if (k == "style") return kind == Kind::Control;
     if (k == "text-color") {
         std::string t = controlTypeLocked(p.target);
-        // A MAP's is maptext's default colour (defaultMapStyle).
         return kind == Kind::Control && (t == "OUTPUT" || t == "BROWSER" || t == "INFO" || t == "INPUT" ||
                                          t == "LABEL" || t == "MAP" || t == "BUTTON");
     }
@@ -311,10 +342,53 @@ void LiveSkin::uncheckSiblingsLocked(const std::string& target) {
 bool LiveSkin::applyPropLocked(const WinsetPair& p) {
     Kind kind = resolveLocked(p.target);
     if (!hasConsumerLocked(kind, p)) return false;
+    if (kind == Kind::Window && file_ && windowLocked(p.target) == findMainWindow(*file_)) {
+        // Stock DreamSeeker 516 sizes the main window's client area, the strip below it not counted: winget then
+        // answers the new size for `size` and `inner-size`, and the controls follow their anchors as for a drag of the
+        // frame (516.1689, tests/data/winset-size-world: main.size=288x288 makes a 224x224 window 288x288 and its
+        // 0,0 -> 100,100 map 288x288). It is not stored as a prop, so a later resize by the player still answers. A
+        // maximized window stays maximized: the size is the one it gets when restored, and `size` answers it at once
+        // while `inner-size` still answers the real client area.
+        if (p.key == "size") {
+            long long w = 0, h = 0;
+            if (!parsePair(p.value, "x,", w, h) || w <= 0 || h <= 0 || w > 65535 || h > 65535) return false;
+            windowWidth_ = int(w);
+            windowHeight_ = int(h);
+            windowSizeSeq_++;
+            if (maximized_) {
+                restoreW_ = int(w);
+                restoreH_ = int(h);
+            } else {
+                client_ = Rect{0, 0, int(w), int(h)};
+                clientSet_ = true;
+            }
+            return true;
+        }
+        // `pos` moves the window: its frame's top-left goes to that screen place, and winget answers it (516.1689:
+        // main.pos=100,120 put the frame at 100,120). The GUI republishes the real place once it has moved.
+        if (p.key == "pos") {
+            long long x = 0, y = 0;
+            if (!parsePair(p.value, ",", x, y) || std::llabs(x) > 65535 || std::llabs(y) > 65535) return false;
+            windowPosX_ = int(x);
+            windowPosY_ = int(y);
+            windowPosSeq_++;
+            screenPos_[""] = {int(x), int(y)};
+            return true;
+        }
+        // `is-maximized` maximizes or restores it (516.1689).
+        if (p.key == "is-maximized") {
+            maximizeReq_ = winsetBool(p.value);
+            maximizeSeq_++;
+            return true;
+        }
+    }
+    if ((p.key == "pos" || p.key == "size") && kind == Kind::Control) applyGeometryLocked(p);
+    if ((p.key == "pos" || p.key == "size") && kind == Kind::Runtime) applyRuntimeGeometryLocked(p);
     std::string target = p.target;
     bool mapKey = p.key == "icon-size" || p.key == "zoom" || p.key == "zoom-mode" || p.key == "letterbox";
     bool inputText = p.key == "text" && kind == Kind::Control && controlTypeLocked(p.target) == "INPUT";
-    if (p.key == "left" || p.key == "right" || p.key == "is-checked" || p.key == "command" || mapKey || inputText) {
+    if (p.key == "left" || p.key == "right" || p.key == "is-checked" || p.key == "command" ||
+        p.key == "inner-background-color" || mapKey || inputText) {
         // One canonical spelling for the keys layoutChild reads, so the freshest write wins whatever spelling it used.
         // is-checked and command are written by a click with the window-qualified name and by a bare winset alike, and
         // an INPUT's text by the player's typing (setInputText) and a winset alike.
@@ -325,7 +399,17 @@ bool LiveSkin::applyPropLocked(const WinsetPair& p) {
     if (kind == Kind::Window) target = windowLocked(p.target)->name;
     // A world-set place answers verbatim until the GUI reports where the window really went (setWindowPos).
     if (p.key == "pos" && (kind == Kind::Window || kind == Kind::Popup)) screenPos_.erase(lowerAscii(target));
-    props_.set(target, p.key, p.value.empty() ? valueOfEmpty(p.key, kind == Kind::Control) : p.value);
+    const std::string value = p.value.empty() ? valueOfEmpty(p.key, kind == Kind::Control) : p.value;
+    props_.set(target, p.key, value);
+    if (kind == Kind::Popup) {
+        if (p.key == "title") popupTitles_.erase(lowerAscii(target));
+        if (p.key == "is-visible") {
+            if (winsetBool(value))
+                hiddenPopups_.erase(lowerAscii(target));
+            else
+                hiddenPopups_.insert(lowerAscii(target));
+        }
+    }
     // zoom and icon-size are one property: setting one clears the other, or a later icon-size=64 would lose to an
     // earlier zoom=2 in shell/skinwindow's read.
     if (p.key == "zoom" || p.key == "icon-size") {
@@ -335,6 +419,86 @@ bool LiveSkin::applyPropLocked(const WinsetPair& p) {
     }
     if (kind == Kind::Control && p.key == "is-checked" && winsetBool(p.value)) uncheckSiblingsLocked(p.target);
     if (kind == Kind::Menu && p.key == "is-checked" && winsetBool(p.value)) uncheckMenuSiblingsLocked(target);
+    return true;
+}
+
+namespace {
+// A pos / size winset applied to a control at x, y, w x h in a box of `bw` x `bh`: a pos moves it and keeps its size, a
+// size keeps its place, and a zero extent fills to the box's far edge, `below` more down (the main window's status
+// strip, which stock's fill covers). false = the value does not parse.
+bool winsetGeometry(const WinsetPair& p, int bw, int bh, int below, long long& x, long long& y, long long& w,
+                    long long& h) {
+    long long a = 0, b = 0;
+    if (!parsePair(p.value, p.key == "pos" ? "," : "x,", a, b)) return false;
+    if (p.key == "pos") {
+        x = a;
+        y = b;
+    } else {
+        w = a > 0 ? a : std::max<long long>(0, bw - x);
+        h = b > 0 ? b : std::max<long long>(0, bh + below - y);
+    }
+    return true;
+}
+}  // namespace
+
+// A placed .dmf control's pos / size, as stock DreamSeeker 516 reads them: where the control is to be now, in the box it
+// is laid out in now, its anchors moving it from there later (skin/layout.h designGeometry). 516.1689,
+// tests/data/winset-size-world: half (anchored 0,100 -> 100,100) set to pos 4,150 and size 50x30 in a 224x224 window is
+// 114x30 at 4,214 in the 288x288 one; a pos alone keeps the size. A zero extent fills to the box's far edge, and in the
+// main window over the status strip below the client area too (map.size=0x0 in a 288x288 window: 288x307 with stock's
+// 19-pixel strip at 96 dpi). A control the layout does not place, or a value that does not parse, keeps the stored
+// prop's older reading.
+bool LiveSkin::applyGeometryLocked(const WinsetPair& p) {
+    const Control* c = tree_.byName(p.target);
+    if (!c || !c->elem || c->runtimeIdentity || !file_) return false;
+    long long x = c->full.x0 - c->box.x0, y = c->full.y0 - c->box.y0, w = c->full.dx(), h = c->full.dy();
+    const int below = c->top.empty() && c->box == tree_.client ? strip_ : 0;
+    if (!winsetGeometry(p, c->box.dx(), c->box.dy(), below, x, y, w, h)) return false;
+    geometry_[lowerAscii(c->window + "." + c->name)] = designGeometry(*file_, *c, x, y, w, h);
+    return true;
+}
+
+// A runtime control's pos / size, read as a placed control's are (516.1689: a map created with pos=20,40 and
+// size=100x100, anchored 0,0 -> 100,100, in a 288x288 window is 36x36 at 20,40 in the 224x224 one; size=80x60 and then
+// pos=10,10 there make it 112x92 at 10,10 in the 256x256 one). The first one fixes the box extent the control's
+// geometry is kept in (DesignGeometry::refW / refH), the box it was created in. The props keep what the world wrote.
+bool LiveSkin::applyRuntimeGeometryLocked(const WinsetPair& p) {
+    const RuntimeCtl* rc = runtimeLocked(p.target);
+    if (!rc || !file_ || !file_->window(rc->parent)) return false;  // a popup's runtime map: page coordinates
+    const Rect box = runtimeParentBox(tree_, *file_, rc->parent);
+    const std::string key = lowerAscii(rc->parent + "." + rc->name);
+    const Elem anchors = runtimeElem(props_, rc->name);
+    long long x = 0, y = 0, w = 0, h = 0;
+    int refW = box.dx(), refH = box.dy();
+    auto g = geometry_.find(key);
+    const Control* c = tree_.byName(rc->parent + "." + rc->name);
+    if (c && c->runtimeIdentity) {
+        x = c->full.x0 - box.x0;
+        y = c->full.y0 - box.y0;
+        w = c->full.dx();
+        h = c->full.dy();
+    } else if (g != geometry_.end()) {  // not laid out yet (later in the winset that created it)
+        x = g->second.x;
+        y = g->second.y;
+        w = g->second.w;
+        h = g->second.h;
+    }
+    if (g != geometry_.end()) {
+        refW = g->second.refW;
+        refH = g->second.refH;
+    }
+    const bool inMain = findMainWindow(*file_) == file_->window(rc->parent);
+    if (!(c && c->runtimeIdentity) && g == geometry_.end()) {  // nothing yet: size fills the box from 0,0
+        w = box.dx();
+        h = box.dy();
+    }
+    if (!winsetGeometry(p, box.dx(), box.dy(), inMain ? strip_ : 0, x, y, w, h)) return false;
+    // Until both have arrived the other one fills: an unset size is the rest of the box, an unset pos is 0,0.
+    if (g == geometry_.end() && !(c && c->runtimeIdentity) && p.key == "pos") {
+        w = std::max<long long>(0, box.dx() - x);
+        h = std::max<long long>(0, box.dy() - y);
+    }
+    geometry_[key] = designGeometry(&anchors, box, refW, refH, x, y, w, h);
     return true;
 }
 
@@ -368,7 +532,10 @@ void LiveSkin::relayoutLocked() {
             }
         cl = Rect{0, 0, w, h};
     }
-    tree_ = layoutSkin(*file_, cl, splits_, &props_, /*inferSlots=*/false);  // stock's empty sides (setPaneShown)
+    // inferSlots off: stock's empty sides (setPaneShown)
+    tree_ = layoutSkin(*file_, cl, splits_, &props_, /*inferSlots=*/false, &geometry_, strip_);
+    for (const auto& r : runtime_)
+        layoutRuntime(tree_, *file_, props_, r.name, r.parent, r.type, r.identity, &geometry_);
     gen_++;
 }
 
@@ -578,6 +745,15 @@ bool LiveSkin::wingetLocked(const std::string& id, const std::string& param, std
     const Control* c = tree_.byName(id);
     if (!c) {
         if (const RuntimeCtl* rc = runtimeLocked(id)) return runtimeWingetLocked(*rc, param, out);
+        // A pane's size is the box it is shown in, whatever a winset asked (516.1689: pane.size=40x40 left a pane shown
+        // in a 96x96 CHILD answering 96x96); a pane shown nowhere answers the winset, else its .dmf size.
+        if (const Block* w = param == "size" && file_ ? windowLocked(id) : nullptr)
+            if (w != findMainWindow(*file_) && !isFloatingWindow(*file_, *w))
+                for (const Control& hc : tree_.controls) {
+                    if (hc.window != w->name || hc.box.empty() || hc.runtimeIdentity) continue;
+                    out = dims(hc.box.dx(), hc.box.dy());
+                    return true;
+                }
         // A popup's / the main window's real place on the screen (setWindowPos) beats what the world last asked for.
         if (param == "pos" || param == "outer-pos") {
             const Block* w = windowLocked(id);
@@ -591,6 +767,24 @@ bool LiveSkin::wingetLocked(const std::string& id, const std::string& param, std
                 if (isMain) return false;  // never shown yet: no plausible guess
             }
             if (param == "outer-pos") return wingetLocked(id, "pos", out);  // outer-pos equals pos
+        }
+        // Popup visibility and page titles have GUI writers too. Do not let an old winset mask a later
+        // page show/hide, document.title, player close or re-browse. World writes update/invalidate these facts.
+        if (knownPopupLocked(id) && !declaresLocked(id) && !windowLocked(id)) {
+            if (param == "is-visible") {
+                bool open = false, hidden = false;
+                for (const std::string& p : popups_) open = open || ieq(p, id);
+                for (const std::string& p : hiddenPopups_) hidden = hidden || ieq(p, id);
+                out = boolParam(open && !hidden);
+                return true;
+            }
+            if (param == "title") {
+                auto title = popupTitles_.find(lowerAscii(id));
+                if (title != popupTitles_.end()) {
+                    out = title->second;
+                    return true;
+                }
+            }
         }
         // A target with no placed control may still be one the world configured (a browse popup, a runtime window).
         if (props_.get(id, param, out)) return true;
@@ -634,8 +828,8 @@ bool LiveSkin::wingetLocked(const std::string& id, const std::string& param, std
             }
             if (props_.get(mn, param, out)) return true;
             Menu m = menuFromFile(*file_);
-            for (const MenuCat& c : m.cats)
-                for (const MenuItem& it : c.items)
+            for (const MenuCat& category : m.cats)
+                for (const MenuItem& it : category.items)
                     if (it.name == mn && (param == "is-checked" || param == "is-disabled")) {
                         out = boolParam(param == "is-checked" ? it.checked : it.disabled);
                         return true;
@@ -667,8 +861,25 @@ bool LiveSkin::wingetLocked(const std::string& id, const std::string& param, std
                 out = envLocked("dpi");
                 return true;
             }  // every window answers it
+            // While maximized, `size` is the size the window is restored to and `inner-size` the real client area
+            // (516.1689: a maximized 256x256 window answered size 256x256 and inner-size 2560x1350).
+            if (isMain && param == "size" && maximized_ && restoreW_ > 0 && restoreH_ > 0) {
+                out = dims(restoreW_, restoreH_);
+                return true;
+            }
             if (isMain && (param == "size" || param == "inner-size")) {
                 out = dims(tree_.client.dx(), tree_.client.dy());
+                return true;
+            }
+            // The frame's size, which the GUI publishes; stock answers its own frame (516.1689: 256x298 for a 240x240
+            // client with its 19-pixel status strip at 96 dpi). Refused until published.
+            if (isMain && param == "outer-size") {
+                if (frameW_ <= 0 || frameH_ <= 0) return false;
+                out = dims(frameW_, frameH_);
+                return true;
+            }
+            if (isMain && param == "is-maximized") {
+                out = boolParam(maximized_);
                 return true;
             }
             if (isMain && param == "macro") {
@@ -698,13 +909,7 @@ bool LiveSkin::wingetLocked(const std::string& id, const std::string& param, std
                     return true;
                 }
             }
-            // A pane's size is the box it is hosted in; an unshown pane's is its .dmf size.
-            if (param == "size" && m && m->boolv("is-pane", false))
-                for (const Control& hc : tree_.controls) {
-                    if (hc.window != w->name || hc.box.empty()) continue;
-                    out = dims(hc.box.dx(), hc.box.dy());
-                    return true;
-                }
+
             if (m)
                 if (const std::string* v = m->get(param)) {
                     out = *v;
@@ -723,18 +928,18 @@ bool LiveSkin::wingetLocked(const std::string& id, const std::string& param, std
                 out = envLocked("dpi");
                 return true;
             }
-            if (param == "is-visible") {
-                bool open = false;
-                for (const std::string& p : popups_) open = open || ieq(p, id);
-                bool hidden = false;
-                for (const std::string& p : hiddenPopups_) hidden = hidden || ieq(p, id);
-                out = boolParam(open && !hidden);
-                return true;
-            }
         }
         return false;
     }
     // First, what the laid-out tree says: a stored intent never beats the layout.
+    if (param == "view-size" && c->type == "MAP") {
+        auto it = mapViewSizes_.find(c->window + "." + c->name);
+        if (it == mapViewSizes_.end()) return false;
+        out = dims(it->second.first, it->second.second);
+        return true;
+    }
+    if (c->runtimeIdentity && (param == "parent" || param == "runtime"))
+        return runtimeWingetLocked(*runtimeLocked(id), param, out);
     if (param == "size") {
         out = dims(c->full.dx(), c->full.dy());
         return true;
@@ -773,18 +978,23 @@ bool LiveSkin::wingetLocked(const std::string& id, const std::string& param, std
             return true;
         }
         if (c->elem) {
-            out = splitterText(float(c->elem->floatv("splitter", kDefaultSplitter)));
+            out = splitterText(fileSplitterPercent(*c->elem));
             return true;
         }
     }
-    // Second, what the world itself set.
-    if (props_.controlProp(c->window, c->name, param, out)) return true;
-    // pos is pane-local: the laid-out corner relative to the box its window was laid out in. A stored winset value
-    // answers verbatim; an empty (off-pane) rect falls through to the file.
+    if (param == "is-vert" && c->type == "CHILD" && c->elem) {
+        out = boolParam(c->elem->boolv("is-vert", false));
+        return true;
+    }
+    // pos is pane-local: the laid-out corner relative to the box its window was laid out in, a winset's included (stock
+    // answers where its anchors have since moved it). An empty (off-pane) rect falls through to a stored value, then
+    // the file.
     if (param == "pos" && !c->rect.empty()) {
         out = std::to_string(c->full.x0 - c->box.x0) + "," + std::to_string(c->full.y0 - c->box.y0);
         return true;
     }
+    // Second, what the world itself set.
+    if (props_.controlProp(c->window, c->name, param, out)) return true;
     // (E3) THIRD, what the .dmf states for this control.
     if (c->elem)
         if (const std::string* v = c->elem->get(param)) {
@@ -872,31 +1082,22 @@ std::string LiveSkin::defaultMapId() const {
     std::lock_guard<std::mutex> g(mu_);
     return defaultMapIdLocked();
 }
-
-std::vector<std::string> LiveSkin::secondaryMaps() const {
+LiveSkin::MapTextSettings LiveSkin::defaultMapTextSettings() const {
     std::lock_guard<std::mutex> g(mu_);
-    std::vector<std::string> out;
-    if (file_) {
-        const std::string def = defaultMapIdLocked();
-        for (const Block& b : file_->blocks)
-            if (b.kind == "window")
-                for (const Elem* e : b.controls())
-                    if (e->type() == "MAP" && b.name + "." + e->name != def) out.push_back(e->name);
+    MapTextSettings out;
+    const auto id = defaultMapIdLocked();
+    if (!id.empty()) {
+        wingetLocked(id, "style", out.style);
+        // MAP text-color is an inherited default, below the control stylesheet
+        // and explicit HTML/CSS colors. Empty/none retains the rasterizer default.
+        std::string color;
+        // Reject CSS punctuation so a malformed value cannot swallow the control stylesheet.
+        if (wingetLocked(id, "text-color", color) && !color.empty() && lowerAscii(color) != "none" &&
+            color.find_first_of("{};<>\"'\\") == std::string::npos)
+            out.style = "body{color:" + color + "}" + out.style;
+        wingetLocked(id, "font-family", out.family);
+        wingetLocked(id, "font-size", out.size);
     }
-    for (const RuntimeCtl& r : runtime_)
-        if (r.type == "MAP") out.push_back(r.name);
-    return out;
-}
-
-std::string LiveSkin::defaultMapStyle() const {
-    std::lock_guard<std::mutex> g(mu_);
-    std::string pick = defaultMapIdLocked();
-    if (pick.empty()) return "";
-    std::string out, color;
-    wingetLocked(pick, "style", out);
-    // The control's text-color is maptext's default colour; a `body` rule in its style still beats it.
-    if (wingetLocked(pick, "text-color", color) && !color.empty() && lowerAscii(color) != "none")
-        out = "body{color:" + color + "}" + out;
     return out;
 }
 
@@ -947,13 +1148,20 @@ bool LiveSkin::applyParentLocked(const WinsetPair& p) {
     bool destroy = v.empty() || v == "none" || v == "null";
     if (const RuntimeCtl* rc = runtimeLocked(p.target)) {
         std::string name = rc->name;
+        const std::string geometryKey = lowerAscii(rc->parent + "." + name);
         if (destroy) {
+            geometry_.erase(geometryKey);
             runtime_.erase(runtime_.begin() + (rc - runtime_.data()));
+            knownPopups_.erase(name);
+            popups_.erase(name);
+            hiddenPopups_.erase(lowerAscii(name));
+            popupTitles_.erase(lowerAscii(name));
             props_.eraseTarget(name);
             return true;
         }
         std::string parent = parentWindowLocked(p.value);
         if (parent.empty()) return false;
+        if (!ieq(parent, rc->parent)) geometry_.erase(geometryKey);  // a new parent reads its geometry afresh
         for (RuntimeCtl& r : runtime_)
             if (r.name == name) r.parent = parent;
         return true;
@@ -968,7 +1176,9 @@ bool LiveSkin::applyParentLocked(const WinsetPair& p) {
     size_t dot = name.rfind('.');
     if (dot != std::string::npos) name = name.substr(dot + 1);
     props_.eraseTarget(name);
-    runtime_.push_back({name, parent, ""});
+    geometry_.erase(lowerAscii(parent + "." + name));
+    if (runtime_.size() >= 1024) return false;
+    runtime_.push_back({name, parent, "", ++nextRuntimeIdentity_});
     return true;
 }
 
@@ -1289,17 +1499,47 @@ std::string LiveSkin::wingetGlobal(const std::string& params, const ParamLookup&
     return out;
 }
 
-std::string LiveSkin::wingetWildcard(const std::string& control, const std::string& params) const {
+std::string LiveSkin::wingetWildcard(const std::string& controls, const std::string& params) const {
     std::lock_guard<std::mutex> g(mu_);
-    nameBlockWriteControlLocked(params);  // a wildcard's answer is not written to the name block
-    std::vector<std::string> names = wingetParamNames(params);
+    nameBlockWriteControlLocked(params);  // an enumeration's answer is not written to the name block
+    const std::vector<std::string> names = wingetParamNames(params);
     if (names.empty()) return "";
-    // One enumerated element: its answer-key prefix and its lookup (both under mu_).
-    struct Item {
-        std::string key;
-        std::function<bool(const std::string&, std::string&)> get;
-    };
-    std::vector<Item> items;
+    std::string out;
+    bool found = false;
+    // Stock splits on ';' and '&', preserves spelling/whitespace and duplicates, and ignores empty entries
+    // after the first. A leading empty entry addresses the main window, not the client-wide wingets.
+    for (size_t begin = 0; begin < controls.size();) {
+        size_t end = controls.find_first_of(";&", begin);
+        if (end == std::string::npos) end = controls.size();
+        if (end > begin || begin == 0) {
+            const auto items = wingetItemsLocked(controls.substr(begin, end - begin));
+            found = found || !items.empty();
+            for (const WingetItem& it : items)
+                for (const std::string& n : names) {
+                    std::string v;
+                    if (!it.get(n, v)) continue;
+                    if (!out.empty()) out.push_back(';');
+                    out += it.key + "." + n + "=" + wingetEncode(v);
+                }
+        }
+        begin = end + 1;
+    }
+    // No resolved control uses the ordinary unknown-control shape. Known controls omit unknown properties.
+    return found ? out : wingetAnswer(params, [](const std::string&, std::string&) { return false; });
+}
+
+std::vector<LiveSkin::WingetItem> LiveSkin::wingetItemsLocked(const std::string& control) const {
+    std::vector<WingetItem> items;
+    if (control.find_first_of("*?") == std::string::npos) {
+        std::string target = control;
+        if (target.empty() && file_) {
+            if (const Block* main = findMainWindow(*file_)) target = main->name;
+        }
+        if (resolveLocked(target) != Kind::Unknown)
+            items.push_back(
+                {control, [this, target](const std::string& k, std::string& v) { return wingetLocked(target, k, v); }});
+        return items;
+    }
     std::string base;
     bool wild = control.size() > 2 && control.compare(control.size() - 2, 2, ".*") == 0;
     if (wild) base = control.substr(0, control.size() - 2);
@@ -1415,17 +1655,7 @@ std::string LiveSkin::wingetWildcard(const std::string& control, const std::stri
             }
         }
     }
-    if (items.empty())
-        return wingetAnswer(params, [](const std::string&, std::string&) { return false; });  // an unknown control
-    std::string out;
-    for (const Item& it : items)
-        for (const std::string& n : names) {
-            std::string v;
-            if (!it.get(n, v)) continue;
-            if (!out.empty()) out.push_back(';');
-            out += it.key + "." + n + "=" + wingetEncode(v);
-        }
-    return out;
+    return items;
 }
 
 bool LiveSkin::knownPopupLocked(const std::string& name) const {
@@ -1452,6 +1682,7 @@ std::string LiveSkin::load(const std::string& dmf) {
         text_ = dmf;
         fileId_++;
         props_.clear();
+        geometry_.clear();
         splits_.clear();
         splitPct_.clear();
         macros_ = resolveMacros(*file_);
@@ -1462,6 +1693,7 @@ std::string LiveSkin::load(const std::string& dmf) {
         runtime_.clear();
         for (const Clone& c : clones_) knownPopups_.erase(c.name);
         clones_.clear();
+        mapViewSizes_.clear();
         for (const Block& b : file_->blocks) {
             const Elem* m = b.kind == "window" ? b.main() : nullptr;
             if (!m) continue;
@@ -1525,6 +1757,31 @@ void LiveSkin::setClient(int w, int h) {
     notify();
 }
 
+void LiveSkin::setWindowFrame(int w, int h) {
+    std::lock_guard<std::mutex> g(mu_);
+    frameW_ = w;
+    frameH_ = h;
+}
+
+void LiveSkin::setStatusStrip(int h) {
+    {
+        std::lock_guard<std::mutex> g(mu_);
+        if (strip_ == h) return;
+        strip_ = h;
+        relayoutLocked();
+    }
+    notify();
+}
+
+void LiveSkin::setWindowState(bool maximized, int restoreW, int restoreH) {
+    std::lock_guard<std::mutex> g(mu_);
+    maximized_ = maximized;
+    if (maximized) {
+        restoreW_ = restoreW;
+        restoreH_ = restoreH;
+    }
+}
+
 WinsetResult LiveSkin::winset(const std::string& control, const std::string& props, bool urlEncoded) {
     WinsetResult r;
     {
@@ -1558,17 +1815,30 @@ void LiveSkin::uncheckMenuSiblingsLocked(const std::string& name) {
 
 void LiveSkin::setPopups(std::set<std::string> names) {
     std::lock_guard<std::mutex> g(mu_);
-    knownPopups_.insert(names.begin(), names.end());
+    for (const auto& name : names)
+        if (!runtimeLocked(name)) knownPopups_.insert(name);
     popups_ = std::move(names);
 }
 
-void LiveSkin::setPopupShown(const std::string& name, bool shown) {
+void LiveSkin::setPopupShown(const std::string& name, bool shown, uint64_t throughRevision) {
     std::lock_guard<std::mutex> g(mu_);
-    if (cloneLocked(name)) props_.set(name, "is-visible", shown ? "true" : "false");
+    if (props_.revision(name, "is-visible") > throughRevision) return;
+    if (const Clone* clone = cloneLocked(name)) props_.set(clone->name, "is-visible", shown ? "true" : "false");
     if (shown)
-        hiddenPopups_.erase(name);
+        hiddenPopups_.erase(lowerAscii(name));
     else
-        hiddenPopups_.insert(name);
+        hiddenPopups_.insert(lowerAscii(name));
+}
+
+void LiveSkin::setPopupTitle(const std::string& name, const std::string& title, uint64_t throughRevision) {
+    std::lock_guard<std::mutex> g(mu_);
+    if (props_.revision(name, "title") > throughRevision) return;
+    popupTitles_[lowerAscii(name)] = title;
+}
+
+uint64_t LiveSkin::propertyRevision() const {
+    std::lock_guard<std::mutex> g(mu_);
+    return props_.revision();
 }
 
 LiveSkin::Clone* LiveSkin::cloneLocked(const std::string& name) {
@@ -1584,7 +1854,7 @@ bool LiveSkin::destroyCloneLocked(const std::string& name) {
     clones_.erase(clones_.begin() + (c - clones_.data()));
     for (auto it = knownPopups_.begin(); it != knownPopups_.end();)
         it = ieq(*it, n) ? knownPopups_.erase(it) : std::next(it);
-    hiddenPopups_.erase(n);
+    hiddenPopups_.erase(lowerAscii(n));
     props_.eraseTarget(n);
     screenPos_.erase(lowerAscii(n));
     for (auto it = runtime_.begin(); it != runtime_.end();)
@@ -1694,9 +1964,43 @@ SkinSnapshot LiveSkin::snapshot() const {
     if (file_)
         if (const Block* mw = findMainWindow(*file_)) s.mainWindow = mw->name;
     for (const RuntimeCtl& r : runtime_) s.runtime.push_back({r.name, r.parent, r.type});
+    s.windowWidth = windowWidth_;
+    s.windowHeight = windowHeight_;
+    s.windowSizeSeq = windowSizeSeq_;
+    s.windowPosX = windowPosX_;
+    s.windowPosY = windowPosY_;
+    s.windowPosSeq = windowPosSeq_;
+    s.maximize = maximizeReq_;
+    s.maximizeSeq = maximizeSeq_;
     return s;
 }
 
+std::vector<std::string> LiveSkin::clearRuntimeBrowsers() {
+    std::vector<std::string> removed;
+    {
+        std::lock_guard<std::mutex> g(mu_);
+        for (auto it = runtime_.begin(); it != runtime_.end();) {
+            if (it->type != "BROWSER") {
+                ++it;
+                continue;
+            }
+            removed.push_back(it->name);
+            props_.eraseTarget(it->name);
+            knownPopups_.erase(it->name);
+            popups_.erase(it->name);
+            hiddenPopups_.erase(lowerAscii(it->name));
+            popupTitles_.erase(lowerAscii(it->name));
+            it = runtime_.erase(it);
+        }
+        if (!removed.empty()) relayoutLocked();
+    }
+    if (!removed.empty()) notify();
+    return removed;
+}
+void LiveSkin::setMapViewSize(const std::string& id, int width, int height) {
+    std::lock_guard<std::mutex> g(mu_);
+    mapViewSizes_[id] = {width, height};
+}
 bool LiveSkin::runtimeControl(const std::string& name, SkinSnapshot::RuntimeControl& out) const {
     std::lock_guard<std::mutex> g(mu_);
     const RuntimeCtl* r = runtimeLocked(name);

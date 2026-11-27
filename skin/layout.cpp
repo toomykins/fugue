@@ -8,6 +8,13 @@
 
 namespace fugue::skin {
 
+float fileSplitterPercent(const Elem& e) {
+    const std::string value = trimSpace(e.str("splitter", ""));
+    char* end = nullptr;
+    const float pct = std::strtof(value.c_str(), &end);
+    return !value.empty() && end == value.c_str() + value.size() && std::isfinite(pct) ? pct : float(kDefaultSplitter);
+}
+
 Rect Rect::intersect(const Rect& s) const {
     Rect r = *this;
     if (r.x0 < s.x0) r.x0 = s.x0;
@@ -55,6 +62,7 @@ void designSize(const Block& b, const Rect& box, int& dw, int& dh) {
 struct GeomOverride {
     long long px = 0, py = 0, sw = 0, sh = 0;
     bool hasPos = false, hasSz = false;
+    bool exact = false;  // a DesignGeometry: the extent is used as it is, never read as "fill"
 };
 
 Rect anchorRect(const Elem& e, const GeomOverride& ov, int dw, int dh, const Rect& box) {
@@ -76,8 +84,10 @@ Rect anchorRect(const Elem& e, const GeomOverride& ov, int dw, int dh, const Rec
         sh = ov.sh;
     }
     // `size = 0x0` is BYOND's "fill the rest of the design box".
-    if (sw <= 0) sw = dw - px;
-    if (sh <= 0) sh = dh - py;
+    if (!ov.exact) {
+        if (sw <= 0) sw = dw - px;
+        if (sh <= 0) sh = dh - py;
+    }
     int64_t a1x = 0, a1y = 0, a2x = 0, a2y = 0;
     bool ok1 = e.point("anchor1", a1x, a1y);
     bool ok2 = e.point("anchor2", a2x, a2y);
@@ -149,6 +159,52 @@ Rect runtimeRect(const File& f, const std::string& window, const Rect& box, cons
     return Rect{x1, y1, std::max(x1, x2), std::max(y1, y2)};
 }
 
+DesignGeometry designGeometry(const Elem* anchors, const Rect& box, int dw, int dh, long long x, long long y,
+                              long long w, long long h) {
+    int64_t a1x = 0, a1y = 0, a2x = 0, a2y = 0;
+    bool ok1 = anchors && anchors->point("anchor1", a1x, a1y);
+    bool ok2 = anchors && anchors->point("anchor2", a2x, a2y);
+    // anchorAxis undone: the design coordinate that the anchor formula moves to `actual` in this box.
+    auto design = [](long long actual, int64_t pct, bool ok, int designExtent, int actualExtent) {
+        if (!ok || pct < 0) return actual;
+        return actual - int64_t(actualExtent) * pct / 100 + int64_t(designExtent) * pct / 100;
+    };
+    long long x1 = design(x, a1x, ok1, dw, box.dx()), y1 = design(y, a1y, ok1, dh, box.dy());
+    long long x2 = design(x + w, a2x, ok2, dw, box.dx()), y2 = design(y + h, a2y, ok2, dh, box.dy());
+    DesignGeometry g{x, y, w, h, dw, dh};
+    if (ok1 && ok2) g = {x1, y1, x2 - x1, y2 - y1, dw, dh};
+    else if (ok1) g = {x1, y1, w, h, dw, dh};  // that corner pins and the extent is kept (anchorRect)
+    else if (ok2) g = {x2 - w, y2 - h, w, h, dw, dh};
+    return g;
+}
+
+DesignGeometry designGeometry(const File& f, const Control& c, long long x, long long y, long long w, long long h) {
+    int dw = c.box.dx(), dh = c.box.dy();
+    if (const Block* b = f.window(c.window)) designSize(*b, c.box, dw, dh);
+    return designGeometry(c.elem, c.box, dw, dh, x, y, w, h);
+}
+
+Elem runtimeElem(const PropStore& props, const std::string& name) {
+    Elem e;
+    e.name = name;
+    for (const char* key : {"pos", "size", "anchor1", "anchor2"}) {
+        std::string v;
+        if (props.get(name, key, v)) {
+            e.idx[key] = int(e.rows.size());
+            e.rows.push_back({key, v});
+        }
+    }
+    return e;
+}
+
+Rect runtimeParentBox(const Tree& tree, const File& file, const std::string& parent) {
+    const Block* block = file.window(parent);
+    if (block && block == findMainWindow(file)) return tree.client;
+    for (const Control& c : tree.controls)
+        if (c.window == parent) return c.box;
+    return {};
+}
+
 namespace {
 
 struct Ctx {
@@ -159,6 +215,7 @@ struct Ctx {
     bool infer;  // the empty-slot rule (layout.h layoutSkin inferSlots)
     std::set<std::string> seen;
     std::string top;  // the floating window being laid out ("" = the main window)
+    const GeometryOverrides* geometry = nullptr;
 };
 
 bool contains(const std::vector<std::string>& v, const std::string& s) {
@@ -240,7 +297,7 @@ void fillSlot(Ctx& c, const std::string& path, const std::string& side, std::str
 
 void layoutChild(Ctx& c, const Block& b, const Elem& e, const Rect& box, const Rect& clip, int depth) {
     std::string path = b.name + "." + e.name;
-    bool vert = e.boolv("is-vert", true);
+    bool vert = e.boolv("is-vert", false);
     std::string left = e.str("left", ""), right = e.str("right", "");
     // Live left/right (a winset) override the file; `live` distinguishes "never stated" from "set, maybe to empty".
     bool leftLive = false, rightLive = false;
@@ -255,25 +312,31 @@ void layoutChild(Ctx& c, const Block& b, const Elem& e, const Rect& box, const R
             rightLive = true;
         }
     }
-    // A side that names no window (tg's `left=null`) is hidden as an emptied one is.
-    if (!left.empty() && !c.f.window(left)) left.clear();
-    if (!right.empty() && !c.f.window(right)) right.clear();
-    // The clearing form: an emptied side is hidden and the other side fills the whole box, undivided. A side the skin
-    // leaves empty is emptied the same way unless the empty-slot rule would fill it from an on-show claimant (tg's
-    // output_selector_screen names only a left window and measures at the box's full size).
-    if (left.empty() && (!c.infer || slotClaimants(c.f, path, "left").empty())) leftLive = true;
-    if (right.empty() && (!c.infer || slotClaimants(c.f, path, "right").empty())) rightLive = true;
-    if (leftLive && left.empty() && !right.empty()) {
+    // A side that names no window (tg's `left=null`) is hidden as an explicitly emptied one is.
+    if (!left.empty() && !c.f.window(left)) {
+        left.clear();
+        leftLive = true;
+    }
+    if (!right.empty() && !c.f.window(right)) {
+        right.clear();
+        rightLive = true;
+    }
+    // Stock uses the whole CHILD for a single pane, whether the other side is
+    // omitted in the file or explicitly cleared. Offline preview can still infer
+    // an unstated pane from its on-show; an explicit live clear overrides inference.
+    const bool leftEmpty = left.empty() && (leftLive || !c.infer || slotClaimants(c.f, path, "left").empty());
+    const bool rightEmpty = right.empty() && (rightLive || !c.infer || slotClaimants(c.f, path, "right").empty());
+    if (leftEmpty && !rightEmpty) {
         c.t.slotList.push_back(Slot{path + ".left", Rect{}, slotClaimants(c.f, path, "left"), ""});
         fillSlot(c, path, "right", right, box, clip, depth + 1);
         return;
     }
-    if (rightLive && right.empty() && !left.empty()) {
+    if (rightEmpty && !leftEmpty) {
         c.t.slotList.push_back(Slot{path + ".right", Rect{}, slotClaimants(c.f, path, "right"), ""});
         fillSlot(c, path, "left", left, box, clip, depth + 1);
         return;
     }
-    double frac = e.floatv("splitter", kDefaultSplitter) / 100;
+    double frac = double(fileSplitterPercent(e)) / 100;
     auto ov = c.splits.find(path);
     if (ov != c.splits.end()) frac = ov->second;
     frac = clampFrac(frac);
@@ -320,6 +383,16 @@ void layoutWindow(Ctx& c, const Block& b, const Rect& box, const Rect& clip, int
             ov.hasPos = c.props->controlPoint(b.name, e->name, "pos", ov.px, ov.py);
             ov.hasSz = c.props->controlSize(b.name, e->name, "size", ov.sw, ov.sh);
         }
+        if (c.geometry) {
+            auto g = c.geometry->find(lowerAscii(b.name + "." + e->name));
+            if (g != c.geometry->end()) {
+                ov.px = g->second.x;
+                ov.py = g->second.y;
+                ov.sw = g->second.w;
+                ov.sh = g->second.h;
+                ov.hasPos = ov.hasSz = ov.exact = true;
+            }
+        }
         ctl.isDefault = e->boolv("is-default", false);
         ctl.depth = depth;
         ctl.side = side;
@@ -354,13 +427,14 @@ Tree layoutSkin(const File& f, Rect client, const std::map<std::string, double>&
 }
 
 Tree layoutSkin(const File& f, Rect client, const std::map<std::string, double>& splits, const PropStore* props,
-                bool inferSlots) {
+                bool inferSlots, const GeometryOverrides* geometry, int below) {
     Tree t;
     t.client = client;
+    t.below = std::max(0, below);
     const Block* mw = findMainWindow(f);
     if (!mw) return t;
-    Ctx c{f, t, splits, props, inferSlots, {}, {}};
-    layoutWindow(c, *mw, client, client, 0, "");
+    Ctx c{f, t, splits, props, inferSlots, {}, {}, geometry};
+    layoutWindow(c, *mw, client, Rect{client.x0, client.y0, client.x1, client.y1 + t.below}, 0, "");
     for (const Block& b : f.blocks) {
         if (b.kind != "window" || &b == mw || !isFloatingWindow(f, b) || c.seen.count(b.name)) continue;
         const Elem* m = b.main();
@@ -381,6 +455,60 @@ Tree layoutSkin(const File& f, Rect client, const std::map<std::string, double>&
     return t;
 }
 
+void layoutRuntime(Tree& tree, const File& file, const PropStore& props, const std::string& name,
+                   const std::string& parent, const std::string& type, uint64_t identity,
+                   const GeometryOverrides* geometry) {
+    // Runtime controls are siblings in their parent window, after file controls.
+    // They retain their own identity through visibility/geometry changes.
+    if (type != "BROWSER" && type != "MAP") return;
+    const auto* block = file.window(parent);
+    if (!block && type != "MAP") return;
+    const bool inMain = block && block == findMainWindow(file);
+    Rect box = runtimeParentBox(tree, file, parent);
+    Elem e = runtimeElem(props, name);
+    int dw = 0, dh = 0;
+    GeomOverride ov;
+    if (block) {
+        designSize(*block, box, dw, dh);
+        // A pos / size winset, read in the box the control had then (runtime geometry, liveskin.cpp).
+        if (geometry) {
+            auto g = geometry->find(lowerAscii(parent + "." + name));
+            if (g != geometry->end()) {
+                ov.px = g->second.x;
+                ov.py = g->second.y;
+                ov.sw = g->second.w;
+                ov.sh = g->second.h;
+                ov.hasPos = ov.hasSz = ov.exact = true;
+                dw = g->second.refW;
+                dh = g->second.refH;
+            }
+        }
+    } else {
+        // Popup MAP geometry is browser-client-relative; Qt's actual parent
+        // supplies clipping. No invented main-window pane or default-map view.
+        int64_t x = 0, y = 0, width = 0, height = 0;
+        e.point("pos", x, y);
+        e.size("size", width, height);
+        if (width <= 0 || height <= 0 || width > 16384 || height > 16384 || std::abs(x) > 16384 || std::abs(y) > 16384)
+            return;
+        box = {0, 0, int(std::max<int64_t>(0, x) + width), int(std::max<int64_t>(0, y) + height)};
+        dw = box.dx();
+        dh = box.dy();
+    }
+    Control c;
+    c.window = parent;
+    c.name = name;
+    c.type = type;
+    c.box = box;
+    c.runtimeIdentity = identity;
+    c.full = anchorRect(e, ov, dw, dh, box);
+    // A control of the main window shows over its status strip as a .dmf one does (layoutSkin `below`).
+    c.rect = c.full.intersect(inMain ? Rect{box.x0, box.y0, box.x1, box.y1 + tree.below} : box);
+    c.offPane = box.empty() || c.rect.empty();
+    props.controlBool(parent, name, "is-visible", c.visible);
+    props.controlBool(parent, name, "is-disabled", c.disabled);
+    tree.controls.push_back(std::move(c));
+}
 bool isFloatingWindow(const File& f, const Block& b) {
     const Elem* m = b.main();
     if (!m || findMainWindow(f) == &b || m->boolv("is-pane", false)) return false;

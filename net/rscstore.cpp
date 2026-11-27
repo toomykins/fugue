@@ -61,7 +61,7 @@ RscStore::RscStore(std::string dir, int64_t capBytes)
     scan();
     loadNames();
     nameLog_ = std::fopen((dir_ + "/names").c_str(), "ab");
-    if (nameLog_) platform::fchmod(fileno(nameLog_), 0600);
+    if (nameLog_) platform::fchmod(platform::fileno(nameLog_), 0600);
     ok_ = nameLog_ != nullptr;
     evict();
 }
@@ -114,7 +114,7 @@ void RscStore::forget(uint32_t id) {
         bytes_ -= it->second.size;
         index_.erase(it);
     }
-    ::unlink(pathFor(dir_, id).c_str());
+    platform::unlink(pathFor(dir_, id).c_str());
 }
 
 bool RscStore::get(uint32_t id, Bytes& data, std::string* name) {
@@ -186,17 +186,17 @@ bool RscStore::put(uint32_t id, const std::string& name, ByteSpan data) {
     if (fd < 0) return false;
     size_t off = 0;
     while (off < data.size()) {
-        auto n = ::write(fd, data.data() + off, unsigned(std::min(data.size() - off, size_t(1 << 30))));
+        auto n = platform::write(fd, data.data() + off, unsigned(std::min(data.size() - off, size_t(1 << 30))));
         if (n < 0 && errno == EINTR) continue;
         if (n <= 0) {
-            ::close(fd);
-            ::unlink(tmp.c_str());
+            platform::close(fd);
+            platform::unlink(tmp.c_str());
             return false;
         }
         off += size_t(n);
     }
-    if (::close(fd) != 0 || platform::rename(tmp.c_str(), p.c_str()) != 0) {
-        ::unlink(tmp.c_str());
+    if (platform::close(fd) != 0 || platform::rename(tmp.c_str(), p.c_str()) != 0) {
+        platform::unlink(tmp.c_str());
         return false;
     }
     index_[id] = Entry{int64_t(data.size()), name, std::time(nullptr)};
@@ -259,7 +259,7 @@ void RscStore::clear(const std::string& dir, uint64_t* files, uint64_t* bytes) {
             if (!parseId(f->path().filename().string(), id)) continue;
             std::error_code e3;
             auto sz = f->file_size(e3);
-            if (::unlink(f->path().string().c_str()) == 0) {
+            if (platform::unlink(f->path().string().c_str()) == 0) {
                 nf++;
                 nb += sz;
                 removed++;
@@ -267,7 +267,7 @@ void RscStore::clear(const std::string& dir, uint64_t* files, uint64_t* bytes) {
         }
         if (removed == total) fs::remove(sh->path(), e2);
     }
-    ::unlink((dir + "/names").c_str());
+    platform::unlink((dir + "/names").c_str());
     if (files) *files = nf;
     if (bytes) *bytes = nb;
 }

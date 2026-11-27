@@ -1,9 +1,9 @@
-// DreamSeeker's command line as dreamseeker.exe 516.1684 parses it, so fugue-qt can stand in for it: a pager, a byond://
+// DreamSeeker's command line as stock 516.1684 accepts it, so fugue-qt can stand in for it: a pager, a byond://
 // handler, or `dreamseeker "byond://host:port" -pager` gets the same result from Fugue.
 // Matches stock DreamSeeker 516.1684:
 //   * A '-' argument is matched case-insensitively against -trace, -pager, -trusted, -safe, -ultrasafe, -isserver and
 //     -is-server; -debug is case-sensitive. Any other '-' argument is dropped and is never the target. The self-updater
-//     forms ({-install a b c}, {-updated}) act only in a standalone hub-game build; in stock dreamseeker.exe they are
+//     forms ({-install a b c}, {-updated}) act only in a standalone hub-game build; in stock DreamSeeker they are
 //     ordinary unknown flags.
 //   * A '+' argument swallows the next one. Only the exact `+connect` uses it, and only when another argument follows its value.
 //     Its value is the target, with "byond://" prepended unless already present. A later +connect replaces the target.

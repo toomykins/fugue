@@ -1,0 +1,33 @@
+{
+  "version": "BYOND 516.1688",
+  "server_port": 14581,
+  "coordinate_units": "physical pixels, top-left MAP origin",
+  "map_size": [448, 320],
+  "window_dpi": 144,
+  "window_size": [470, 376],
+  "crop_in_window": [11, 45, 448, 320],
+  "resize_refit_history": "none; fixture skin startup size",
+  "state_policy": "separate owned guest; stock global settings not cleared",
+  "readiness": "new delayed READY in events.log after client.screen population",
+  "paired_pixel_parity": false,
+  "capture": "build/probes/20261025T115833Z-775661f2/capture-20261025T115846Z-776a7d91.png",
+  "capture_metadata": "build/probes/20261025T115833Z-775661f2/capture-20261025T115846Z-776a7d91.json",
+  "server_owner": "build/probes/20261025T115833Z-eccc01ad/owner.json",
+  "click_run": {
+    "client_owner": "build/probes/20261025T114931Z-6489656b/owner.json",
+    "server_owner": "build/probes/20261025T114931Z-bca115a4/owner.json",
+    "source_difference": "before addition of tint specimen only",
+    "default_label_opaque_glyph_points": [[1,85],[1,87],[12,88],[3,89],[19,89],[13,90],[15,91],[15,92],[12,93]],
+    "glyph_callbacks": [],
+    "solid_control_point": [139,175],
+    "solid_callback": "CLICK overlay icon-x=12;icon-y=17;left=1;button=left;screen-loc=5:12,5:17"
+  },
+  "observations": {
+    "default_vertical_alignment": "bottom",
+    "overlay_control": "solid red; owner maptext covered by equal-layer overlay",
+    "zero_width": "Hidden wraps in tile-sized box",
+    "zero_height": "Tint remains visible in tile-sized-height box",
+    "tint_region_rgb_max": [0,0,128]
+  },
+  "cleanup": "all four owned stock client/server processes stopped through verified ownership records"
+}

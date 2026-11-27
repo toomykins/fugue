@@ -17,7 +17,7 @@ std::string norm(const std::string& s) { return lowerAscii(trimSpace(s)); }
 void PropStore::set(const std::string& target, const std::string& key, const std::string& val) {
     std::string t = norm(target), k = norm(key);
     if (t.empty() || k.empty()) return;
-    p_[t][k] = val;
+    p_[t][k] = {val, ++revision_};
 }
 
 void PropStore::erase(const std::string& target, const std::string& key) {
@@ -34,8 +34,15 @@ bool PropStore::get(const std::string& target, const std::string& key, std::stri
     if (t == p_.end()) return false;
     auto k = t->second.find(norm(key));
     if (k == t->second.end()) return false;
-    out = k->second;
+    out = k->second.text;
     return true;
+}
+
+uint64_t PropStore::revision(const std::string& target, const std::string& key) const {
+    auto t = p_.find(norm(target));
+    if (t == p_.end()) return 0;
+    auto k = t->second.find(norm(key));
+    return k == t->second.end() ? 0 : k->second.revision;
 }
 
 bool PropStore::controlProp(const std::string& window, const std::string& name, const std::string& key,

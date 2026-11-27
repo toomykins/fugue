@@ -1,5 +1,6 @@
 // Round-trips the key.txt line-1 codec on synthesized blocks (encodeKeyLine1 / buildKeyBlob invert the decoder).
 #include <QtTest>
+#include "tests/testmain.h"
 #include "account/desc.h"
 #include "account/keyblock.h"
 
@@ -111,5 +112,5 @@ private:
     static Bytes pwordCryptLevelsPw() { return pwBytes("hunter2"); }
 };
 
-QTEST_APPLESS_MAIN(AccountCodec)
+FUGUE_TEST_APPLESS_MAIN(AccountCodec)
 #include "account_codec_test.moc"

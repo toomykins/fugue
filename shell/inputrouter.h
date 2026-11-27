@@ -21,7 +21,7 @@ struct Route {
         Winset,  // a `.winset "..."` with no macro key (a skin button's `.winset "rpanewindow.left=;"`): text = params
         Quit,    // `.quit`
         Reconnect,    // `.reconnect`: end the session and connect to the same world again
-        Screenshot,   // `.screenshot` (dialog) or `.screenshot auto` (text = "auto": no dialog); shell/screenshot.h
+        Screenshot,   // `.screenshot` (dialog); text = "auto" for `.screenshot auto`
         Macros,       // `.macros`: the macro editor (Client > Macros...; shell/macrodialog.h)
         Options,      // `.options`: the "Options and Messages" window, whose Client menu holds Macros...
         Output,       // `.output control text`: text = the control ("win.ctl" or "win.ctl:fn"), arg = the text

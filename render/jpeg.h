@@ -6,12 +6,12 @@
 #include <cstdint>
 #include <string>
 
-#include "render/png.h"
+#include "render/image.h"
 
-namespace fugue::render {
+namespace fugue::assets {
 
 // false + why on a malformed or unsupported stream (CMYK/YCCK are refused; grayscale is expanded to RGB).
 // maxPixels caps w*h before any pixel buffer is allocated.
 bool decodeJpeg(const uint8_t* d, size_t n, RgbaImage& out, std::string& why, uint64_t maxPixels);
 
-}  // namespace fugue::render
+}  // namespace fugue::assets

@@ -1,10 +1,13 @@
 {
   "client": "fugue-qt",
+  "clock_unix_ns": 1000000000000000000,
+  "tick_ns": 100000000,
+  "viewport": {"w": 288, "h": 288},
   "date": "2026-10-18T18:11:54Z",
   "eye": {"x": 5, "y": 5},
   "frames": 53,
   "frames_sha256": "7d7120d489e1b62aac8044da47fafc9039ba2c657f6dc7ddc013d2f23a1e411b",
-  "note": "frames.txt = every s2c frame except 0x009f; res/<resID %08x> = verified resource bytes (CRC-32/XFER of the bytes == name)",
+  "note": "frames.txt retains server-to-client frames except 0x009f; res/<resID %08x> retains the resource bytes. PHASE 1 through PHASE 4 mark wire boundaries. The test assigns synthetic arrival ticks 100, 160, 220 and 280, with setup at tick 0; clock_unix_ns is an arbitrary replay epoch. Original arrival/presentation timings and stock rendered outputs were not retained. Resource arrival timing is unspecified; numeric and colour expectations remain in visanim_test.cpp.",
   "resource_bytes": 515,
   "resource_names": {
     "3b42c8e8": "thing.dmi"

@@ -5,6 +5,7 @@
 // Storage: paths under the state dir, with a save/load round trip.
 #include <QTemporaryDir>
 #include <QtTest>
+#include "tests/testmain.h"
 
 #include "skin/dmf.h"
 #include "skin/usermacros.h"
@@ -283,5 +284,5 @@ private slots:
     }
 };
 
-QTEST_GUILESS_MAIN(UserMacros)
+FUGUE_TEST_GUILESS_MAIN(UserMacros)
 #include "usermacros_test.moc"

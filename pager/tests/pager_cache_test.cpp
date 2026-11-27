@@ -5,6 +5,7 @@
 #include <QLockFile>
 #include <QTemporaryDir>
 #include <QtTest>
+#include "tests/testmain.h"
 #include "account/store.h"
 #include "pager/cache.h"
 #include "pager/launch.h"
@@ -169,5 +170,5 @@ private slots:
         QCOMPARE(humanBytes(3ULL << 30), std::string("3.00 GiB"));
     }
 };
-QTEST_MAIN(PagerCache)
+FUGUE_TEST_MAIN(PagerCache)
 #include "pager_cache_test.moc"

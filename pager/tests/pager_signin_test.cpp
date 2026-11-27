@@ -1,6 +1,7 @@
 // pager_signin: the sign-in flow end to end against a fake hub on loopback, with a temp HOME and a synthetic account.
 // The fake hub answers the download-key request with a block encoded under the password, or with a refusal.
 #include <QtTest>
+#include "tests/testmain.h"
 #include <QTemporaryDir>
 #include "platform/socket.h"
 #include "tests/privatefile.h"
@@ -125,8 +126,8 @@ class PagerSignIn : public QObject {
     void writeSid() {
         QDir().mkpath(home_.path() + "/.fugue");
         QFile f(home_.path() + "/.fugue/byond-sid");
-        f.open(QIODevice::WriteOnly);
-        f.write(QByteArray(kSid) + "\n");
+        QVERIFY2(f.open(QIODevice::WriteOnly), qPrintable(f.errorString()));
+        QCOMPARE(f.write(QByteArray(kSid) + "\n"), qint64(QByteArray(kSid).size() + 1));
     }
 private slots:
     void init() {
@@ -177,7 +178,7 @@ private slots:
         QDirIterator it(home_.path(), QDir::Files | QDir::Hidden, QDirIterator::Subdirectories);
         while (it.hasNext()) {
             QFile f(it.next());
-            f.open(QIODevice::ReadOnly);
+            QVERIFY2(f.open(QIODevice::ReadOnly), qPrintable(f.errorString()));
             QVERIFY2(!f.readAll().contains("correct horse"), qPrintable(f.fileName()));
         }
     }
@@ -185,7 +186,7 @@ private slots:
     void signInReplacesTheBlockInAnExistingKeyTxt() {
         QDir().mkpath(home_.path() + "/.byond");
         QFile f(home_.path() + "/.byond/key.txt");  // an existing ~/.byond/key.txt is the write target
-        f.open(QIODevice::WriteOnly);
+        QVERIFY2(f.open(QIODevice::WriteOnly), qPrintable(f.errorString()));
         f.write("BEGIN KEY Other\nabc\n`\nEND KEY\nBEGIN KEY Synthetic Tester\nstale\n`\nEND KEY\n");
         f.close();
         FakeHub hub;
@@ -195,7 +196,7 @@ private slots:
         QVERIFY2(r.ok, r.detail.c_str());
         QCOMPARE(r.keyTxtPath, (home_.path() + "/.byond/key.txt").toStdString());
         QFile g(QString::fromStdString(r.keyTxtPath));
-        g.open(QIODevice::ReadOnly);
+        QVERIFY2(g.open(QIODevice::ReadOnly), qPrintable(g.errorString()));
         QByteArray body = g.readAll();
         QVERIFY(body.startsWith("BEGIN KEY Other\nabc\n`\nEND KEY\nBEGIN KEY Synthetic Tester\n"));
         QVERIFY(!body.contains("stale"));
@@ -252,5 +253,5 @@ private slots:
         QCOMPARE(int(r.failure), int(pager::SignInFailure::MissingInput));
     }
 };
-QTEST_GUILESS_MAIN(PagerSignIn)
+FUGUE_TEST_GUILESS_MAIN(PagerSignIn)
 #include "pager_signin_test.moc"

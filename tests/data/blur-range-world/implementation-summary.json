@@ -1,0 +1,206 @@
+{
+  "schema": 1,
+  "stock_version": "516.1688",
+  "native_backends": [
+    "default D3D11",
+    "OpenGL"
+  ],
+  "native_comparison": "Complete 992x672 RGB source images, one-LSB existing tolerance; both backends have identical difference counts, not exact stock pixels.",
+  "raw_native_directory": "build/blur-pooled-final",
+  "rows": [
+    {
+      "differingPixels": 910,
+      "maxChannelDifference": 1,
+      "pixelsOverOne": 0,
+      "shape": "square",
+      "size": 4
+    },
+    {
+      "differingPixels": 1928,
+      "maxChannelDifference": 1,
+      "pixelsOverOne": 0,
+      "shape": "square",
+      "size": 6.25
+    },
+    {
+      "differingPixels": 5230,
+      "maxChannelDifference": 1,
+      "pixelsOverOne": 0,
+      "shape": "square",
+      "size": 8
+    },
+    {
+      "differingPixels": 8008,
+      "maxChannelDifference": 1,
+      "pixelsOverOne": 0,
+      "shape": "square",
+      "size": 12.5
+    },
+    {
+      "differingPixels": 12613,
+      "maxChannelDifference": 1,
+      "pixelsOverOne": 0,
+      "shape": "square",
+      "size": 16
+    },
+    {
+      "differingPixels": 182409,
+      "maxChannelDifference": 1,
+      "pixelsOverOne": 0,
+      "shape": "square",
+      "size": 96
+    },
+    {
+      "differingPixels": 180648,
+      "maxChannelDifference": 1,
+      "pixelsOverOne": 0,
+      "shape": "square",
+      "size": 99
+    },
+    {
+      "differingPixels": 182967,
+      "maxChannelDifference": 1,
+      "pixelsOverOne": 0,
+      "shape": "square",
+      "size": 99.5
+    },
+    {
+      "differingPixels": 182648,
+      "maxChannelDifference": 1,
+      "pixelsOverOne": 0,
+      "shape": "square",
+      "size": 100
+    },
+    {
+      "differingPixels": 1714,
+      "maxChannelDifference": 1,
+      "pixelsOverOne": 0,
+      "shape": "edge",
+      "size": 4
+    },
+    {
+      "differingPixels": 2244,
+      "maxChannelDifference": 1,
+      "pixelsOverOne": 0,
+      "shape": "edge",
+      "size": 6.25
+    },
+    {
+      "differingPixels": 9766,
+      "maxChannelDifference": 1,
+      "pixelsOverOne": 0,
+      "shape": "edge",
+      "size": 8
+    },
+    {
+      "differingPixels": 8396,
+      "maxChannelDifference": 1,
+      "pixelsOverOne": 0,
+      "shape": "edge",
+      "size": 12.5
+    },
+    {
+      "differingPixels": 16937,
+      "maxChannelDifference": 1,
+      "pixelsOverOne": 0,
+      "shape": "edge",
+      "size": 16
+    },
+    {
+      "differingPixels": 129899,
+      "maxChannelDifference": 1,
+      "pixelsOverOne": 0,
+      "shape": "edge",
+      "size": 96
+    },
+    {
+      "differingPixels": 132858,
+      "maxChannelDifference": 1,
+      "pixelsOverOne": 0,
+      "shape": "edge",
+      "size": 99
+    },
+    {
+      "differingPixels": 141285,
+      "maxChannelDifference": 1,
+      "pixelsOverOne": 0,
+      "shape": "edge",
+      "size": 99.5
+    },
+    {
+      "differingPixels": 139285,
+      "maxChannelDifference": 1,
+      "pixelsOverOne": 0,
+      "shape": "edge",
+      "size": 100
+    }
+  ],
+  "totals_per_backend": {
+    "captures": 18,
+    "source_pixels": 11999232,
+    "differing_pixels": 1339745,
+    "pixels_over_one": 0,
+    "maximum_channel_difference": 1
+  },
+  "clamp_equivalence_requests": [
+    101,
+    104,
+    128,
+    256,
+    8193,
+    "DBL_MAX"
+  ],
+  "clamp_comparison": "Each byte-identical to native size 100 for both patterns/backends; stock 100/101/104/128/256 equality is in summary.json.",
+  "resident_texture_upload_bytes": 0,
+  "pool_analytic_regression": {
+    "source": [
+      992,
+      672
+    ],
+    "size": 100,
+    "logical_passes": 14,
+    "scratch_textures": 2,
+    "pinned_output_textures": 1,
+    "physical_bytes_including_map": 35468288,
+    "previous_physical_bytes_including_map": 105562400,
+    "logical_work_rgba8_equivalent_pixels": 26390600,
+    "five_planes": "admitted",
+    "six_planes": "refused by work budget, then recovery checked"
+  },
+  "algorithm_evidence": {
+    "stock_version": "BYOND 516.1688",
+    "validation": "Formula checked against independent stock captures; parameter clamping rests on measured saturation."
+  },
+  "rejected_approaches": {
+    "full_gaussian": {
+      "maximum_channel_difference": 3,
+      "pixels_over_one": 123265,
+      "raw_local_directory": "build/blur-native-initial"
+    },
+    "cascade_unrounded_half": {
+      "maximum_channel_difference": 2,
+      "pixels_over_one": 4772,
+      "raw_local_directory": "build/blur-native-cascade"
+    },
+    "cascade_byte_steps": {
+      "maximum_channel_difference": 2,
+      "pixels_over_one": 2962,
+      "raw_local_directory": "build/blur-native-byte-steps"
+    }
+  },
+  "intermediate_failures": [
+    "Initial build invocation used nonexistent shell_map_test/shell_composition_test targets; corrected to map_test/composition_test.",
+    "Explicit packHalf/unpackHalf did not fix default precision and failed OpenGL shader compilation; replaced with portable nearest-half arithmetic.",
+    "Pooled textureSize shader baking failed for ESSL 100; supplied half-texel uniforms instead.",
+    "Initial pool member named slots collided with Qt macro; renamed slotForPass.",
+    "One focused invocation named nonexistent localTargetsAndInput; corrected to localRelayPixelsAndInput.",
+    "First pooled native run failed default-backend large blur and matrix pixels: bottom-left QRhi viewport origin misplaced logical images in larger top-down targets. Corrected viewport offset; OpenGL had passed.",
+    "First full verify 20261031T085023Z-verify-4d4c4a74: 60 CTest targets passed, shell_composition failed two obsolete standalone-size refusal expectations (5 and 32). Native MAP 80 and OpenGL overlay 3 passed without skips. Corrected the expectations and explicitly retained chain-size-5 refusal; final verification is a separate run."
+  ],
+  "limits": [
+    "No FPS/GPU timing benchmark: memory figures are deterministic allocation accounting, not driver total VRAM.",
+    "Large stock goldens are white binary square/half-plane over black; arbitrary colored/partial-alpha large-blur combinations and other stock versions/backends not established.",
+    "No fresh live Fugue/server callback sweep; existing native small-filter/input regressions retained, including nested-alpha two-pixel/2-LSB gap.",
+    "Pool targets clear their full physical capacity; less storage does not imply fewer passes or faster GPU execution."
+  ]
+}

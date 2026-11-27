@@ -1,0 +1,76 @@
+window "main"
+    elem "main"
+        type = MAIN
+        size = 640x440
+        is-default = true
+        title = "Splitter fixture"
+    elem "outer"
+        type = CHILD
+        pos = 0,0
+        size = 640x440
+        anchor1 = 0,0
+        anchor2 = 100,100
+        left = "blank"
+        right = "nested"
+        is-vert = true
+        splitter = 50
+window "blank"
+    elem "blank"
+        type = MAIN
+        size = 640x480
+        is-pane = true
+window "nested"
+    elem "nested"
+        type = MAIN
+        size = 640x480
+        is-pane = true
+    elem "split"
+        type = CHILD
+        pos = 0,0
+        size = 640x477
+        anchor1 = 0,0
+        anchor2 = 100,100
+        left = "row"
+        right = "info"
+        is-vert = false
+        splitter = 2
+        show-splitter = false
+window "row"
+    elem "row"
+        type = MAIN
+        size = 676x30
+        is-pane = true
+
+    elem "menu"
+        type = BUTTON
+        pos = 0,5
+        size = 88x27
+        anchor1 = 0,0
+        anchor2 = 15,100
+        text = "Menu"
+    elem "hotkeys"
+        type = BUTTON
+        pos = 92,5
+        size = 88x27
+        anchor1 = 15,0
+        anchor2 = 29,100
+        text = "Hotkeys"
+    elem "emotes"
+        type = BUTTON
+        pos = 185,5
+        size = 88x27
+        anchor1 = 29,0
+        anchor2 = 43,100
+        text = "Emotes"
+window "info"
+    elem "info"
+        type = MAIN
+        size = 640x475
+        is-pane = true
+    elem "label"
+        type = LABEL
+        pos = 0,0
+        size = 640x475
+        anchor1 = 0,0
+        anchor2 = 100,100
+        text = "INFO placeholder"

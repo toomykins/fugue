@@ -1,0 +1,395 @@
+{
+ "schema": 1,
+ "stock": "DreamSeeker/DreamDaemon 516.1689",
+ "date": "2026-11-26",
+ "method": "tools/stockprobe/stockprobe.py --stock-only --map <the control> click with case=<case>: left and right clicks at MAP pixels in the stock window. A click is what the world logged (the clicked atom's name, icon-x, icon-y and place; screen objects stand at 0,0), or null when it logged nothing; a menu is the entries of the right-click menu stock showed, topmost first, each named by its verb (poke_<kind>), empty when it showed none",
+ "cases": [
+  {
+   "case": "8,1_obj_wide",
+   "clicks": [
+    {
+     "at": [
+      8,
+      72
+     ],
+     "over": "obj",
+     "iconX": 9,
+     "iconY": 24,
+     "place": [
+      5,
+      9
+     ]
+    },
+    {
+     "at": [
+      8,
+      112
+     ],
+     "over": "floor",
+     "iconX": 25,
+     "iconY": 16,
+     "place": [
+      5,
+      8
+     ]
+    },
+    {
+     "at": [
+      17,
+      112
+     ],
+     "over": "floor",
+     "iconX": 2,
+     "iconY": 16,
+     "place": [
+      6,
+      8
+     ]
+    },
+    {
+     "at": [
+      216,
+      100
+     ],
+     "over": null
+    },
+    {
+     "at": [
+      218,
+      150
+     ],
+     "over": null
+    },
+    {
+     "at": [
+      212,
+      200
+     ],
+     "over": "master",
+     "iconX": 5,
+     "iconY": 24,
+     "place": [
+      0,
+      0
+     ]
+    },
+    {
+     "at": [
+      150,
+      48
+     ],
+     "over": "floor",
+     "iconX": 7,
+     "iconY": 16,
+     "place": [
+      10,
+      10
+     ]
+    },
+    {
+     "at": [
+      185,
+      48
+     ],
+     "over": "floor",
+     "iconX": 10,
+     "iconY": 16,
+     "place": [
+      11,
+      10
+     ]
+    },
+    {
+     "at": [
+      148,
+      165
+     ],
+     "over": "obj",
+     "iconX": 5,
+     "iconY": 27,
+     "place": [
+      10,
+      6
+     ]
+    },
+    {
+     "at": [
+      172,
+      165
+     ],
+     "over": "floor",
+     "iconX": 29,
+     "iconY": 27,
+     "place": [
+      10,
+      6
+     ]
+    }
+   ],
+   "menus": [
+    {
+     "at": [
+      8,
+      72
+     ],
+     "entries": [
+      "nst",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      8,
+      112
+     ],
+     "entries": [
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      216,
+      100
+     ],
+     "entries": []
+    },
+    {
+     "at": [
+      185,
+      48
+     ],
+     "entries": [
+      "floor"
+     ]
+    }
+   ]
+  },
+  {
+   "case": "1,9_obj_wide",
+   "clicks": [
+    {
+     "at": [
+      100,
+      16
+     ],
+     "over": null
+    },
+    {
+     "at": [
+      100,
+      48
+     ],
+     "over": "floor",
+     "iconX": 5,
+     "iconY": 16,
+     "place": [
+      8,
+      11
+     ]
+    },
+    {
+     "at": [
+      100,
+      66
+     ],
+     "over": "floor",
+     "iconX": 5,
+     "iconY": 30,
+     "place": [
+      8,
+      10
+     ]
+    }
+   ],
+   "menus": [
+    {
+     "at": [
+      100,
+      16
+     ],
+     "entries": []
+    },
+    {
+     "at": [
+      100,
+      48
+     ],
+     "entries": [
+      "floor"
+     ]
+    }
+   ]
+  },
+  {
+   "case": "0,4_obj_wide",
+   "clicks": [
+    {
+     "at": [
+      8,
+      112
+     ],
+     "over": null
+    },
+    {
+     "at": [
+      24,
+      112
+     ],
+     "over": "floor",
+     "iconX": 9,
+     "iconY": 16,
+     "place": [
+      5,
+      8
+     ]
+    },
+    {
+     "at": [
+      40,
+      112
+     ],
+     "over": "floor",
+     "iconX": 25,
+     "iconY": 16,
+     "place": [
+      5,
+      8
+     ]
+    }
+   ],
+   "menus": [
+    {
+     "at": [
+      8,
+      112
+     ],
+     "entries": [
+      "master"
+     ]
+    },
+    {
+     "at": [
+      24,
+      112
+     ],
+     "entries": [
+      "floor"
+     ]
+    }
+   ]
+  },
+  {
+   "case": "8,1_obj_wide_288x288",
+   "clicks": [
+    {
+     "at": [
+      248,
+      135
+     ],
+     "over": null
+    },
+    {
+     "at": [
+      256,
+      180
+     ],
+     "over": null
+    },
+    {
+     "at": [
+      248,
+      232
+     ],
+     "over": "master",
+     "iconX": 9,
+     "iconY": 24,
+     "place": [
+      0,
+      0
+     ]
+    }
+   ],
+   "menus": [
+    {
+     "at": [
+      248,
+      135
+     ],
+     "entries": []
+    },
+    {
+     "at": [
+      256,
+      180
+     ],
+     "entries": []
+    }
+   ]
+  },
+  {
+   "case": "8,1_obj_wide_192x192",
+   "clicks": [
+    {
+     "at": [
+      100,
+      8
+     ],
+     "over": "floor",
+     "iconX": 5,
+     "iconY": 8,
+     "place": [
+      9,
+      11
+     ]
+    },
+    {
+     "at": [
+      16,
+      100
+     ],
+     "over": "floor",
+     "iconX": 17,
+     "iconY": 12,
+     "place": [
+      6,
+      8
+     ]
+    },
+    {
+     "at": [
+      100,
+      30
+     ],
+     "over": "floor",
+     "iconX": 5,
+     "iconY": 18,
+     "place": [
+      9,
+      10
+     ]
+    }
+   ],
+   "menus": [
+    {
+     "at": [
+      100,
+      8
+     ],
+     "entries": [
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      16,
+      100
+     ],
+     "entries": [
+      "nst",
+      "floor"
+     ]
+    }
+   ]
+  }
+ ]
+}

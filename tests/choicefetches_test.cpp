@@ -3,6 +3,7 @@
 // when its DM thread is free and answers with the list of whichever prompt holds the id then, or not at all; the
 // 0x0090 echo of a 0x008f sent behind the request comes after that answer. Prompt ids are server-wide, lowest free first.
 #include <QtTest>
+#include "tests/testmain.h"
 #include "app/choicefetches.h"
 #include "model/prompt.h"
 #include <deque>
@@ -351,5 +352,5 @@ private slots:
     }
 };
 
-QTEST_GUILESS_MAIN(ChoiceFetchesTest)
+FUGUE_TEST_GUILESS_MAIN(ChoiceFetchesTest)
 #include "choicefetches_test.moc"

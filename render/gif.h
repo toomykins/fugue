@@ -12,9 +12,9 @@
 #include <string>
 #include <vector>
 
-#include "render/png.h"
+#include "render/image.h"
 
-namespace fugue::render {
+namespace fugue::assets {
 
 // false + why on any malformed stream (a bad later frame rejects the whole file).
 bool decodeGifFirstFrame(const uint8_t* d, size_t n, RgbaImage& out, std::string& why);
@@ -30,4 +30,4 @@ struct GifAnimation {
 // false + why on a malformed stream, or when the composited frames would exceed maxBytes.
 bool decodeGifAnimation(const uint8_t* d, size_t n, GifAnimation& out, std::string& why, size_t maxBytes);
 
-}  // namespace fugue::render
+}  // namespace fugue::assets

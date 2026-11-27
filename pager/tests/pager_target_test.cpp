@@ -1,5 +1,6 @@
 // pager_target: parseTarget table: the shapes DreamSeeker's parser accepts, plus the refusals.
 #include <QtTest>
+#include "tests/testmain.h"
 #include "pager/target.h"
 
 using namespace fugue::pager;
@@ -48,5 +49,5 @@ private slots:
         QVERIFY2(QString::fromStdString(err).contains(needle), err.c_str());
     }
 };
-QTEST_APPLESS_MAIN(PagerTarget)
+FUGUE_TEST_APPLESS_MAIN(PagerTarget)
 #include "pager_target_test.moc"

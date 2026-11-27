@@ -158,7 +158,7 @@ SignInResult signIn(const std::string& usernameIn, const std::string& password, 
     if (!f) {
         // Drop any cached identity for this account; it may be a well-formed block that failed to decode.
         std::string ip = account::identityPath(r.account);
-        if (!ip.empty()) ::unlink(ip.c_str());
+        if (!ip.empty()) platform::unlink(ip.c_str());
         auto out = fail(SignInFailure::BadKey,
                         "fetched " + r.account +
                             "'s key but could not decode it (any stale cached identity has been removed): " + derr);

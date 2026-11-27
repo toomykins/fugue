@@ -21,7 +21,9 @@
 //
 // Stock behaviour also modelled: the null-control globals, "<X>.*" wildcards, `id` everywhere, `pos` (pane-local for a
 // pane, the file pos for a hidden window or an unplaced control), every window's `dpi`, an unplaced control's file
-// `size`, window places, runtime-created controls and macros, and the GUI's focus. A side no window is stated for stays empty
+// `size`, a winset of the main window's `size` (its client area) and of a placed control's `pos` / `size` (where it is
+// now, its anchors moving it from there: skin/layout.h designGeometry), window places, runtime-created controls and
+// macros, and the GUI's focus. A side no window is stated for stays empty
 // until the GUI shows a pane whose on-show claims it (setPaneShown, skin/layout.h inferSlots).
 #pragma once
 #include <cstdint>
@@ -65,6 +67,17 @@ struct SkinSnapshot {
         std::string name, parent, type;
     };
     std::vector<RuntimeControl> runtime;
+    // A winset of the main window's `size` (mainwindow.size=WxH): the client area it asked for, which the GUI gives its
+    // window. `client` already has it; windowSizeSeq bumps on every such winset, even to the size the window has.
+    // While the window is maximized (LiveSkin::setWindowState) the size is the one it is to have when it is restored.
+    int windowWidth = 0, windowHeight = 0;
+    uint64_t windowSizeSeq = 0;
+    // A winset of the main window's `pos`: the screen place of its frame's top-left; windowPosSeq bumps on each.
+    int windowPosX = 0, windowPosY = 0;
+    uint64_t windowPosSeq = 0;
+    // A winset of the main window's `is-maximized`; maximizeSeq bumps on each.
+    bool maximize = false;
+    uint64_t maximizeSeq = 0;
 };
 
 struct WinsetResult {
@@ -107,21 +120,20 @@ public:
     // (a winclone'd window's browser too). With no skin loaded yet, everything prints. No winexists()
     // side effect.
     bool printsOutput(const std::string& control) const;
-    // The default MAP control's `style` (what a winset last set, else the .dmf's). Stock lays out MeasureText() with
-    // this sheet: MeasureText(t, null, w) after `winset map style=S` answers MeasureText(t, S, w) (render/dsmaptext.h).
-    // The is-default map, else the first map; "" with no skin or no map. A text-color the control sets (not "none") leads
-    // the sheet as a `body` colour rule: stock draws maptext that names no colour in it, else white.
-    std::string defaultMapStyle() const;
-    // The MAP controls a winset `parent=` created (SkinSnapshot::runtime), by name: the secondary maps the session thread
-    // assembles a scene for (render/scene.h assembleSecondaryMap).
+    // The MAP controls a winset `parent=` created (SkinSnapshot::runtime), by name.
     std::vector<std::string> runtimeMaps() const;
+    // GUI presentation geometry in logical pixels; publishing it does not relayout.
+    void setMapViewSize(const std::string& id, int width, int height);
+    std::vector<std::string> clearRuntimeBrowsers();  // session boundary: retire documents, not popups
     // The control a winset `parent=` created under this name ("name" or "parent.name", case-insensitive); false if none.
     bool runtimeControl(const std::string& name, SkinSnapshot::RuntimeControl& out) const;
     // The default MAP control's "window.elem": the is-default one, else the first; "" with no skin or no map.
     std::string defaultMapId() const;
-    // Every MAP control but the default one, by the name a screen_loc prefix uses: the .dmf's other MAPs (their elem
-    // name) and runtimeMaps(). The secondary maps the session thread assembles.
-    std::vector<std::string> secondaryMaps() const;
+    struct MapTextSettings {
+        std::string style, family, size;
+    };
+    // Consistent worker raster inputs for the shared scene's default MAP.
+    MapTextSettings defaultMapTextSettings() const;
 
     // winget(client, null or "", params): the client-wide ("special") wingets, answered as stock DreamSeeker 516
     // answers them (the table is in liveskin.cpp kGlobalParams). Which name reads the windows,
@@ -137,8 +149,11 @@ public:
     // set DreamSeeker has instantiated (see usedMenus_). It enumerates X itself (windows, popups and menus; a macro
     // set has no entry of its own), then its named elements in file order as `X.param=v` / `X.elem.param=v`, each
     // element listing only the params it has, values encoded. The k=v form is always used, even for one param.
-    // Anything else (`*`, `main*`, `*.map`, `win.ctl.*`, a menu no window has named yet) is an unknown control.
-    std::string wingetWildcard(const std::string& control, const std::string& params) const;
+    // Also enumerates ';' / '&' separated control lists (including wildcard entries), retaining requested order,
+    // spelling and duplicates. Unknown controls/properties are omitted; if no control resolves, use wingetAnswer's
+    // unknown-control shape. Whitespace is significant; a leading empty entry names the main window.
+    // Other wildcard forms (`*`, `main*`, `*.map`, `win.ctl.*`, an unused menu) are unknown controls.
+    std::string wingetWildcard(const std::string& controls, const std::string& params) const;
     // The global wingets the skin cannot know (the GUI / session publish them; see kGlobalParams for which and the
     // stock defaults used until they do): "dpi", "screen-pos", "screen-size", "url", "sound", "hwmode", the locks.
     void setClientEnv(const std::string& name, std::string value);
@@ -148,6 +163,13 @@ public:
     // once shown and the winset value after a move (kept while hidden). A world winset of a popup's pos answers
     // verbatim until the GUI republishes.
     void setWindowPos(const std::string& window, int x, int y);
+    // The GUI's main window: its frame's size (winget `outer-size`, refused until published), the height of its status
+    // strip under the client area (0 = none; a zero `size` fills over it, as stock's does), and whether it is maximized
+    // (or full-screen) with the client size it is to have when restored (winget `size` answers that one meanwhile, and
+    // a `size` winset changes it, as in stock DreamSeeker 516).
+    void setWindowFrame(int w, int h);
+    void setStatusStrip(int h);
+    void setWindowState(bool maximized, int restoreW, int restoreH);
     // The GUI's keyboard focus as DreamSeeker spells it for winget(null, "focus"): "window.control" for a skin
     // control, "<popup>.browser" for a popup's page, "" for the main window itself (the answer is then its name,
     // "mainwindow"). A winset `focus` overrides it until the GUI reports again.
@@ -173,8 +195,11 @@ public:
     // A winset to an id that was never browse()d is dropped. So a name stays a popup for the rest of the session
     // once it has been one; only its visibility changes.
     void setPopups(std::set<std::string> names);
-    // The GUI's half of is-visible: a popup the player closed is hidden until the world browse()s it again.
-    void setPopupShown(const std::string& name, bool shown);
+    // GUI publication. A delayed browse/snapshot must not overwrite a newer world write; page/player events
+    // use the default (latest writer). Titles are GUI facts, like screen positions, not new world winsets.
+    void setPopupShown(const std::string& name, bool shown, uint64_t throughRevision = ~uint64_t(0));
+    void setPopupTitle(const std::string& name, const std::string& title, uint64_t throughRevision = ~uint64_t(0));
+    uint64_t propertyRevision() const;  // captured with a worker browse notification, before subsequent winsets
     bool isPopup(const std::string& name) const;
 
     // winclone(src, "window", name) (S2C::WinClone): a blank window the world fills. Stock DreamSeeker answers
@@ -233,6 +258,12 @@ private:
     bool setFocusLocked(const std::string& target, bool on);
     void uncheckSiblingsLocked(const std::string& target);
     bool wingetLocked(const std::string& control, const std::string& param, std::string& out) const;
+    // Enumeration entries are resolved and consumed under the same mu_ lock.
+    struct WingetItem {
+        std::string key;
+        ParamLookup get;
+    };
+    std::vector<WingetItem> wingetItemsLocked(const std::string& control) const;
     std::string defaultMapIdLocked() const;
     // ":map", ":input": the default control of that type as "window.elem" (DM reference, winget), "" when none.
     std::string typeSelectorLocked(const std::string& id) const;
@@ -255,7 +286,9 @@ private:
     // Runtime-created controls (winset `parent=`): see runtime_.
     struct RuntimeCtl {
         std::string name, parent, type;
+        uint64_t identity = 0;
     };
+    uint64_t nextRuntimeIdentity_ = 0;
     const RuntimeCtl* runtimeLocked(const std::string& name) const;
     std::string typeLocked(const std::string& control) const;
     bool applyParentLocked(const WinsetPair& p);
@@ -277,6 +310,20 @@ private:
     bool clientSet_ = false;
     Tree tree_;
     PropStore props_;
+    // placed and runtime controls' pos / size winsets (skin/layout.h designGeometry, layoutRuntime)
+    GeometryOverrides geometry_;
+    int windowWidth_ = 0, windowHeight_ = 0;  // the main window's size winset (SkinSnapshot::windowSizeSeq)
+    uint64_t windowSizeSeq_ = 0;
+    int windowPosX_ = 0, windowPosY_ = 0;  // the main window's pos winset (SkinSnapshot::windowPosSeq)
+    uint64_t windowPosSeq_ = 0;
+    bool maximizeReq_ = false;  // the main window's is-maximized winset (SkinSnapshot::maximizeSeq)
+    uint64_t maximizeSeq_ = 0;
+    int frameW_ = 0, frameH_ = 0;  // setWindowFrame
+    int strip_ = 0;                // setStatusStrip
+    bool maximized_ = false;       // setWindowState
+    int restoreW_ = 0, restoreH_ = 0;
+    bool applyGeometryLocked(const WinsetPair& p);
+    bool applyRuntimeGeometryLocked(const WinsetPair& p);
     std::map<std::string, double> splits_;
     std::map<std::string, float> splitPct_;  // "window.elem" -> the splitter value as winset/a drag stored it (winget)
     MacroTable macros_;
@@ -304,6 +351,7 @@ private:
     // The first 8 text bytes of the heap block DreamSeeker builds each global-winget name in, as the names, control
     // wingets and lone answers this client has seen wrote them (liveskin.cpp nameBlockWrite). Zero = never used.
     mutable char nameBlock_[8] = {};
+    std::map<std::string, std::string> popupTitles_;        // GUI title, invalidated by a world title write
     std::map<std::string, std::pair<int, int>> screenPos_;  // setWindowPos, keyed lower-case ("" = the main window)
     std::string guiFocus_;                                  // setGuiFocus
     std::map<std::string, std::string> viewSize_;           // setViewSize, keyed lower-case "window.elem"
@@ -316,6 +364,7 @@ private:
     // map inside its window; `parent=` removes it. Kept in creation order; winget and winexists answer them, and a MAP
     // one is built as a widget (SkinSnapshot::runtime).
     std::vector<RuntimeCtl> runtime_;
+    std::map<std::string, std::pair<int, int>> mapViewSizes_;
     std::set<std::string> shownPanes_;  // setPaneShown (lower-case)
     // The menus and macro sets stock DreamSeeker has built, in build order. winget(null,"macro") and "menu" list only the
     // sets some window has named, and a "<set>.*" wildcard enumerates nothing before that. Seeded at load from every

@@ -218,7 +218,7 @@ CachePlan clearCache(std::string* err) {
                 done.items.push_back(CacheItem{it.what, it.path, it.files - f, it.bytes - std::min(b, it.bytes)});
             continue;
         }
-        if (::unlink(it.path.c_str()) == 0 || errno == ENOENT)
+        if (platform::unlink(it.path.c_str()) == 0 || errno == ENOENT)
             done.items.push_back(it);
         else
             fail("remove " + it.path + ": " + std::strerror(errno));

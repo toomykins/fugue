@@ -3,6 +3,7 @@
 // opens no menu.
 #include <QFile>
 #include <QtTest>
+#include "tests/testmain.h"
 
 #include <map>
 #include <string>
@@ -71,5 +72,5 @@ private slots:
     }
 };
 
-QTEST_APPLESS_MAIN(MenuList)
+FUGUE_TEST_APPLESS_MAIN(MenuList)
 #include "menulist_test.moc"

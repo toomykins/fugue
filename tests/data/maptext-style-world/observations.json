@@ -1,0 +1,309 @@
+{
+  "comparison": "build\\probes\\20261025T124328Z-compare-38c83f9d\\comparison.json",
+  "stock_version": "516.1688",
+  "coordinate_units": "physical capture pixels; 2x native MAP",
+  "scope": "class/nested text, outline, line spacing, font-unit controls, runtime stylesheet change; NOT pixel parity",
+  "state_history": "explicit 768x512 physical reset at DPI 144, keep for style-only, keep for changed text; fresh Fugue state; stock global settings unchanged",
+  "readiness": "fixture completed winget and waited 3 ticks after each action; not a GPU fence",
+  "cleanup": "all synthetic guest/server processes stopped through verified ownership records",
+  "clients": {
+    "stock": {
+      "green_parts": {
+        "plain": {
+          "white_bounds": [
+            74,
+            40,
+            40,
+            46
+          ],
+          "dark_pixels": 0,
+          "red_pixels": 0,
+          "green_pixels": 0,
+          "white_row_groups": [
+            [
+              40,
+              85
+            ]
+          ]
+        },
+        "outlined": {
+          "white_bounds": [
+            74,
+            40,
+            40,
+            46
+          ],
+          "dark_pixels": 316,
+          "red_pixels": 0,
+          "green_pixels": 0,
+          "white_row_groups": [
+            [
+              40,
+              85
+            ]
+          ]
+        },
+        "nested": {
+          "white_bounds": null,
+          "dark_pixels": 1548,
+          "red_pixels": 0,
+          "green_pixels": 1440,
+          "white_row_groups": []
+        },
+        "24pt": {
+          "white_bounds": [
+            74,
+            40,
+            40,
+            46
+          ],
+          "dark_pixels": 0,
+          "red_pixels": 0,
+          "green_pixels": 0,
+          "white_row_groups": [
+            [
+              40,
+              85
+            ]
+          ]
+        },
+        "18pt": {
+          "white_bounds": [
+            80,
+            44,
+            28,
+            34
+          ],
+          "dark_pixels": 0,
+          "red_pixels": 0,
+          "green_pixels": 0,
+          "white_row_groups": [
+            [
+              44,
+              77
+            ]
+          ]
+        },
+        "line-1": {
+          "white_bounds": [
+            0,
+            6,
+            22,
+            54
+          ],
+          "dark_pixels": 0,
+          "red_pixels": 0,
+          "green_pixels": 0,
+          "white_row_groups": [
+            [
+              6,
+              29
+            ],
+            [
+              36,
+              59
+            ]
+          ]
+        },
+        "line-1.5": {
+          "white_bounds": [
+            0,
+            6,
+            22,
+            68
+          ],
+          "dark_pixels": 0,
+          "red_pixels": 0,
+          "green_pixels": 0,
+          "white_row_groups": [
+            [
+              6,
+              29
+            ],
+            [
+              50,
+              73
+            ]
+          ]
+        },
+        "siblings": {
+          "white_bounds": null,
+          "dark_pixels": 1356,
+          "red_pixels": 0,
+          "green_pixels": 1884,
+          "white_row_groups": []
+        }
+      },
+      "style_only_color": "green",
+      "changed_text_color": "red",
+      "geometry": {
+        "bounds_physical": [
+          50,
+          50,
+          840,
+          618
+        ],
+        "client_physical": [
+          768,
+          512
+        ],
+        "dpi": 144,
+        "client_dip_96": [
+          512.0,
+          341.3333333333333
+        ],
+        "maximized": false
+      },
+      "map_query": "768x512"
+    },
+    "fugue": {
+      "green_parts": {
+        "plain": {
+          "white_bounds": [
+            74,
+            40,
+            40,
+            46
+          ],
+          "dark_pixels": 0,
+          "red_pixels": 0,
+          "green_pixels": 0,
+          "white_row_groups": [
+            [
+              40,
+              85
+            ]
+          ]
+        },
+        "outlined": {
+          "white_bounds": [
+            74,
+            40,
+            40,
+            46
+          ],
+          "dark_pixels": 228,
+          "red_pixels": 0,
+          "green_pixels": 0,
+          "white_row_groups": [
+            [
+              40,
+              85
+            ]
+          ]
+        },
+        "nested": {
+          "white_bounds": null,
+          "dark_pixels": 624,
+          "red_pixels": 0,
+          "green_pixels": 1538,
+          "white_row_groups": []
+        },
+        "24pt": {
+          "white_bounds": [
+            74,
+            40,
+            40,
+            46
+          ],
+          "dark_pixels": 0,
+          "red_pixels": 0,
+          "green_pixels": 0,
+          "white_row_groups": [
+            [
+              40,
+              85
+            ]
+          ]
+        },
+        "18pt": {
+          "white_bounds": [
+            78,
+            46,
+            30,
+            34
+          ],
+          "dark_pixels": 0,
+          "red_pixels": 0,
+          "green_pixels": 0,
+          "white_row_groups": [
+            [
+              46,
+              79
+            ]
+          ]
+        },
+        "line-1": {
+          "white_bounds": [
+            0,
+            4,
+            22,
+            60
+          ],
+          "dark_pixels": 0,
+          "red_pixels": 0,
+          "green_pixels": 0,
+          "white_row_groups": [
+            [
+              4,
+              27
+            ],
+            [
+              40,
+              63
+            ]
+          ]
+        },
+        "line-1.5": {
+          "white_bounds": [
+            0,
+            4,
+            22,
+            78
+          ],
+          "dark_pixels": 0,
+          "red_pixels": 0,
+          "green_pixels": 0,
+          "white_row_groups": [
+            [
+              4,
+              27
+            ],
+            [
+              58,
+              81
+            ]
+          ]
+        },
+        "siblings": {
+          "white_bounds": null,
+          "dark_pixels": 720,
+          "red_pixels": 0,
+          "green_pixels": 1872,
+          "white_row_groups": []
+        }
+      },
+      "style_only_color": "green",
+      "changed_text_color": "red",
+      "geometry": {
+        "bounds_physical": [
+          50,
+          50,
+          840,
+          618
+        ],
+        "client_physical": [
+          768,
+          512
+        ],
+        "dpi": 144,
+        "client_dip_96": [
+          512.0,
+          341.3333333333333
+        ],
+        "maximized": false
+      },
+      "map_query": "512x341"
+    }
+  }
+}

@@ -1,7 +1,7 @@
 // Ports of Go standard-library math functions (BSD-3-Clause, Copyright 2009 The Go Authors; see THIRD-PARTY-NOTICES.md).
 // Bit-exact results keep glides, transforms and easing deterministic across platforms, whatever the platform's libm.
 // sin/cos/atan are the Cephes forms and hypot is max*sqrt(1+(min/max)^2). Arguments with |x| >= 2^29 fall back to libm.
-// Must be compiled with -ffp-contract=off, so that a*b+c is never fused. model/ and render/ both are.
+// Must be compiled with -ffp-contract=off, so that a*b+c is never fused. model/ is.
 #pragma once
 #include <cmath>
 #include <cstdint>

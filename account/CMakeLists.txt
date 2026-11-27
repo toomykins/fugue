@@ -11,15 +11,15 @@ file(GLOB acct_tool_srcs CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tool/*.cp
 add_executable(fugue-account ${acct_tool_srcs})
 target_link_libraries(fugue-account PRIVATE fugue_account fugue_net fugue_proto fugue_canon Qt6::Core)
 
-# account/tests/*_test.cpp -> one QtTest executable + one ctest each (names: account_<stem>).
+# account/tests/*_test.cpp -> one suite in fugue_tests + one ctest each (names: account_<stem>).
 set(CMAKE_AUTOMOC ON)
 file(GLOB acct_test_srcs CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/*_test.cpp)
 foreach(src ${acct_test_srcs})
   get_filename_component(stem ${src} NAME_WE)
-  add_executable(${stem} ${src})
+  fugue_test_suite(${stem} ${src})
   target_link_libraries(${stem} PRIVATE fugue_account fugue_net fugue_proto fugue_canon Qt6::Core Qt6::Test)
   target_compile_definitions(${stem} PRIVATE FUGUE_ACCOUNT_BIN="$<TARGET_FILE:fugue-account>")
   add_dependencies(${stem} fugue-account)
   string(REGEX REPLACE "_test$" "" name ${stem})
-  add_test(NAME ${name} COMMAND ${stem} -o -,txt)
+  fugue_add_test(${name} fugue_tests ${name} -o -,txt)
 endforeach()

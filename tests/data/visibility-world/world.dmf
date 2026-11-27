@@ -1,0 +1,21 @@
+window "main"
+    elem "main"
+        type = MAIN
+        size = 800x450
+        is-default = true
+        title = "Visibility fixture"
+    elem "map"
+        type = MAP
+        pos = 0,0
+        size = 352x352
+        is-default = true
+    elem "info"
+        type = INFO
+        pos = 360,0
+        size = 440x352
+        is-default = true
+    elem "input"
+        type = INPUT
+        pos = 0,370
+        size = 800x30
+        is-default = true

@@ -49,6 +49,7 @@ enum Type : uint16_t {
     Sound = 0x006d,             // sound(): play, stop or update a sound
     MobGone = 0x006e,           // [id u32]...: mob records the server no longer has
     ObjGone = 0x006f,           // [id u32]...: obj records the server no longer has
+    ClientDir = 0x0070,         // [dir u8]: client.dir
     SelfRef = 0x0071,           // [ref u32]: the client's own mob; the first one means "logged in"
     WorldName = 0x0072,         // the world's name (cstring first)
     Hud = 0x0076,               // client.screen membership

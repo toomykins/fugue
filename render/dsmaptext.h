@@ -8,7 +8,9 @@
 //   * Faces: no font-family (or `sans-serif`) gives "MS Sans Serif" 10pt, a bitmap font (sserife.fon: 8/10/12pt).
 //     "Small Fonts" has one 7pt strike, so under the Wine profile every size up to 13pt measures alike. `monospace`, <tt>, <code>
 //     and <pre> give the "Courier" bitmap. Any other family is that TrueType face; an unknown one falls back to Arial.
-//     A bitmap face is integer-scaled above its largest strike (k = (em + 2*il) / tmHeight).
+//     Under the Wine profile a bitmap face is integer-scaled above its largest strike (k = (em + 2*il) / tmHeight). On
+//     Windows it never is: a size is drawn from the nearest strike as GDI's mapper weighs them, and far above the
+//     largest one from Arial.
 //   * Lines: tmHeight for the last line, and floor(line-height * tmAscent) between lines. line-height defaults to 1.2
 //     and accepts only a number or a percentage; `normal` or a length stacks every line at pitch 0. Bold on a bitmap
 //     face adds 1 px per character; italic adds nothing.
@@ -20,8 +22,9 @@
 //     wins; `font:` sets family, size, weight and style together, defaulting what it omits.
 //   * "" gives DreamSeeker's "cannot measure" (the server resumes with null); whitespace or tags only gives height 0.
 //
-// Two profiles, because Windows and wine ship different bitmap fonts. The Windows profile (the default) has Small Fonts
-// 5pt and 6pt strikes, with estimated advance widths; the Wine profile has only the 7pt strike.
+// Two profiles, because Windows and wine ship different bitmap fonts. The Windows profile (the default) has the strikes
+// of Windows' own files, those digitised for 120 dpi included (render/gdifont_windows.inc); the Wine profile has only
+// Wine's (Small Fonts 7pt, MS Sans Serif 8, 10 and 12pt, Courier 10pt).
 //
 // Not modelled: lines that mix font sizes, <IMG> (measures 0), <h1>-<h6>, text-indent, padding and letter-spacing.
 // TrueType faces need setTrueTypeResolver(); without one they measure as MS Sans Serif.
@@ -70,7 +73,7 @@ int cp1252Byte(char32_t cp);
 // the drawing and the MeasureText reply, so a runechat box the server sized from our reply holds the lines we
 // draw). Lines stack from the block's top (y 0) as the measured height adds up; the block's height is the measure,
 // except that pt 9 is laid out at its drawn em 12.
-// Colour, text-align, valign and -dm-text-outline are read here (they never change a measurement) by applyProps.
+// Colour, text-align, valign, underline, text-shadow and -dm-text-outline are read here (they never change a measurement) by applyProps.
 struct DsFace {
     std::string family;  // "ms sans serif" / "small fonts" / "courier" (a bitmap face) or the TrueType family used
     int em = 0;          // the GDI request, px (CreateFont(-em))
@@ -82,17 +85,29 @@ struct DsPaint {
     uint32_t color = 0xffffffffu;  // 0xRRGGBBAA
     bool outline = false;
     uint32_t outlineColor = 0x000000ffu;
+    int outlineWidth = 1;  // px
+    bool underline = false;
+    bool shadow = false;  // text-shadow: an offset copy of the text and its outline, under them
+    int shadowX = 0, shadowY = 0, shadowBlur = 0;
+    uint32_t shadowColor = 0x000000ffu;
+    int outlineFlags = 0;  // the outline filter's: 1 sharp, 2 square
+};
+// An underlined cell (spaces included): `w` px from pen position `x`, in the cell's face and paint.
+struct DsUnderline {
+    int x = 0, w = 0, face = 0, paint = 0;
 };
 struct DsGlyph {
     char32_t cp = 0;
     int x = 0;
     int face = 0;
     int paint = 0;
+    bool joined = false;  // follows a glyph of its own run of linked glyphs (dsmaptext.cpp): GDI drew them as one
 };  // spaces and tabs only advance: not listed
 // align 0 left 1 center 2 right; `overhang` px (last glyph's ink past its advance) count toward a centred/right line's width.
 struct DsLine {
     int top = 0, ascent = 0, height = 0, width = 0, overhang = 0, align = 0;
     std::vector<DsGlyph> glyphs;
+    std::vector<DsUnderline> underlines;
 };
 struct DsLayout {
     bool ok = false;  // false: nothing to draw ("" or whitespace/tags only)

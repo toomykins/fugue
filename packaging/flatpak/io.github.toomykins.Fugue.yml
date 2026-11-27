@@ -4,16 +4,16 @@
 #       build-flatpak packaging/flatpak/io.github.toomykins.Fugue.yml     (run from the repository root)
 #   flatpak run io.github.toomykins.Fugue
 #
-# Runtime: KDE 6.10 (Qt 6.10) plus the QtWebEngine base app, since the KDE runtime has no WebEngine.
+# Runtime: KDE 6.11 (Qt 6.11.3, as the other builds) plus the QtWebEngine base app, since the KDE runtime has no WebEngine.
 # All client state (~/.fugue: sign-ins, sid, cauth.txt, macros, resource cache) persists in
 # ~/.var/app/io.github.toomykins.Fugue/, separate from a native install's, so a Flatpak install starts fresh.
 # ~/.byond/cfg is visible read-only so the sign-in screen can import an existing BYOND key.txt.
 id: io.github.toomykins.Fugue
 runtime: org.kde.Platform
-runtime-version: '6.10'
+runtime-version: '6.11'
 sdk: org.kde.Sdk
 base: io.qt.qtwebengine.BaseApp
-base-version: '6.10'
+base-version: '6.11'
 command: fugue-qt
 finish-args:
   - --share=network
@@ -74,8 +74,6 @@ modules:
       - -DFUGUE_RELEASE=ON
       # a release must play tracker modules: fail the build rather than ship one that refuses them
       - -DFUGUE_OPENMPT=ON
-      # the experimental GPU renderer, off until the pager's "Use GPU rendering" option turns it on
-      - -DFUGUE_BUILD_GPU=ON
     sources:
       - type: dir
         path: ../..

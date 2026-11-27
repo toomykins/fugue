@@ -1,0 +1,418 @@
+[
+  {
+    "phase": "g-overlay-group",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=17;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=5;icon-y=4;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=16;icon-y=29;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  },
+  {
+    "phase": "g-overlay-group-tint",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=17;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=5;icon-y=4;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=16;icon-y=29;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  },
+  {
+    "phase": "g-overlay-group-alpha",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=17;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=5;icon-y=4;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=16;icon-y=29;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  },
+  {
+    "phase": "g-overlay-group-zero",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=17;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=5;icon-y=4;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=16;icon-y=29;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  },
+  {
+    "phase": "g-overlay-group-ownicon",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=17;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=5;icon-y=4;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=16;icon-y=29;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  },
+  {
+    "phase": "g-overlay-group-leafplane",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the master loc= icon-x=41;icon-y=56;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=17;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=5;icon-y=4;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the master loc= icon-x=48;icon-y=61;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  },
+  {
+    "phase": "g-overlay-group-offset",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=17;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=5;icon-y=4;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=16;icon-y=29;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  },
+  {
+    "phase": "g-overlay-group-apart",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the master loc= icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=17;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=5;icon-y=4;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the master loc= icon-x=16;icon-y=29;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  },
+  {
+    "phase": "g-overlay-under-group-apart-tint",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the master loc= icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=17;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=5;icon-y=4;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the master loc= icon-x=16;icon-y=29;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  },
+  {
+    "phase": "g-overlay-group-apart-alpha",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the master loc= icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=17;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=5;icon-y=4;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the master loc= icon-x=16;icon-y=29;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  },
+  {
+    "phase": "g-overlay-group-apart-leafalpha",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the master loc= icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=17;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=5;icon-y=4;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the master loc= icon-x=16;icon-y=29;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  },
+  {
+    "phase": "g-overlay-group-apart-leafplane",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the master loc= icon-x=41;icon-y=56;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=17;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=5;icon-y=4;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the master loc= icon-x=48;icon-y=61;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  },
+  {
+    "phase": "g-overlay-group-apart-leafoffset",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=17;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the master loc= icon-x=12;icon-y=27;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=16;icon-y=29;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  },
+  {
+    "phase": "g-overlay-group-apart-zero",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=17;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=5;icon-y=4;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=16;icon-y=29;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  },
+  {
+    "phase": "g-overlay-nested-group-overlap",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the yellow loc=the floor icon-x=1;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=5;icon-y=4;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=16;icon-y=29;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  },
+  {
+    "phase": "g-overlay-nested-group-overlap-alpha",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the yellow loc=the floor icon-x=1;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=5;icon-y=4;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=16;icon-y=29;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  },
+  {
+    "phase": "g-overlay-nested-group-overlap-tint",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the yellow loc=the floor icon-x=1;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=5;icon-y=4;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=16;icon-y=29;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  },
+  {
+    "phase": "g-overlay-nested-group-apart-overlap-alpha",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the yellow loc=the floor icon-x=1;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the master loc= icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=5;icon-y=4;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the master loc= icon-x=16;icon-y=29;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  },
+  {
+    "phase": "g-overlay-nested-group-childapart-overlap-alpha",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the yellow loc=the floor icon-x=1;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=5;icon-y=4;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=16;icon-y=29;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  },
+  {
+    "phase": "g-overlay-nested-group-childgroup-overlap-alpha",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the yellow loc=the floor icon-x=1;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=5;icon-y=4;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=16;icon-y=29;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  },
+  {
+    "phase": "g-overlay-nested-group-same-overlap-alpha",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the yellow loc=the floor icon-x=1;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=5;icon-y=4;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=16;icon-y=29;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  },
+  {
+    "phase": "g-overlay-nested-group-deep-overlap-alpha",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the yellow loc=the floor icon-x=1;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=5;icon-y=4;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=16;icon-y=29;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  },
+  {
+    "phase": "g-overlay-nested-group-childzero-overlap",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the yellow loc=the floor icon-x=1;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=5;icon-y=4;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=16;icon-y=29;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  },
+  {
+    "phase": "g-overlay-leafplane",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the master loc= icon-x=41;icon-y=56;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=17;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=5;icon-y=4;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the master loc= icon-x=48;icon-y=61;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  },
+  {
+    "phase": "g-overlay-leafplane-tint",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the master loc= icon-x=41;icon-y=56;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=17;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=5;icon-y=4;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the master loc= icon-x=48;icon-y=61;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  },
+  {
+    "phase": "g-overlay-nested-group-leafplane-tint",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the master loc= icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=17;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=5;icon-y=4;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the master loc= icon-x=16;icon-y=29;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  },
+  {
+    "phase": "g-overlay-group-apart-offset",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the master loc= icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=17;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=5;icon-y=4;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the master loc= icon-x=16;icon-y=29;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  },
+  {
+    "phase": "g-overlay-group-leafoffset",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=17;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=5;icon-y=4;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=16;icon-y=29;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  },
+  {
+    "phase": "g-overlay-group-apart-leafcenter-alpha",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the master loc= icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=17;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=5;icon-y=4;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=16;icon-y=29;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  },
+  {
+    "phase": "g-overlay-group-leafcenter-alpha",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=17;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=5;icon-y=4;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=16;icon-y=29;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  },
+  {
+    "phase": "g-overlay-group-apart-clear",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the master loc= icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=17;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=5;icon-y=4;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the master loc= icon-x=16;icon-y=29;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  },
+  {
+    "phase": "g-overlay-nested-childgroup-overlap-alpha",
+    "owner": "build\\probes\\20261029T174639Z-97fdca30",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168],[112,104],[120,104],[4,188],[12,188],[47,163]],
+    "events": "CLICK the yellow loc=the floor icon-x=1;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the master loc= icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:17,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=25;icon-y=24;left=1;button=left;screen-loc=4:25,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=5;icon-y=4;left=1;button=left;screen-loc=1:5,2:4\r\n\r\nCLICK the floor loc=the floor icon-x=13;icon-y=4;left=1;button=left;screen-loc=1:13,2:4\r\n\r\nCLICK the master loc= icon-x=16;icon-y=29;left=1;button=left;screen-loc=2:16,2:29\r\n\r\n"
+  }
+]

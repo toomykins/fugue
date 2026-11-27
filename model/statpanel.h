@@ -37,7 +37,7 @@ std::string plainAtomName(const std::string& s);  // drops BYOND's 0xFF text-mac
 std::string statText(const World& w, const World::StatLine& l);
 
 // The player's verb scope (client appearance verbs UNION the own mob's UNION srcAdmittedVerbIds). false = not knowable yet: callers use the dictionary.
-bool verbScope(const World& w, std::vector<uint16_t>& ids);
+bool verbScope(const World& w, std::vector<uint32_t>& ids);
 // The verb tabs of the scope above, computed once: a caller that needs the strip and a tab's rows builds this per tick.
 struct VerbPanel {
     std::vector<std::string> categories;                     // ASCII-sorted, distinct

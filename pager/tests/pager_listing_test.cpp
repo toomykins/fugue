@@ -1,5 +1,6 @@
 // pager_listing: the hub listing parser, on a sample listing with invented names.
 #include <QtTest>
+#include "tests/testmain.h"
 #include "pager/listing.h"
 #include "pager/text.h"
 
@@ -64,5 +65,5 @@ private slots:
         QCOMPARE(goQuote("a\"b\n"), std::string("\"a\\\"b\\n\""));
     }
 };
-QTEST_APPLESS_MAIN(PagerListing)
+FUGUE_TEST_APPLESS_MAIN(PagerListing)
 #include "pager_listing_test.moc"

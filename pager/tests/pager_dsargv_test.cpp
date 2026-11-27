@@ -1,5 +1,6 @@
 // DreamSeeker's command line (pager/dsargv.h). Each row is a shape whose stock behaviour is read from stock DreamSeeker 516.1684.
 #include <QtTest>
+#include "tests/testmain.h"
 #include <set>
 #include "pager/clientaccount.h"
 #include "pager/dsargv.h"
@@ -113,7 +114,7 @@ private slots:
         QCOMPARE(d.dropped, (std::vector<std::string>{"b:2"}));
     }
     void
-    updaterLinesAreUnknownFlags() {  // inert in stock dreamseeker.exe (only a standalone hub-game build acts on them)
+    updaterLinesAreUnknownFlags() {  // inert in stock DreamSeeker (only a standalone hub-game build acts on them)
         DsArgv d = p({"-install", "h:1", "x", "y"});
         QCOMPARE(d.target, std::string("h:1"));
         QCOMPARE(d.dropped, (std::vector<std::string>{"-install", "x", "y"}));
@@ -130,14 +131,6 @@ private slots:
                                                     "c:2"}));
         DsArgv e = p({"--audio", "none"});
         QVERIFY(e.target.empty());
-    }
-    void rendererOptionPassesThrough() {
-        DsArgv d = p({"--renderer", "gpu", "--connect", "localhost:13337"});
-        QVERIFY(d.target.empty());
-        QCOMPARE(d.fugue, (std::vector<std::string>{"--renderer", "gpu", "--connect", "localhost:13337"}));
-        DsArgv e = ds({"--renderer=gpu", "byond://localhost:13337", "-pager"});
-        QCOMPARE(e.target, std::string("byond://localhost:13337"));
-        QCOMPARE(e.fugue, (std::vector<std::string>{"--renderer=gpu"}));
     }
     void unknownDoubleDashWord() {
         // Invoked as DreamSeeker: DS drops any unknown '-' argument, so an unknown --word is dropped too and never
@@ -245,5 +238,5 @@ private slots:
     }
 };
 
-QTEST_GUILESS_MAIN(PagerDsArgv)
+FUGUE_TEST_GUILESS_MAIN(PagerDsArgv)
 #include "pager_dsargv_test.moc"

@@ -1,0 +1,25 @@
+{
+ "schema": 1,
+ "stock": "DreamSeeker/DreamDaemon 516.1688",
+ "date": "2026-11-14",
+ "method": "36 native 1:1 grabs of the MAP 500 ms apart; pixel_x read as the small box's left edge minus 2 on each case tile; wire records logged from Fugue's 0x00f0 decoder with a temporary trace",
+ "wire": {
+  "slice": {"leadingStep": {"from": 65535, "to": 65535, "time": 10, "loop": -1, "flags": 8, "ext": 10},
+            "then": "the original two steps, the first with StepDelay -10 (started a second earlier)"},
+  "slice-once": {"leadingStep": {"from": 65535, "to": 65535, "time": 20, "loop": 1, "flags": 8, "ext": 0}},
+  "continue": {"chain": 1, "delay": -10, "steps": "the first step, then the continuing step with flags 0 (sequential)"},
+  "end-loop": {"chain": 1, "steps": 0, "sent": "at the END_LOOP call"},
+  "replace": {"chain": 1, "delay": -10, "steps": "the first step, then a head step (flags 0x40000080, StepDelay 0)"}
+ },
+ "cases": {
+  "slice": {"pixelXSeen": [[17, 25], [18, 26]], "window": [16, 32],
+            "note": "two runs; each alternates between two values 8 px apart, half the 1 s window apart"},
+  "slice-once": {"heldPixelX": [31, 32], "note": "holds at the window's end after one pass (two runs: 31 and 32), not at the settled 0"},
+  "continue": {"final": [32, 32]},
+  "end-loop": {"pixelXAfterCall": 0, "note": "stops at once on the settled appearance"},
+  "parallel-color": {"base": [40, 80, 230], "samples": [[2, [40, 80, 229]], [5, [31, 80, 178]], [8, [25, 80, 143]]],
+                     "model": "rgb = base * (1 - p) + base * #00ff00 * p, p = progress (pixel_x / 16)"},
+  "parallel-color-base": {"samples": [[3, [37, 0, 18]], [6, [28, 0, 69]], [8, [25, 0, 87]]],
+                          "model": "red tint to blue: (40 (1-p), 0, 230 p)"}
+ }
+}

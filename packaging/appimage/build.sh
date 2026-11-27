@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Build Fugue-x86_64.AppImage from the source tree.
 #
-#   QT_ROOT_DIR=/path/to/Qt/6.8.3/gcc_64 packaging/appimage/build.sh [outdir]      (run from anywhere)
+#   QT_ROOT_DIR=/path/to/Qt/6.11.3/gcc_64 packaging/appimage/build.sh [outdir]      (run from anywhere)
 #
-# Needs a Qt 6 with WebEngine, WebChannel and ShaderTools (the CI job uses aqtinstall's 6.8.3 on ubuntu-22.04, so the
+# Needs a Qt 6 with WebEngine, WebChannel and ShaderTools (the CI job uses aqtinstall's 6.11.3 on ubuntu-22.04, so the
 # image's glibc floor is 2.35), plus the build prerequisites of docs/BUILDING.md and libopenmpt-dev. Work files go under
 # $WORK (default <outdir>/work); downloaded tools are checked against the sha256 pinned below.
 set -euo pipefail

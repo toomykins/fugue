@@ -2,6 +2,7 @@
 // (tab strip, row text, token gate, click and tab-select encodings). Cancel, row-click and tab-body bytes match stock
 // DreamSeeker on the wire; the request frames are the ones stock DreamDaemon emits for alert() and input().
 #include <QtTest>
+#include "tests/testmain.h"
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -779,14 +780,14 @@ private slots:
         twin.hasPos = true;
         twin.x = 14;
         twin.y = 10;  // obj 5 is not mob 5
-        std::vector<uint16_t> ids;
+        std::vector<uint32_t> ids;
         QVERIFY(verbScope(w, ids));
-        QCOMPARE(ids, (std::vector<uint16_t>{1, 3, 4, 6, 8}));
+        QCOMPARE(ids, (std::vector<uint32_t>{1, 3, 4, 6, 8}));
         // The panel follows the world: dropping the carried obj and stepping off the turf changes the scope.
         w.usrContents.clear();
         me.x = 11;
         QVERIFY(verbScope(w, ids));
-        QCOMPARE(ids, (std::vector<uint16_t>{2, 3, 6}));  // turf_next is now underfoot; (10,11) is still within view(1)
+        QCOMPARE(ids, (std::vector<uint32_t>{2, 3, 6}));  // turf_next is now underfoot; (10,11) is still within view(1)
     }
     void tokenGateAndOwnership() {
         Session s;
@@ -1027,5 +1028,5 @@ private slots:
     }
 };
 
-QTEST_APPLESS_MAIN(PromptStatTest)
+FUGUE_TEST_APPLESS_MAIN(PromptStatTest)
 #include "prompt_stat_test.moc"

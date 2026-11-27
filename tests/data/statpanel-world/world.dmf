@@ -1,0 +1,26 @@
+window "main"
+    elem "main"
+        type = MAIN
+        size = 800x600
+        is-default = true
+    elem "map"
+        type = MAP
+        pos = 0,0
+        size = 400x550
+        anchor1 = 0,0
+        anchor2 = 50,100
+        is-default = true
+    elem "info"
+        type = INFO
+        pos = 400,0
+        size = 400x550
+        anchor1 = 50,0
+        anchor2 = 100,100
+        is-default = true
+    elem "input"
+        type = INPUT
+        pos = 0,560
+        size = 800x30
+        anchor1 = 0,100
+        anchor2 = 100,100
+        is-default = true

@@ -5,6 +5,7 @@ on:
     branches: [main, master]
     tags: ['v*']
   pull_request:
+  workflow_dispatch:
 
 jobs:
   build:
@@ -15,10 +16,21 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential cmake ninja-build pkg-config \
-            qt6-base-dev qt6-webengine-dev qt6-webchannel-dev \
-            libjpeg-dev zlib1g-dev libopenmpt-dev libgl-dev
+            zlib1g-dev libjpeg-dev libopenmpt-dev libgl-dev libegl-dev libxkbcommon-dev \
+            libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 \
+            libnss3 libasound2t64 libcups2 libxcomposite1 libxdamage1 libxrandr2 libxtst6 fonts-wine \
+            xvfb libgl1-mesa-dri libglx-mesa0 libxcb-image0 libxcb-render-util0 libxcb-xinerama0 libxcb-xkb1
+      # Use one SDK for Qt libraries and their matching GuiPrivate headers.
+      - uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125   # v4.4.1
+        with:
+          version: '6.11.3'
+          # Released aqtinstall (3.3.0) cannot read Qt's Windows repository from 6.11 on; drop this once a release can.
+          aqtsource: 'git+https://github.com/miurahr/aqtinstall.git@4c759852b1108cc801d8e24979136b895b5155d4'
+          arch: linux_gcc_64
+          modules: 'qtwebengine qtwebchannel qtpositioning qtshadertools'
+          cache: true
       - name: Configure
-        run: cmake -G Ninja -S . -B build -DFUGUE_RELEASE=ON -DFUGUE_COMPILE_JOBS=2
+        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release -DFUGUE_RELEASE=ON
       - name: Build
         run: ninja -C build -j2
       - name: Test
@@ -26,7 +38,12 @@ jobs:
           QT_QPA_PLATFORM: offscreen
           FUGUE_AUDIO: none
           QTWEBENGINE_CHROMIUM_FLAGS: --no-sandbox
-        run: ctest --test-dir build --output-on-failure
+        run: ctest --test-dir build -L portable --no-tests=error --output-on-failure
+      - name: Test host fonts
+        run: ctest --test-dir build -L font --no-tests=error --output-on-failure
+      # Every entry runs on its own Xvfb display with Mesa (tools/xvfb-test.sh), as it does locally.
+      - name: Test GPU and native profiles
+        run: ctest --test-dir build -L 'gpu|native' --no-tests=error --output-on-failure
 
   macos:
     strategy:
@@ -39,11 +56,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install prerequisites
-        run: brew install cmake ninja pkgconf qtbase qtwebengine qtwebchannel qtsvg qtshadertools jpeg-turbo libopenmpt
+        run: brew install cmake ninja pkgconf libopenmpt jpeg-turbo
+      # Qt's own build at the version the other jobs use; Homebrew only has its current one.
+      - uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125   # v4.4.1
+        with:
+          version: '6.11.3'
+          arch: clang_64
+          modules: 'qtwebengine qtwebchannel qtpositioning qtshadertools'
+          cache: true
+          aqtsource: 'git+https://github.com/miurahr/aqtinstall.git@4c759852b1108cc801d8e24979136b895b5155d4'
       - name: Configure
         run: >-
-          cmake -G Ninja -S . -B build -DFUGUE_RELEASE=ON -DFUGUE_OPENMPT=ON -DFUGUE_BUILD_GPU=ON
-          -DFUGUE_COMPILE_JOBS=2 -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 -DCMAKE_PREFIX_PATH="$(brew --prefix)"
+          cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release -DFUGUE_RELEASE=ON -DFUGUE_OPENMPT=ON
+          -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR;$(brew --prefix)"
+          -DJPEG_ROOT="$(brew --prefix jpeg-turbo)"
           -DPKG_CONFIG_EXECUTABLE="$(brew --prefix)/bin/pkg-config"
       - name: Build
         run: cmake --build build --parallel 2
@@ -54,7 +80,7 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
           FUGUE_AUDIO: none
-        run: ctest --test-dir build -LE gpu --output-on-failure
+        run: ctest --test-dir build -L portable --no-tests=error --output-on-failure
       - name: Deploy and verify the standalone bundle
         run: |
           cmake --install build --prefix "$PWD/build/macos"
@@ -80,19 +106,26 @@ jobs:
       - uses: actions/checkout@v4
       - uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125   # v4.4.1
         with:
-          version: '6.8.3'
+          version: '6.11.3'
+          # Released aqtinstall (3.3.0) cannot read Qt's Windows repository from 6.11 on; drop this once a release can.
+          aqtsource: 'git+https://github.com/miurahr/aqtinstall.git@4c759852b1108cc801d8e24979136b895b5155d4'
           arch: win64_msvc2022_64
           modules: 'qtwebengine qtwebchannel qtpositioning qtshadertools'
           cache: true
       - name: Configure
         shell: pwsh
-        run: >-
-          cmake -S . -B build -G "Visual Studio 17 2022" -A x64
-          -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
-          -DVCPKG_TARGET_TRIPLET=x64-windows -DFUGUE_RELEASE=ON -DFUGUE_OPENMPT=ON -DFUGUE_BUILD_GPU=ON
+        run: |
+          (& ./tools/msvc-env.ps1 | ConvertFrom-Json).PSObject.Properties | ForEach-Object { [Environment]::SetEnvironmentVariable($_.Name, $_.Value, "Process") }
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=cl `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET=x64-windows -DFUGUE_RELEASE=ON -DFUGUE_OPENMPT=ON
       - name: Build
-        run: cmake --build build --config Release --parallel 2
+        shell: pwsh
+        run: |
+          (& ./tools/msvc-env.ps1 | ConvertFrom-Json).PSObject.Properties | ForEach-Object { [Environment]::SetEnvironmentVariable($_.Name, $_.Value, "Process") }
+          cmake --build build --parallel 2
       - name: Test
+        id: tests
         shell: pwsh
         env:
           QT_QPA_PLATFORM: offscreen
@@ -100,30 +133,34 @@ jobs:
           QTWEBENGINE_CHROMIUM_FLAGS: --no-sandbox --disable-gpu
         run: |
           $env:PATH = "$pwd/build/vcpkg_installed/x64-windows/bin;$env:PATH"
-          ctest --test-dir build -C Release -LE gpu --output-on-failure --timeout 120
-      - name: Diagnose a crashing test
-        if: failure()
+          ctest --test-dir build -L portable --no-tests=error --output-on-failure --timeout 120
+      - name: Test GPU profiles on software D3D11
+        id: gpu_tests
+        shell: pwsh
+        env:
+          FUGUE_GPU_SOFTWARE: 1
+        run: |
+          $env:PATH = "$pwd/build/vcpkg_installed/x64-windows/bin;$env:PATH"
+          ctest --test-dir build -L gpu -LE display --no-tests=error --output-on-failure
+      - name: Test host fonts
+        id: font_tests
+        shell: pwsh
+        run: |
+          $env:PATH = "$pwd/build/vcpkg_installed/x64-windows/bin;$env:PATH"
+          $env:FUGUE_FONT_DIR = "$env:WINDIR/Fonts"
+          ctest --test-dir build -L font --no-tests=error --output-on-failure
+      - name: Diagnose failed tests
+        if: failure() && (steps.tests.outcome == 'failure' || steps.gpu_tests.outcome == 'failure' || steps.font_tests.outcome == 'failure')
         shell: pwsh
         env:
           QT_QPA_PLATFORM: offscreen
           FUGUE_AUDIO: none
+          QTWEBENGINE_CHROMIUM_FLAGS: --no-sandbox --disable-gpu
         run: |
-          # A fail-fast exit loses buffered stdout, so run each function on its own and report its exit code.
+          # CTest preserves each failed entry's suite, selected functions and environment.
           $env:PATH = "$pwd/build/vcpkg_installed/x64-windows/bin;$env:PATH"
-          $failed = Get-ChildItem build/Testing/Temporary -Filter 'LastTestsFailed*.log' -ErrorAction SilentlyContinue |
-            Get-Content | ForEach-Object { ($_ -split ':', 2)[1] }
-          $exes = foreach ($t in $failed) {
-            Get-ChildItem build -Recurse -Include "${t}_test.exe", "$t.exe" | Select-Object -First 1
-          }
-          $exes | ForEach-Object {
-            $exe = $_.FullName
-            "=== $exe"
-            foreach ($f in (& $exe -functions | ForEach-Object { $_ -replace '\(\)$', '' })) {
-              $out = & $exe $f -v2 2>&1 | Out-String
-              "== $f exit=$LASTEXITCODE"
-              if ($LASTEXITCODE -ne 0) { $out }
-            }
-          }
+          $env:FUGUE_FONT_DIR = "$env:WINDIR/Fonts"
+          ctest --test-dir build --rerun-failed --verbose --output-on-failure --timeout 120
       - name: Package
         shell: pwsh
         run: ./packaging/windows/package.ps1 -QtDir "$env:QT_ROOT_DIR"
@@ -149,59 +186,7 @@ jobs:
         with:
           files: Fugue-windows-x64.zip
 
-  # The .deb uses the distribution's Qt (Ubuntu 24.04+, Debian 13), so it is built on 24.04, whose glibc is its floor. Its
-  # Qt is 6.4 (Debian 13's is 6.8), older than the GPU renderer needs (6.7), so this package has the CPU renderer only; the
-  # AppImage has both.
-  deb:
-    if: false   # off until the web sandbox tiers land
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install prerequisites
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build pkg-config dpkg-dev \
-            qt6-base-dev qt6-webengine-dev qt6-webchannel-dev \
-            libjpeg-dev zlib1g-dev libopenmpt-dev libgl-dev
-      - name: Configure
-        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release -DFUGUE_RELEASE=ON -DFUGUE_OPENMPT=ON -DFUGUE_STATIC_JPEG=ON -DFUGUE_COMPILE_JOBS=2
-      - name: Build
-        run: ninja -C build -j2 fugue-qt
-      - name: Check the Depends list
-        run: ctest --test-dir build -R deb_depends --output-on-failure
-      - name: Package
-        run: |
-          cpack --config build/CPackConfig.cmake -G DEB -B "$PWD/dist"
-          dpkg-deb --info dist/fugue_*_amd64.deb
-          dpkg-deb --contents dist/fugue_*_amd64.deb
-      - name: Smoke test in clean containers
-        # No user namespaces in a container, so the web sandbox is off here only; on a desktop the package keeps it on.
-        run: |
-          for image in ubuntu:24.04 debian:13; do
-            echo "::group::$image"
-            docker run --rm -v "$PWD/dist:/dist:ro" -e DEBIAN_FRONTEND=noninteractive \
-              -e QT_QPA_PLATFORM=offscreen -e QTWEBENGINE_DISABLE_SANDBOX=1 -e QTWEBENGINE_CHROMIUM_FLAGS=--disable-gpu \
-              "$image" sh -ec '
-                apt-get update -qq
-                apt-get install -y -qq /dist/fugue_*_amd64.deb
-                fugue-qt --version
-                fugue-qt webcheck
-                test -f /usr/share/applications/io.github.toomykins.Fugue.desktop'
-            echo "::endgroup::"
-          done
-      - uses: actions/upload-artifact@v4
-        with:
-          name: fugue-deb
-          path: dist/fugue_*_amd64.deb
-      - name: Attach the package to the release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: dist/fugue_*_amd64.deb
-
-  # The AppImage bundles Qt 6.8 including WebEngine. It is built on the oldest runner image so the glibc it needs (2.35)
+  # The AppImage bundles Qt 6.11 including WebEngine. It is built on the oldest runner image so the glibc it needs (2.35)
   # is old enough for every current distribution; the distribution's own Qt there (6.2) is too old, hence aqtinstall.
   appimage:
     if: false   # off until the web sandbox tiers land
@@ -220,7 +205,9 @@ jobs:
             libxcb-xkb1 libwayland-client0 libwayland-cursor0 libwayland-egl1 libnss3 libasound2 libfontconfig1 libdbus-1-3 libcups2
       - uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125   # v4.4.1
         with:
-          version: '6.8.3'
+          version: '6.11.3'
+          # Released aqtinstall (3.3.0) cannot read Qt's Windows repository from 6.11 on; drop this once a release can.
+          aqtsource: 'git+https://github.com/miurahr/aqtinstall.git@4c759852b1108cc801d8e24979136b895b5155d4'
           arch: linux_gcc_64
           modules: 'qtwebengine qtwebchannel qtpositioning qtserialport qtshadertools'
           cache: true
@@ -256,65 +243,6 @@ jobs:
         with:
           files: dist/Fugue-x86_64.AppImage
 
-  # The experimental GPU renderer's own tests run here; the release builds contain it but skip these tests.
-  gpu-linux:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install prerequisites
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build pkg-config \
-            libjpeg-dev zlib1g-dev libopenmpt-dev libgl-dev libegl-dev libxkbcommon-x11-0 \
-            libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libnss3 xvfb mesa-utils libgl1-mesa-dri
-      - uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125   # v4.4.1
-        with:
-          version: '6.8.3'
-          arch: linux_gcc_64
-          modules: 'qtwebengine qtwebchannel qtpositioning qtshadertools'
-          cache: true
-      - name: Configure
-        run: cmake -G Ninja -S . -B build -DFUGUE_BUILD_GPU=ON -DFUGUE_COMPILE_JOBS=2
-      - name: Build
-        run: ninja -C build -j2
-      - name: Test (GPU on Mesa llvmpipe)
-        env:
-          QT_QPA_PLATFORM: xcb
-          LIBGL_ALWAYS_SOFTWARE: '1'
-          FUGUE_AUDIO: none
-          QTWEBENGINE_CHROMIUM_FLAGS: --no-sandbox --disable-gpu
-        run: xvfb-run -a -s "-screen 0 1400x1000x24" ctest --test-dir build -L gpu --output-on-failure --timeout 300
-
-  gpu-windows:
-    runs-on: windows-2022
-    steps:
-      - uses: actions/checkout@v4
-      - uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125   # v4.4.1
-        with:
-          version: '6.8.3'
-          arch: win64_msvc2022_64
-          modules: 'qtwebengine qtwebchannel qtpositioning qtshadertools'
-          cache: true
-      - name: Configure
-        shell: pwsh
-        run: >-
-          cmake -S . -B build -G "Visual Studio 17 2022" -A x64
-          -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
-          -DVCPKG_TARGET_TRIPLET=x64-windows -DFUGUE_OPENMPT=ON -DFUGUE_BUILD_GPU=ON
-      - name: Build
-        run: cmake --build build --config Release --parallel 2
-      - name: Test (GPU on D3D11 WARP)
-        shell: pwsh
-        env:
-          QT_QPA_PLATFORM: offscreen
-          FUGUE_AUDIO: none
-          QTWEBENGINE_CHROMIUM_FLAGS: --no-sandbox --disable-gpu
-          FUGUE_GPU_TEST_SOFTWARE: '1'
-          FUGUE_GPU_SOFTWARE: '1'
-        run: |
-          $env:PATH = "$pwd/build/vcpkg_installed/x64-windows/bin;$env:PATH"
-          ctest --test-dir build -C Release -L gpu --output-on-failure --timeout 300
-
   flatpak:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: build
@@ -322,7 +250,7 @@ jobs:
     permissions:
       contents: write
     container:
-      image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.10
+      image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.11
       options: --privileged
     steps:
       - uses: actions/checkout@v4

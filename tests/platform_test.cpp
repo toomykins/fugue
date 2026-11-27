@@ -1,4 +1,5 @@
 #include <QtTest>
+#include "tests/testmain.h"
 #include "platform/socket.h"
 
 class PlatformTest : public QObject {
@@ -44,5 +45,5 @@ private slots:
         QCOMPARE(error, EPIPE);
     }
 };
-QTEST_GUILESS_MAIN(PlatformTest)
+FUGUE_TEST_GUILESS_MAIN(PlatformTest)
 #include "platform_test.moc"

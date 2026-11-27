@@ -10,20 +10,18 @@
 #include <functional>
 #include <string>
 
-namespace fugue::render {
-struct Icon;
-}
-
 namespace fugue::shell {
+
+struct DmiIcon;
 
 struct ChatIconLookup {
     enum Status {
         Absent,
         Pending,
         Ready
-    } status = Absent;                   // Absent: no such ordinal; Pending: listed, bytes not here yet
-    std::string bytes;                   // Ready: the resource file (.dmi, .png, ...), unless
-    const render::Icon* icon = nullptr;  // the caller already holds it parsed (or evaluated from a DDMI recipe)
+    } status = Absent;              // Absent: no such ordinal; Pending: listed, bytes not here yet
+    std::string bytes;              // Ready: the resource file (.dmi, .png, ...), unless
+    const DmiIcon* icon = nullptr;  // the caller already holds it decoded (or evaluated from a DDMI recipe)
 };
 
 // `get` answers for a ResourceList ordinal. A tag whose resource is Pending is left as it was and sets *pending, so

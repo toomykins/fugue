@@ -7,9 +7,7 @@
 
 #include <QFontDatabase>
 #include <QFontMetrics>
-#include <QGlyphRun>
 #include <QPainter>
-#include <QRawFont>
 #include <QRegularExpression>
 #include <QStringList>
 #include <QStyleOptionButton>
@@ -51,7 +49,7 @@ Run runOf(const SkinFont& f, const QString& text) {
                                 ? QChar::surrogateToUcs4(text[i], text[i + 1])
                                 : char32_t(text[i].unicode());
         const int n = cp > 0xFFFF ? 2 : 1;
-        const int a = f.bitmap.bitmap ? render::dsBitmapAdvancePx(f.bitmap, cp) : m.horizontalAdvance(text.mid(i, n));
+        const int a = m.horizontalAdvance(text.mid(i, n));
         r.adv.push_back(a);
         r.at.push_back(i);
         r.width += a;
@@ -104,11 +102,7 @@ SkinFont skinControlFont(const std::string& family, const std::string& size, con
     QStringList fams;
     int px = em;
     QFont::StyleHint hint = QFont::SansSerif;
-    if (int h = render::dsBitmapCharHeight(l.toStdString(), em)) {
-        px = h;
-        out.bitmap = render::dsBitmapFace(l.toStdString(), em, bold);
-        out.bitmap.italic = f.italic();
-        // Microsoft Sans Serif, MS Sans Serif's TrueType successor, is not a stand-in: it is about 8% wider.
+    if (isStockFace(l)) {
         if (l == "courier") {
             fams = twinsOf("courier new");
             hint = QFont::Monospace;
@@ -142,8 +136,8 @@ void drawSkinText(QPainter& p, const QRect& r, const SkinFont& f, const QString&
     const QString s = ellipsis ? skinEllipsized(f, text, r.width()) : text;
     const Run run = runOf(f, s);
     const QFontMetrics m(f.font);
-    const int height = f.bitmap.bitmap ? f.bitmap.height : m.height();
-    const int ascent = f.bitmap.bitmap ? f.bitmap.ascent : m.ascent();
+    const int height = m.height();
+    const int ascent = m.ascent();
     const int x0 = align & Qt::AlignLeft    ? r.left()
                    : align & Qt::AlignRight ? r.right() + 1 - run.width
                                             : r.left() + (r.width() - run.width) / 2;
@@ -154,39 +148,7 @@ void drawSkinText(QPainter& p, const QRect& r, const SkinFont& f, const QString&
     p.save();
     p.setClipRect(r, Qt::IntersectClip);
     p.setFont(f.font);
-    if (!f.bitmap.bitmap) {
-        p.drawText(QPoint(x0, base), s);
-        p.restore();
-        return;
-    }
-    const QRawFont raw = QRawFont::fromFont(f.font);
-    QList<quint32> glyphs;
-    QList<QPointF> pos;
-    int x = x0;
-    for (size_t i = 0; i < run.adv.size(); i++) {
-        const int from = run.at[i], n = (i + 1 < run.at.size() ? run.at[i + 1] : s.size()) - from;
-        const QString ch = s.mid(from, n);
-        if (ch != " ") {
-            const QList<quint32> g = raw.isValid() ? raw.glyphIndexesForString(ch) : QList<quint32>();
-            if (g.size() == 1 && g[0]) {
-                glyphs << g[0];
-                pos << QPointF(x, base);
-            } else
-                p.drawText(QPoint(x, base), ch);
-        }
-        x += run.adv[i];
-    }
-    if (!glyphs.isEmpty()) {
-        QGlyphRun gr;
-        gr.setRawFont(raw);
-        gr.setGlyphIndexes(glyphs);
-        gr.setPositions(pos);
-        p.drawGlyphRun(QPointF(0, 0), gr);
-    }
-    if (f.font.underline())
-        p.fillRect(x0, base + std::max(1, m.underlinePos()), run.width, std::max(1, m.lineWidth()), p.pen().color());
-    if (f.font.strikeOut())
-        p.fillRect(x0, base - m.strikeOutPos(), run.width, std::max(1, m.lineWidth()), p.pen().color());
+    p.drawText(QPoint(x0, base), s);
     p.restore();
 }
 

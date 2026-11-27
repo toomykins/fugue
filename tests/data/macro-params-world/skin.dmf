@@ -1,0 +1,28 @@
+macro "default"
+    elem "any"
+        name = "Any"
+        command = "KeyDown [[*]] [[map.mouse-pos]] [[map.size]]"
+    elem "up"
+        name = "Any+UP"
+        command = "KeyUp [[*]] [[map.mouse-pos]] [[map.size]]"
+    elem "pairs"
+        name = "F1"
+        command = "Pairs \"[[map.mouse-pos]]\" \"[[map.size]]\" \"[[main.map.mouse-pos]]\" \"[[MAP.size]]\""
+window "main"
+    elem "main"
+        type = MAIN
+        size = 480x320
+        title = "Macro parameter probe"
+        is-default = true
+        statusbar = false
+        macro = "default"
+    elem "map"
+        type = MAP
+        pos = 30,20
+        size = 300x200
+        is-default = true
+    elem "label"
+        type = LABEL
+        pos = 30,250
+        size = 400x30
+        text = "Outside MAP"

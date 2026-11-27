@@ -1,0 +1,38 @@
+{
+  "engine": "BYOND 516.1688",
+  "mapPixels": [480, 480],
+  "settledPairedEvidence": "build/mob-image-categories/paired.json",
+  "stockSession": "build/probes/20261024T095450Z-79aeaf96",
+  "nativeSession": "build/probes/20261024T100042Z-919c984e",
+  "poses": {
+    "identity": {"maxChannelError": 0},
+    "rotate": {"maxChannelError": 0},
+    "reverse": {"maxChannelError": 0},
+    "shrink": {"maxChannelError": 1},
+    "tint": {"maxChannelError": 0},
+    "alpha": {"maxChannelError": 0}
+  },
+  "clicks": {
+    "coordinates": "zero-based pixel relative to the image's untransformed top-left; both leaf and ordinary-overlay mob targets",
+    "identity": {"pixel": [25, 5], "icon": [26, 27], "vis": null},
+    "rotate": {"pixel": [5, 5], "icon": [28, 27], "vis": [6, 27]},
+    "reverse": {"pixel": [25, 25], "icon": [26, 25], "vis": [26, 7]},
+    "shrink": {"pixel": [20, 10], "icon": [25, 28], "vis": [13, 14]},
+    "routing": "target mob, target turf, main.map; image-only pixels"
+  },
+  "categoryEvidence": "build/mob-image-category-isolated/paired.json",
+  "categorySamples": {
+    "coordinates": [[455, 208], [442, 306]],
+    "meaning": ["hidden other mob's image", "hidden self mob's image"],
+    "normal": [false, false],
+    "SEE_OBJS": [false, false],
+    "SEE_MOBS": [true, true],
+    "SEE_SELF": [false, true],
+    "agreement": "stock and native; admitted samples RGB 40,230,70, hidden samples black"
+  },
+  "limitations": [
+    "Settled poses only; no animate interpolation claim",
+    "Category samples are not whole-crop pixel equality at the noninteger presentation scale",
+    "Earlier category attempts used an unsuitable eye or a negative overlay straddling the visible blocker cell; retained separately, not successful parity evidence"
+  ]
+}

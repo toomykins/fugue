@@ -1,4 +1,11 @@
 #include "app/sessionworker.h"
+#include "net/textmacro.h"
+#include "app/mapframeclock.h"
+#include "shell/turfmap.h"
+#include "shell/entitymap.h"
+#include "shell/mapmenu.h"
+#include "shell/namedmap.h"
+#include "shell/statview.h"
 #include "net/guest.h"
 #include <algorithm>
 #include <chrono>
@@ -11,14 +18,8 @@
 #include <cstdlib>
 #include <ctime>
 #include <filesystem>
-#include <QFile>
-#include <QJsonArray>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include "app/mapcadence.h"
 #include "app/choicefetches.h"
 #include "app/defaultskin.h"
-#include "app/renderthread.h"
 #include "audio/player.h"
 #include "audio/note.h"
 #include "model/browsing.h"
@@ -33,71 +34,19 @@
 #include "pager/target.h"
 #include "proto/enc_c2s_0002_input.h"
 #include "proto/msg.h"
-#include "render/ddmi.h"
-#include "render/mousechain.h"
-#include "render/hittest.h"
-#include "render/scene.h"
 #include "shell/chaticons.h"
-#include "skin/skinfeed.h"
+#include "shell/ttmetrics.h"
+#include <QBuffer>
+#include <QUrlQuery>
 #include "shell/recipefiler.h"
+#include "skin/skinfeed.h"
 #include "skin/winicon.h"
 
 using namespace fugue;
 
 namespace {
-// True while anything on the map is moving at `now` (ns, the map's assembly clock): the eye or an atom gliding, an
-// animate() chain (an atom's or the client's), a flick() still playing, or a particle set on screen still active. Only
-// then does the map need the fast cadence.
-bool mapInMotion(const model::World& w, int64_t now) {
-    auto live = [&](int64_t start, int64_t dur) { return start > 0 && dur > 0 && now < start + dur; };
-    if (w.eyeGliding && live(w.eyeGlide.startNs, w.eyeGlide.durNs)) return true;
-    for (const model::AnimSeq& q : model::animSequences(w.clientChain))
-        if (q.endNs < 0 || now < q.endNs + 1) return true;
-    for (const auto& [id, a] : w.atoms) {
-        if (a.gliding && live(a.glide.startNs, a.glide.durNs)) return true;
-        if (a.animating)
-            for (const model::AnimSeq& q : model::animSequences(a.chain))
-                if (q.endNs < 0 || now < q.endNs + 1) return true;
-    }
-    for (const auto& [id, f] : w.flicks)
-        if (f.startNs > 0 && now - f.startNs < int64_t(5e9)) return true;  // 5 s bounds a flick's length
-    // A particle set drawn within the last second that still spawns or has particles alive.
-    for (const auto& [key, ps] : w.particles)
-        if (ps.drawnNs > 0 && now - ps.drawnNs < int64_t(1e9) && model::particlesActive(ps)) return true;
-    return false;
-}
-
 constexpr int kTickMs = 90;  // the UI tick: chat, stat panel, browse windows
 
-// The INFO control's data: the tab strip, and the selected tab's rows. An atom row carries its icon cell
-// (render::statRowIcon, animated at clockNs).
-shell::StatView buildStatView(const model::Session& m, render::ResStore& res, int64_t clockNs) {
-    const model::World& w = m.world();
-    shell::StatView v;
-    model::VerbPanel panel = model::verbPanel(w);  // once per tick: the strip and the selected tab's rows share it
-    for (const std::string& t : model::statTabs(w, panel)) v.tabs << QString::fromStdString(t);
-    v.selected = w.stat.selected;
-    std::string cat;
-    if (model::verbTabCategory(w, panel, w.stat.selected, cat)) {
-        v.verbTab = true;
-        for (const model::VerbDef& e : panel.byCategory[cat])
-            v.rows.append({QString::fromStdString(e.name), QString(), false});
-    } else {
-        for (const auto& l : w.stat.lines) {
-            model::StatValue sv = model::statValueOf(l.value);
-            proto::enc::AtomRef ref;
-            bool click = model::statRowRef(w, sv, ref);
-            shell::StatRowView r{
-                QString::fromStdString(l.name), QString::fromStdString(model::statText(w, l)), click, {}};
-            std::vector<uint8_t> px;
-            int cell = model::iconSizeOf(w);
-            if (sv.isAtom() && render::statRowIcon(m, res, sv.appid, cell, clockNs, px, l.icon.ns))
-                r.icon = QImage(px.data(), cell, cell, cell * 4, QImage::Format_RGBA8888).copy();
-            v.rows.append(r);
-        }
-    }
-    return v;
-}
 }  // namespace
 
 void SessionWorker::post(Job j) {
@@ -105,18 +54,52 @@ void SessionWorker::post(Job j) {
     if (inbox_.size() < 4096)
         inbox_.push_back(std::move(j));  // bounded, so a stalled session cannot grow it without limit
 }
-void SessionWorker::postMouse(const fugue::shell::MapPointer& p, bool rightClickToWire) {
-    post(MouseJob{p, rightClickToWire});
-}
 void SessionWorker::postCommand(const QString& line, bool promptNull) { post(CmdJob{line.toStdString(), promptNull}); }
 void SessionWorker::postStockMove(int dir) { post(MoveJob{dir}); }
+void SessionWorker::postMapPointer(const shell::MapPointer& pointer) {
+    std::lock_guard<std::mutex> g(inMu_);
+    // Coalesce only consecutive motion on the same rendered identity. Never
+    // coalesce across a target transition, leave, click or other input job.
+    if (pointer.kind == shell::MapPointer::Hover && !inbox_.empty())
+        if (auto* last = std::get_if<MapPointerJob>(&inbox_.back());
+            last && last->pointer.kind == shell::MapPointer::Hover && shell::sameMapTarget(last->pointer, pointer)) {
+            last->pointer = pointer;
+            return;
+        }
+    // The widget hands over every pick and every leave; a leave after a leave says nothing new.
+    if (pointer.kind == shell::MapPointer::Leave && !inbox_.empty())
+        if (auto* last = std::get_if<MapPointerJob>(&inbox_.back()); last && last->pointer.kind == shell::MapPointer::Leave)
+            return;
+    if (inbox_.size() >= 4096) {
+        // A stalled connection must not retain an old server hover. Collapse
+        // excess hover history to a reset followed by the latest observation.
+        std::erase_if(inbox_, [](const Job& j) {
+            const auto* p = std::get_if<MapPointerJob>(&j);
+            return p && (p->pointer.kind == shell::MapPointer::Hover || p->pointer.kind == shell::MapPointer::Leave);
+        });
+        auto leave = pointer;
+        leave.kind = shell::MapPointer::Leave;
+        inbox_.push_back(MapPointerJob{leave});
+    }
+    if (inbox_.size() < 4098) inbox_.push_back(MapPointerJob{pointer});
+}
+void SessionWorker::postStatHover(int row, const std::string& control, int mods, quint64 generation, bool icon,
+                                  int iconX, int iconY) {
+    shell::StatHover h{row, control, generation, icon, iconX, iconY, {bool(mods & 1), bool(mods & 2), bool(mods & 4)}};
+    std::lock_guard<std::mutex> g(inMu_);
+    // Steps within one row say nothing new until the session has taken them: keep the last.
+    if (!inbox_.empty())
+        if (auto* last = std::get_if<StatHoverJob>(&inbox_.back());
+            last && !last->leave && last->hover.row == row && last->hover.generation == generation &&
+            last->hover.control == control) {
+            last->hover = std::move(h);
+            return;
+        }
+    if (inbox_.size() < 4096) inbox_.push_back(StatHoverJob{false, std::move(h)});
+}
+void SessionWorker::postStatHoverLeft() { post(StatHoverJob{true, {}}); }
+void SessionWorker::postMapMenuPick(quint64 token, int index) { post(MapPickJob{token, index}); }
 void SessionWorker::postTopic(const QString& href) { post(TopicJob{href.toStdString()}); }
-void SessionWorker::postMenuQuery(const fugue::shell::MapPointer& p, const QPoint& globalPos) {
-    post(MenuJob{p, globalPos});
-}
-void SessionWorker::postAtomVerb(quint16 verbId, quint8 kind, quint32 ref, bool viaArgument, const QString& atom) {
-    post(AtomVerbJob{verbId, kind, ref, viaArgument, atom.toStdString()});
-}
 void SessionWorker::postPromptAnswer(quint32 id, bool alert, const QString& text) {
     post(PromptJob{id, alert, false, text.toStdString()});
 }
@@ -126,8 +109,8 @@ void SessionWorker::postArgCancel(quint32 id) { post(ArgJob{id, true, {}}); }
 void SessionWorker::postArgNone(quint32 id) { post(ArgJob{id, false, {}, true}); }
 void SessionWorker::postStatTab(int index) { post(StatTabJob{index}); }
 void SessionWorker::postStatRow(int row, const std::string& control, const std::string& button, int mods, bool dbl,
-                                bool icon, int iconX, int iconY) {
-    post(StatRowJob{row, control, button, mods, dbl, icon, iconX, iconY});
+                                quint64 generation, bool icon, int iconX, int iconY) {
+    post(StatRowJob{row, control, button, mods, dbl, generation, icon, iconX, iconY});
 }
 
 void SessionWorker::run() {
@@ -149,6 +132,11 @@ void SessionWorker::run() {
         if (!sameConnection) s = std::make_unique<net::Session>(cfg_, log);
         const auto started = std::chrono::steady_clock::now();
         net::SessionEnding e = runSession(*s, first, sameConnection);
+        if (live_)
+            for (const auto& name : live_->clearRuntimeBrowsers()) {
+                openPopups_.erase(name);
+                emit browseClosed(QString::fromStdString(name));
+            }
         e.afterLink = viaLink;
         viaLink = !linkTarget_.empty();
         if (stop_) return;
@@ -203,6 +191,53 @@ void SessionWorker::noteSessionEnd(const std::string& line) {
 }
 
 net::SessionEnding SessionWorker::runSession(net::Session& s, bool first, bool afterReboot) {
+    ++mapSession_;
+    ++mapMenuToken_;
+    struct MapChoice {
+        model::HitTarget hit;
+        uint32_t verb;
+        bool argument;
+        std::string name;
+        uint16_t key = 0;
+        bool haveKey = false;
+        uint64_t lifetime = 0;
+        std::optional<shell::MapPointer> attachment;
+    };
+    std::vector<MapChoice> mapChoices;
+    int menuZ = 0;
+    emit mapMenuReady(shell::MapMenu{});  // close any popup from the old world
+    emit mapViewSize(0, 0);
+    emit hoverName({});
+    if (mapMetrics_) mapMetrics_->reset();
+    if (mapMailbox_ && mapMailbox_->publish(QImage(), QRect(), 0, 0)) emit mapFrameAvailable();
+    shell::TurfMap turfMap;
+    shell::EntityMap entityMap;
+    struct NamedScene {
+        explicit NamedScene(const QString& name) : scene(name) {}
+        shell::NamedMap scene;
+        shell::NamedMap::Frame last;
+    };
+    std::map<uint64_t, std::unique_ptr<NamedScene>> namedScenes;
+    if (mapRoutes_)
+        for (const auto& route : mapRoutes_->snapshot())
+            if (route.mailbox->publish({}, {}, 0, 0)) emit mapFrameAvailable();
+    shell::MapVisibility mapVisibility;
+    const auto traceSelector = qgetenv("FUGUE_ATOM_TRACE");
+    auto atomTrace = traceSelector.isEmpty()
+                         ? std::optional<shell::AtomTrace>{}
+                         : shell::AtomTrace::parse(traceSelector, qgetenv("FUGUE_ATOM_TRACE_INFO_ROW"));
+    if (!traceSelector.isEmpty() && !atomTrace)
+        std::fprintf(
+            stderr,
+            "[atom-trace] invalid selector; expected obj:<decimal> or mob:<decimal>, optional INFO row 0..65535\n");
+    if (atomTrace) atomTrace->inspectPixels = qgetenv("FUGUE_ATOM_TRACE_PIXELS") == "1";
+    shell::AtomTraceOutput atomTraceOutput;
+    uint64_t diagnosticMapPublication = 0;
+    int diagnosticPublishedSprites = -1;  // no mailbox publication observed yet
+    entityMap.setDiagnostics(atomTrace ? &*atomTrace : nullptr);
+    shell::TurfMap::Frame lastMapFrame;
+    shell::MapSprites lastSprites;
+    int lastViewW = 0, lastViewH = 0;
     auto log = [](const std::string& m) { std::fprintf(stderr, "[session] %s\n", m.c_str()); };
     {
         std::lock_guard<std::mutex> g(inMu_);
@@ -249,87 +284,37 @@ net::SessionEnding SessionWorker::runSession(net::Session& s, bool first, bool a
         pumpResync();
         if (pumpPrompts) pumpPrompts();
     });
-    render::ResStore res;
-    render::SceneCache sceneCache;  // main and auxiliary maps share parsed fields, never resolved placements/resources
-    QFile sceneTrace;
-    const auto sceneTracePath = qEnvironmentVariable("FUGUE_SCENE_TRACE");
-    if (!sceneTracePath.isEmpty()) {
-        sceneTrace.setFileName(sceneTracePath);
-        if (sceneTrace.open(QIODevice::WriteOnly | QIODevice::Truncate))
-            sceneTrace.write(
-                "map,clock_ns,prepare_ms,appearance_ms,appearance_parses,appearance_hits,width,height,layers,success,"
-                "cache_bytes,cache_entries\n");
-        else
-            std::fprintf(stderr, "[scene-trace] cannot open %s: %s\n", qPrintable(sceneTracePath),
-                         qPrintable(sceneTrace.errorString()));
-    }
-    const bool sceneProfile = qEnvironmentVariableIntValue("FUGUE_SCENE_PROFILE") != 0;
-    const bool profilePreparation = sceneProfile || sceneTrace.isOpen();
-    auto sceneLogAt = std::chrono::steady_clock::now();
-    double scenePrepareSum = 0, sceneAppearanceSum = 0;
-    uint64_t sceneSamples = 0, sceneParses = 0, sceneHits = 0;
-    auto tracePreparation = [&](const std::string& id, int64_t clock, double ms, const render::SceneStats& stats,
-                                const render::DrawList& dl, bool ok) {
-        if (sceneTrace.isOpen()) {
-            QByteArray row = '"' + QByteArray::fromStdString(id).replace("\"", "\"\"") + '"';
-            row += ',' + QByteArray::number(qlonglong(clock));
-            for (double v : {ms, stats.appearanceBuildMs}) row += ',' + QByteArray::number(v, 'f', 6);
-            for (uint64_t v : {stats.appearanceParses, stats.appearanceCacheHits})
-                row += ',' + QByteArray::number(qulonglong(v));
-            for (int v : {dl.outW, dl.outH, stats.layers, int(ok)}) row += ',' + QByteArray::number(v);
-            for (size_t v : {sceneCache.retainedBytes(), sceneCache.entries()})
-                row += ',' + QByteArray::number(qulonglong(v));
-            row += '\n';
-            if (sceneTrace.write(row) != row.size()) sceneTrace.close();
-        }
-        if (id.empty()) {
-            scenePrepareSum += ms;
-            sceneAppearanceSum += stats.appearanceBuildMs;
-            ++sceneSamples;
-            sceneParses += stats.appearanceParses;
-            sceneHits += stats.appearanceCacheHits;
-        }
-        const auto now = std::chrono::steady_clock::now();
-        if (now - sceneLogAt >= std::chrono::seconds(1)) {
-            if (sceneProfile && sceneSamples)
-                std::fprintf(
-                    stderr,
-                    "[scene-profile] main prepare=%.3fms appearance=%.3fms parses=%.1f hits=%.1f samples=%llu\n",
-                    scenePrepareSum / sceneSamples, sceneAppearanceSum / sceneSamples,
-                    double(sceneParses) / sceneSamples, double(sceneHits) / sceneSamples,
-                    (unsigned long long)sceneSamples);
-            if (sceneProfile) {  // model table sizes + RSS, for spotting state that only grows
-                const auto& w = m.world();
-                size_t rss = 0;
-                if (FILE* f = std::fopen("/proc/self/statm", "r")) {
-                    unsigned long a = 0, b = 0;
-                    if (std::fscanf(f, "%lu %lu", &a, &b) == 2) rss = b * 4096 / 1048576;
-                    std::fclose(f);
-                }
-                size_t anim = 0;
-                for (const auto& [k, a] : w.atoms) anim += a.animating;
-                size_t tv = 0;
-                for (const auto& [k, v] : w.turfVis) tv += v.size();
-                std::fprintf(stderr,
-                             "[counters] rssMB=%zu app=%zu maxAppid=%u atoms=%zu animating=%zu particles=%zu "
-                             "flicks=%zu imgs=%zu imgChains=%zu turfVis=%zu/%zu tiles=%zu cache=%zu/%zu freed=%zu "
-                             "appErased=%zu appPending=%zu appAsked=%zu cellMobs=%zu cellObjs=%zu refBind=%zu\n",
-                             rss, w.appearances.size(), w.appearances.empty() ? 0u : w.appearances.rbegin()->first,
-                             w.atoms.size(), anim, w.particles.size(), w.flicks.size(), w.images.size(),
-                             w.imageChains.size(), w.turfVis.size(), tv, w.tiles.size(), sceneCache.entries(),
-                             sceneCache.retainedBytes(), w.resync.freed.size(), appearanceGc.erasedTotal(),
-                             appearanceGc.pending(), appearanceGc.asksTotal(), w.cellMobs.size(), w.cellObjs.size(),
-                             w.refBind.size());
-            }
-            if (sceneTrace.isOpen()) sceneTrace.flush();
-            sceneLogAt = now;
-            scenePrepareSum = sceneAppearanceSum = 0;
-            sceneSamples = sceneParses = sceneHits = 0;
-        }
+    net::InputModel im;  // verbs + the mouse subscription mask (Verb / MouseSubs), session thread only
+    shell::MapHover hover;
+    std::string statusName;  // the last hoverName sent
+    auto steadyNs = [] {
+        return int64_t(std::chrono::duration_cast<std::chrono::nanoseconds>(
+                           std::chrono::steady_clock::now().time_since_epoch()).count());
     };
-    net::InputModel im;          // verbs + the mouse subscription mask (Verb / MouseSubs), session thread only
-    render::MouseChain chain;    // press/drag/double-click state, session thread only
-    render::HoverTracker hover;  // one for every map control, as stock keeps one; session thread only
+    auto sendHover = [&] {
+        const auto now = steadyNs();
+        for (auto body = hover.due(now); !body.empty(); body = hover.due(now))  // reports due together, in order
+            s.sendInput(C2S::Command, proto::enc::mouseWireBody(std::move(body), s.wideVerbIds()));
+    };
+    // One hover pick (a map's or the stat panel's) into the session's one record, gated by the MouseSubs bits and the
+    // appearance flags of what it names and of what the last report named.
+    auto updateHover = [&](const shell::MapPointer& p, bool current) {
+        const auto& w = m.world();
+        auto flagsOf = [&](const shell::MapPointer& named) -> uint32_t {
+            std::optional<uint32_t> appid = named.info ? std::optional<uint32_t>(named.infoAppid) : std::nullopt;
+            if (!named.info)
+                if (const auto target = shell::mapPointerTarget(named, w); target) appid = target->appid;
+            if (!appid) return 0;
+            const auto a = w.appearances.find(*appid);
+            return a == w.appearances.end() ? 0 : a->second.fields.appearanceFlags;
+        };
+        shell::MapHover::Gate gate{im.clientHover(), im.clientMove()};
+        if (current && p.kind == shell::MapPointer::Hover) gate.flags = flagsOf(p);
+        if (const auto* last = hover.last()) gate.sentFlags = flagsOf(*last);
+        hover.update(p, current, gate, steadyNs());
+        sendHover();
+    };
+    bool rightPressSent = false;  // the right press in progress went to the wire (shell::mapPopupAction)
     // The live skin: skin and winset traffic goes in, and wingets are answered from it. Shared with the GUI.
     std::shared_ptr<skin::LiveSkin> live = live_ ? live_ : std::make_shared<skin::LiveSkin>();
     skin::SkinFeed feed(live);
@@ -407,10 +392,13 @@ net::SessionEnding SessionWorker::runSession(net::Session& s, bool first, bool a
                                             return true;
                                         },
                                     });
-    MapCadence mapPace;
     s.setObserver([&](uint16_t type, ByteSpan body) {
         if (type == S2C::Resource) return;  // resource-pump frames are not model input
         if (rec_) rec_->s2c(type, body);
+        // The handshake precedes this observer, including on a reboot/relogin.
+        // Set both consumers before the first verb/appearance frame can arrive.
+        im.setWideVerbIds(s.wideVerbIds());
+        m.setWideVerbIds(s.wideVerbIds());
         if (type == S2C::Alert || type == S2C::Input || type == S2C::ExpansionReply || type == S2C::PromptWithdraw ||
             type == S2C::ProbeEcho) {
             // alert()/input() requests, PromptWithdraw, the ExpansionReply to a choices request and the ProbeEcho
@@ -450,18 +438,17 @@ net::SessionEnding SessionWorker::runSession(net::Session& s, bool first, bool a
             }
         }
         im.onFrame(type, body);
-        if (type == S2C::MouseSubs) emit popupMenus(im.showPopupMenus());
         if (type == S2C::Verb) {
             auto snap = std::make_shared<const net::InputModel>(im);
             std::lock_guard<std::mutex> g(verbsMu_);
             verbSnap_ = std::move(snap);
         }
-        // Stamp the frame with the same wall clock the map is assembled at (clockNs below). Without it, glides and
-        // animate() chains start at the model's default clock and snap instead of running.
+        // Timestamp model updates with the current wall clock.
         m.setIngestClockNs(
             std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch())
                 .count());
         m.ingest(type, body);
+        if (type == S2C::Timing) s.wake();  // recompute the map deadline immediately on a client.fps change
         pumpResync();
         if (rec_) {
             const model::World& w = m.world();
@@ -484,7 +471,7 @@ net::SessionEnding SessionWorker::runSession(net::Session& s, bool first, bool a
                 } else {
                     lastBrowse[name] = bf.html;
                     emit browseHtml(QString::fromStdString(name), QString::fromStdString(bf.params),
-                                    QString::fromStdString(bf.html));
+                                    QString::fromStdString(bf.html), live->propertyRevision());
                 }
             }
             syncBrowseNames();
@@ -530,7 +517,6 @@ net::SessionEnding SessionWorker::runSession(net::Session& s, bool first, bool a
             rscWanted.clear();
         }
         framesIngested++;
-        if (mapPace.ingested()) s.wake();  // a still map: draw this frame now, not at the end of the idle wait
     });
     // Main window icon (skin/winicon.h): this world's files by name, and its ResourceList by ordinal.
     skin::IconResolver icon(skin::IconResolver::Env{
@@ -558,7 +544,14 @@ net::SessionEnding SessionWorker::runSession(net::Session& s, bool first, bool a
         if (rec_) rec_->resource(id, name, data);
         icon.noteResource(id, name);
         m.noteResource(id, data, name);
-        if (rsc_ && !render::isDdmi(data.data(), data.size()))
+        // A font file among the world's resources is loaded for its maptext, as stock does (resource type 14 there).
+        // Any font file that arrives counts, a page's own included: taking only ResourceList's type-14 entries did not
+        // load tgstation's lobby face 'Grand9K Pixel' (why was not looked into).
+        if (data.size() > 4 && (!std::memcmp(data.data(), "\0\1\0\0", 4) || !std::memcmp(data.data(), "OTTO", 4) ||
+                                !std::memcmp(data.data(), "true", 4) || !std::memcmp(data.data(), "ttcf", 4)) &&
+            shell::addResourceFont(QByteArray(reinterpret_cast<const char*>(data.data()), qsizetype(data.size()))))
+            std::fprintf(stderr, "[maptext] font from resource %08x %s\n", id, name.c_str());
+        if (rsc_ && !browseRecipes.onResource(id, name, data))
             rsc_->put(id, name, std::string(reinterpret_cast<const char*>(data.data()), data.size()));
         // browse(file(...)) arrives as a resource plus a directive in the offer's params (not as a Browse): open it as
         // a browse window, or file it under the alias a page will ask for.
@@ -573,7 +566,7 @@ net::SessionEnding SessionWorker::runSession(net::Session& s, bool first, bool a
                 log("browse_file \"" + name + "\" -> window " + bp.window + " (" + std::to_string(data.size()) +
                     " bytes)");
                 emit browseHtml(QString::fromStdString(bp.window), QString::fromStdString(opts),
-                                QString::fromStdString(html));
+                                QString::fromStdString(html), live->propertyRevision());
             } else if (std::string alias = model::browseFileAlias(opts); !alias.empty() && rsc_) {
                 rsc_->alias(alias, id);
                 log("browse_file \"" + name + "\" filed as " + alias);
@@ -583,19 +576,28 @@ net::SessionEnding SessionWorker::runSession(net::Session& s, bool first, bool a
             emit outputFile(QString::fromStdString(ctl), QString::fromStdString(std::string(
                                                              reinterpret_cast<const char*>(data.data()), data.size())));
         }
-        std::string err;
-        uint32_t claimed = id;
-        if (!res.add(data, &claimed, &err)) log("resource refused: " + err);
-        if (rsc_) browseRecipes.onResource(id, name, data, res, m.world().resources, *rsc_);
         feed.onResource(id, name, data);  // the skin may arrive as a .dmf resource named by SkinResource
     });
+    shell::MapTextCache textMeasure;
+    s.setTextMeasure(
+        [&](const std::string& text, const std::string& style, uint16_t width) -> std::pair<uint16_t, uint16_t> {
+            // Every request is answered: a refusal resumes the world's proc with null.
+            const auto settings = live->defaultMapTextSettings();
+            bool valid = true;
+            const double points = settings.size.empty() ? 0 : QString::fromStdString(settings.size).toDouble(&valid);
+            textMeasure.setStyle(
+                {QString::fromStdString(settings.style), QString::fromStdString(settings.family), valid ? points : -1});
+            const auto size =
+                textMeasure.measure(QString::fromStdString(net::plainText(text)), QString::fromStdString(style), width);
+            if (size.width() < 0) return {uint16_t(0xffff), uint16_t(0xffff)};
+            return {uint16_t(size.width()), uint16_t(size.height())};
+        });
     // Winget: the skin holds a query until it has a measured layout.
     s.setWingetHandler([&](ByteSpan body) {
         skin::WingetQuery q;
         if (!skin::parseWingetBody(body, q)) return;  // malformed: nothing is sent either
         feed.submitWinget(q, nowMs(), winReply);
     });
-    s.setMapStyleProvider([&] { return feed.live().defaultMapStyle(); });
     net::SessionEnding out;
     out.afterReboot = afterReboot;
     std::string err = afterReboot ? s.relogin() : s.connectAndLogin();
@@ -609,17 +611,80 @@ net::SessionEnding SessionWorker::runSession(net::Session& s, bool first, bool a
     out.loggedIn = true;
 
     uint64_t skinLoadsSeen = 0;
+    uint64_t mapTextSkinGeneration = UINT64_MAX;
     uint64_t chatSeen = 0;
+    shell::StatThumbnails statThumbnails;
     std::optional<shell::StatView> lastStatView;  // none yet: a session's first view replaces the last session's panel
     QString lastName;
     int64_t lastTickNs = 0, lastFrameNs = 0;
-    std::string lastAssembleErr;
-    std::map<std::string, std::string> lastAuxErr;  // per secondary map (render::assembleSecondaryMap)
-    bool dlLogged = false;
     // A line with `\icon` tags waits (in order) for their files; after kChatIconWaitMs the tags are dropped.
     QStringList chatHeld;
     std::optional<std::chrono::steady_clock::time_point> chatHeldSince;
     constexpr int kChatIconWaitMs = 10000;
+    shell::IconCache chatIcons;  // the icons chat lines name, DDMI recipes evaluated
+    // Icons a page asked for by resource reference (BrowseRscStore::wantIcon): each waits up to kChatIconWaitMs for
+    // its file, like a chat icon, and is then answered with nothing.
+    std::deque<std::pair<std::string, std::chrono::steady_clock::time_point>> pageIcons;
+    shell::IconCache pageIconCache;
+    auto servePageIcons = [&] {
+        if (!rsc_) return;
+        const auto nowT = std::chrono::steady_clock::now();
+        for (std::string& key : rsc_->takeWantedIcons()) pageIcons.emplace_back(std::move(key), nowT);
+        if (pageIcons.empty()) return;
+        const model::World& w = m.world();
+        std::vector<uint32_t> wanted;
+        pageIconCache.begin(w.resources, [&](uint32_t id, QByteArray& bytes) {
+            Bytes data;
+            if (!s.resources().readStored(id, data)) {
+                wanted.push_back(id);
+                return false;
+            }
+            bytes = QByteArray(reinterpret_cast<const char*>(data.data()), qsizetype(data.size()));
+            return true;
+        });
+        for (auto it = pageIcons.begin(); it != pageIcons.end();) {
+            const std::string& key = it->first;
+            const bool expired = nowT - it->second > std::chrono::milliseconds(kChatIconWaitMs);
+            const auto mark = key.find('?');
+            const skin::IconRef ref = skin::parseIconRef(key.substr(0, mark));
+            const QUrlQuery query(QString::fromStdString(mark == std::string::npos ? std::string() : key.substr(mark + 1)));
+            std::string png;
+            bool answered = ref.kind != skin::IconRef::Ordinal;
+            if (!answered && ref.ordinal < w.resources.size()) {
+                using Status = shell::IconCache::Status;
+                const auto found = pageIconCache.lookup(ref.ordinal);
+                if (found.ready) {
+                    const shell::DmiIcon& icon = pageIconCache.icon(found.id);
+                    const QString name = query.queryItemValue("state", QUrl::FullyDecoded);
+                    const QString moves = query.queryItemValue("movement").toLower();
+                    const shell::DmiIcon::State* state = nullptr;
+                    if (moves == "true" || moves == "1")
+                        if (const auto moving = icon.moving.find(name); moving != icon.moving.end()) state = &moving->second;
+                    if (!state) state = icon.state(name);
+                    const int dir = query.hasQueryItem("dir") ? query.queryItemValue("dir").toInt() : 2;
+                    const int frame = std::max(1, query.queryItemValue("frame").toInt());
+                    const QImage image = state && !icon.sheet.isNull() ? icon.frame(icon.index(*state, dir ? dir : 2, frame - 1))
+                                                                        : QImage();
+                    if (!image.isNull()) {
+                        QByteArray bytes;
+                        QBuffer buffer(&bytes);
+                        buffer.open(QIODevice::WriteOnly);
+                        image.save(&buffer, "PNG");
+                        png = bytes.toStdString();
+                    }
+                    answered = true;
+                } else if (found.status != Status::Missing && found.status != Status::Deferred &&
+                           found.status != Status::DependencyUnavailable)
+                    answered = true;  // not a picture
+            }
+            if (answered || expired) {
+                rsc_->putIcon(key, std::move(png));
+                it = pageIcons.erase(it);
+            } else
+                ++it;
+        }
+        if (!wanted.empty()) s.resources().prioritize(wanted);
+    };
     auto flushChat = [&] {
         const model::World& w = m.world();
         if (w.chatTotal != chatSeen) {
@@ -632,19 +697,29 @@ net::SessionEnding SessionWorker::runSession(net::Session& s, bool first, bool a
         auto nowT = std::chrono::steady_clock::now();
         if (!chatHeldSince) chatHeldSince = nowT;
         bool expired = nowT - *chatHeldSince > std::chrono::milliseconds(kChatIconWaitMs);
-        // The resource store evaluates a DDMI recipe (a runtime /icon, as stock mints it) against its operand icons.
+        // The icon cache evaluates a DDMI recipe (a runtime /icon, as stock mints it) against its operand icons.
+        std::vector<uint32_t> wanted;
+        chatIcons.begin(w.resources, [&](uint32_t id, QByteArray& bytes) {
+            Bytes data;
+            if (!s.resources().readStored(id, data)) {
+                wanted.push_back(id);
+                return false;
+            }
+            bytes = QByteArray(reinterpret_cast<const char*>(data.data()), qsizetype(data.size()));
+            return true;
+        });
         auto lookup = [&](uint32_t ord) {
             shell::ChatIconLookup l;
-            const auto& list = w.resources;
-            if (ord >= list.size()) return l;
-            uint32_t id = list[ord].first;
-            if (const render::Icon* ic = res.iconResolved(id, list)) {
+            if (ord >= w.resources.size()) return l;
+            using Status = shell::IconCache::Status;
+            const auto found = chatIcons.lookup(ord);
+            const bool waiting = found.status == Status::Missing || found.status == Status::Deferred ||
+                                 found.status == Status::DependencyUnavailable;
+            if (found.ready) {
                 l.status = shell::ChatIconLookup::Ready;
-                l.icon = ic;
-            } else if (!res.refusedRecipes().count(id) && !expired) {
+                l.icon = &chatIcons.icon(found.id);
+            } else if (waiting && !expired) {
                 l.status = shell::ChatIconLookup::Pending;
-                s.resources().prioritize({id});
-                s.resources().prioritize(res.takeWanted());
             }
             return l;
         };
@@ -658,13 +733,14 @@ net::SessionEnding SessionWorker::runSession(net::Session& s, bool first, bool a
             chatHeldSince = nowT;
         }
         if (chatHeld.isEmpty()) chatHeldSince.reset();
+        if (!wanted.empty()) s.resources().prioritize(wanted);
         if (!ready.isEmpty()) emit chatLines(ready);
     };
     // ---- input: everything below runs on this thread, the socket's only writer ----
     // A verb's candidate srcs (model::verbSrcCandidates): client, own mob, the movables it can see, usr.contents,
     // client.screen, turfs in view, the own area. With one candidate the verb is sent; with several, the player is asked
     // (srcChoice), as stock DreamSeeker does.
-    auto srcFor = [&](uint16_t id) {
+    auto srcFor = [&](uint32_t id) {
         std::vector<net::SrcCandidate> out;
         const model::World& w = m.world();
         for (const model::VerbSrcCandidate& c : model::verbSrcCandidates(w, id, true)) {
@@ -688,13 +764,6 @@ net::SessionEnding SessionWorker::runSession(net::Session& s, bool first, bool a
                 {{c.src.kind, c.src.ref}, c.name, !own, std::nullopt, c.rank.dist, c.rank.cell, c.rank.carried});
         }
         return out;
-    };
-    auto sendBodies = [&](const char* what, const std::vector<Bytes>& bodies) {
-        for (const Bytes& b : bodies) {
-            bool ok = s.sendInput(C2S::Command, b);
-            std::fprintf(stderr, "[input] %s: Command sub=%02x len=%zu %s\n", what, b.empty() ? 0 : b[0], b.size(),
-                         ok ? "sent" : "NOT SENT");
-        }
     };
     // Runs a typed or macro command line. A missing argument opens a dialog, as stock DreamSeeker does, rather than
     // printing usage. `line` names the command in the log.
@@ -787,45 +856,11 @@ net::SessionEnding SessionWorker::runSession(net::Session& s, bool first, bool a
             jobs.swap(inbox_);
         }
         for (Job& j : jobs) {
-            if (auto* mj = std::get_if<MouseJob>(&j)) {
-                render::ChainEnv env;
-                env.scene = mj->p.scene.get();
-                // Until the world's MouseSubs arrives, send every hook: an unwanted frame is a no-op, but a
-                // missing one can break the world.
-                env.hooks = im.haveMouseSubs() ? im.hooks() : proto::enc::allMouseHooks();
-                env.rightClickToWire = mj->rightClick;
-                env.control = mj->p.control;
-                env.offMap = mj->p.offMap;
-                env.clientWheel = !im.haveMouseSubs() || im.clientWheel();
-                env.clientHover = im.clientHover();
-                env.clientMove = im.clientMove();
-                std::vector<Bytes> fr;
-                using K = fugue::shell::MapPointer;
-                if (mj->p.kind == K::Wheel) {
-                    sendBodies("mouse-wheel", render::wheelFrames(mj->p.ev, env, mj->p.wheelX, mj->p.wheelY));
-                    continue;
-                }
-                if (mj->p.kind == K::Hover || mj->p.kind == K::Leave) {
-                    fr = mj->p.kind == K::Hover ? hover.at(mj->p.ev, env, mj->p.motion) : hover.leave();
-                    for (const Bytes& b : fr)  // unlogged when sent: a MouseMove world reports every pixel step
-                        if (!s.sendInput(C2S::Command, b))
-                            std::fprintf(stderr, "[input] mouse-hover: len=%zu NOT SENT\n", b.size());
-                    continue;
-                }
-                if (mj->p.kind == K::Press) {
-                    hover.forget();
-                    fr = chain.press(mj->p.ev, env);
-                } else if (mj->p.kind == K::Move)
-                    fr = chain.move(mj->p.ev, env);
-                else
-                    fr = mj->p.pressUnsent ? chain.releaseUnpressed(mj->p.ev, env) : chain.release(mj->p.ev, env);
-                std::string what = std::string("mouse-") +
-                                   (mj->p.kind == K::Press  ? "press"
-                                    : mj->p.kind == K::Move ? "move"
-                                                            : "release") +
-                                   "(" + chain.note() + ")";
-                sendBodies(what.c_str(), fr);
-            } else if (auto* mv = std::get_if<MoveJob>(&j)) {
+            if (auto* mv = std::get_if<MoveJob>(&j)) {
+                // Under client.dir the keys move by the screen: `.north` goes to whatever is drawn at the top (stock
+                // 516.1689, a scratch probe world: EAST sends east, south, west, north for up, right, down, left).
+                const int turn = m.world().clientDir;
+                mv->dir = shell::MapTurn(turn == 4 ? 8 : turn == 8 ? 4 : turn).icon(mv->dir);
                 net::FrameOut f = net::stockMoveFrame(mv->dir);
                 bool ok = s.sendInput(f.type, f.body);
                 std::fprintf(stderr, "[input] move dir=%d: 0x%04x len=%zu %s (sub 0: stock move command)\n", mv->dir,
@@ -854,7 +889,7 @@ net::SessionEnding SessionWorker::runSession(net::Session& s, bool first, bool a
                     }
                     runResult(choice.line + " <- src \"" + aj->text + "\"",
                               im.verbCommand(
-                                  choice.line, m.world().haveSelf, [&](uint16_t) { return picked; }, argAtoms,
+                                  choice.line, m.world().haveSelf, [&](uint32_t) { return picked; }, argAtoms,
                                   choice.promptNull));
                     continue;
                 }
@@ -878,134 +913,6 @@ net::SessionEnding SessionWorker::runSession(net::Session& s, bool first, bool a
                 std::string value = serverList ? net::listPickText(aj->text) : aj->text;
                 runResult(miss.line + " <- \"" + aj->text + "\"",
                           net::InputModel::completeArg(miss, value, m.world().haveSelf, argAtoms));
-            } else if (auto* qj = std::get_if<MenuJob>(&j)) {
-                // Right-click verb menu: hit-test the scene the player saw, then apply the model's eligibility rules
-                // (model/verbmenu.h). One row per atom under the pointer (render::hitStack), topmost first, each with its
-                // icon and a submenu of that atom's verbs.
-                std::vector<render::Hit> hits;
-                if (qj->p.scene) hits = render::hitStack(*qj->p.scene, qj->p.ev.imgX, qj->p.ev.imgY);
-                // The recorder's marker: where the click landed, what the hit test stacked, what the menu offers.
-                auto menuMarker = [&](const QList<MenuAtom>& listed) {
-                    if (!rec_) return;
-                    const render::HitScene* sc = qj->p.scene.get();
-                    const int px = qj->p.ev.imgX, py = qj->p.ev.imgY;
-                    std::string f = "\"px\":" + std::to_string(px) + ",\"py\":" + std::to_string(py);
-                    if (sc && sc->tileW > 0 && sc->tileH > 0)
-                        f += ",\"tile\":[" + std::to_string(sc->originX + px / sc->tileW) + "," +
-                             std::to_string(sc->originY + sc->rows - 1 - py / sc->tileH) + "]";
-                    f += ",\"hits\":[";
-                    for (size_t i = 0; i < hits.size(); i++)
-                        f += (i ? "," : "") + std::string("{\"name\":") + model::Recorder::quote(hits[i].name) +
-                             ",\"kind\":" + std::to_string(hits[i].kind) + ",\"ref\":" + std::to_string(hits[i].ref) +
-                             ",\"x\":" + std::to_string(hits[i].worldX) + ",\"y\":" + std::to_string(hits[i].worldY) +
-                             ",\"screen\":" + (hits[i].screen ? "true" : "false") + "}";
-                    f += "],\"menu\":[";
-                    for (int i = 0; i < listed.size(); i++) {
-                        f += (i ? "," : "") + std::string("{\"atom\":") +
-                             model::Recorder::quote(listed[i].name.toStdString()) + ",\"verbs\":[";
-                        for (int v = 0; v < listed[i].verbs.size(); v++)
-                            f += (v ? "," : "") + model::Recorder::quote(listed[i].verbs[v].name.toStdString());
-                        f += "]}";
-                    }
-                    rec_->marker("menu", f + "]");
-                };
-                if (hits.empty()) {
-                    menuMarker({});
-                    std::fprintf(stderr, "[menu] no atom under the cursor\n");
-                    continue;
-                }
-                std::vector<MenuAtom> stack;
-                std::vector<model::HitTarget> targets;
-                std::vector<size_t> counts;
-                for (const render::Hit& h : hits) {
-                    model::HitTarget ht = model::targetFromHit(m.world(), h.kind, h.ref, h.worldX, h.worldY, h.screen);
-                    MenuAtom ma;
-                    ma.name = QString::fromStdString(h.name);
-                    for (const model::MenuVerb& mv : model::atomMenu(m.world(), ht.appid, ht.target)) {
-                        VerbMenuItem it;
-                        it.name = QString::fromStdString(mv.verb.name);
-                        it.id = mv.verb.id;
-                        it.viaArgument = mv.viaArgument;
-                        it.kind = ht.target.kind;
-                        it.ref = ht.target.kind == model::kTargetTurf ? (uint32_t(std::max(1, ht.target.x) - 1) |
-                                                                         uint32_t(std::max(1, ht.target.y) - 1) << 16)
-                                                                      : ht.target.ref;
-                        it.atom = ma.name;
-                        ma.verbs.append(it);
-                    }
-                    counts.push_back(size_t(ma.verbs.size()));
-                    stack.push_back(std::move(ma));
-                    targets.push_back(ht);
-                }
-                // Stock lists only the atoms that have a verb to offer, and no menu when none does.
-                QList<MenuAtom> atoms;
-                const std::vector<size_t> listed = model::listedMenuAtoms(counts);
-                for (size_t i = 0, next = 0; i < hits.size(); i++) {
-                    if (next >= listed.size() || listed[next] != i) {
-                        std::fprintf(stderr, "[menu] \"%s\": no verbs, not listed\n", hits[i].name.c_str());
-                        continue;
-                    }
-                    next++;
-                    const render::Hit& h = hits[i];
-                    const model::HitTarget& ht = targets[i];
-                    MenuAtom ma = std::move(stack[i]);
-                    int iw = 0, ih = 0;
-                    std::vector<uint8_t> px;
-                    // Drawn from the atom's appearance (render/scene.h appearanceIcon), not from the map layers: those miss
-                    // HUD atoms and carry map-only colour and offsets.
-                    if (render::appearanceIcon(m, res, h.appid, h.dir, iw, ih, px))
-                        ma.icon = QImage(px.data(), iw, ih, iw * 4, QImage::Format_RGBA8888).copy();
-                    std::fprintf(stderr, "[menu] \"%s\" kind=%u ref=%u appid=%u cell=(%d,%d): %d verbs, icon %s\n",
-                                 h.name.c_str(), ht.target.kind, ht.target.ref, ht.appid, ht.target.x, ht.target.y,
-                                 int(ma.verbs.size()),
-                                 ma.icon.isNull() ? "NONE" : (std::to_string(iw) + "x" + std::to_string(ih)).c_str());
-                    atoms.append(std::move(ma));
-                }
-                menuMarker(atoms);
-                if (atoms.isEmpty()) continue;  // no popup when nothing on the tile offers a verb
-                emit verbStackReady(qj->global, atoms);
-            } else if (auto* aj = std::get_if<AtomVerbJob>(&j)) {
-                Bytes body;
-                if (aj->viaArgument) {
-                    // A verb the player carries, taking the atom as its first argument. Its src is the owner of the
-                    // client or own-mob verb section that holds it (model::ownVerbIds).
-                    model::VerbSrc vs;
-                    auto ve = im.verbs().find(aj->verbId);
-                    if (!model::ownVerbSrc(m.world(), aj->verbId, vs) || ve == im.verbs().end()) {
-                        std::fprintf(stderr,
-                                     "[input] atom verb %u via-argument: neither the client nor the own mob carries it "
-                                     "now - not sent\n",
-                                     aj->verbId);
-                        continue;
-                    }
-                    // Sent as [tag 0][kind][ref], or, for a runtime-list argument, as the ListResolve naming the atom
-                    // (net::InputModel::atomArgument).
-                    model::AtomTarget t;
-                    t.kind = aj->kind;
-                    t.ref = aj->ref;
-                    if (t.kind == model::kTargetTurf) {
-                        t.x = int(aj->ref & 0xffff) + 1;
-                        t.y = int(aj->ref >> 16) + 1;
-                    }
-                    std::string text = net::atomArgumentText(aj->atom, model::dmRefOf(m.world(), t));
-                    runResult(ve->second.name + " <- menu \"" + text + "\"",
-                              net::InputModel::atomArgument(ve->second, net::VerbSrc{vs.kind, vs.ref}, aj->kind,
-                                                            aj->ref, text, m.world().haveSelf, aj->atom, argAtoms));
-                    continue;
-                } else if (auto ve = im.verbs().find(aj->verbId); ve != im.verbs().end()) {
-                    // The atom's own verb: the atom is the src (kind 1 obj / 2 mob / 3 turf), and its arguments are
-                    // prompted for as from the stat panel.
-                    runResult(ve->second.name + " <- menu on \"" + aj->atom + "\"",
-                              net::InputModel::atomVerb(ve->second, net::VerbSrc{aj->kind, aj->ref}, aj->atom,
-                                                        m.world().haveSelf, argAtoms));
-                    continue;
-                } else {
-                    body = proto::enc::encodeVerb(aj->verbId, aj->kind, aj->ref, {});
-                }
-                bool ok = s.sendInput(C2S::Command, body);
-                std::fprintf(stderr, "[input] atom verb %u %s kind=%u ref=%u: len=%zu %s\n", aj->verbId,
-                             aj->viaArgument ? "via-argument" : "own-section", aj->kind, aj->ref, body.size(),
-                             ok ? "sent" : "NOT SENT");
             } else if (auto* pj = std::get_if<PromptJob>(&j)) {
                 // Exactly one reply per request. A cancel is sent only where stock DreamSeeker offers one.
                 model::PromptReply rep = pj->cancel  ? prompts.cancel(pj->id)
@@ -1032,12 +939,201 @@ net::SessionEnding SessionWorker::runSession(net::Session& s, bool first, bool a
                 } else {
                     std::fprintf(stderr, "[input] stat tab %d out of range\n", sj->index);
                 }
+            } else if (auto* hj = std::get_if<StatHoverJob>(&j)) {
+                // The stat panel's pointer goes through the same record as the maps' (shell::MapHover).
+                std::optional<shell::MapPointer> p;
+                if (hj->leave) {
+                    p.emplace();
+                    p->kind = shell::MapPointer::Leave;
+                    p->session = mapSession_;
+                } else if (lastStatView) {
+                    p = shell::statHoverPointer(m.world(), *lastStatView, hj->hover, mapSession_);
+                }
+                if (!p) continue;  // picked on a view the panel no longer shows
+                updateHover(*p, true);
+            } else if (auto* pointerJob = std::get_if<MapPointerJob>(&j)) {
+                const auto& p = pointerJob->pointer;
+                const auto& w = m.world();
+                if (p.session != mapSession_) continue;
+                const auto& c = p.click;
+                const bool current = shell::mapPointerCurrent(p, w, mapSession_);
+                if (p.kind == shell::MapPointer::Hover || p.kind == shell::MapPointer::Leave) {
+                    if (p.fromDefaultMap)
+                        if (auto name = current ? shell::mapHoverName(p, w) : std::string(); name != statusName) {
+                            statusName = std::move(name);
+                            emit hoverName(QString::fromStdString(statusName));
+                        }
+                    updateHover(p, current);
+                    continue;
+                }
+                const auto popup = shell::mapPopupAction(p, im.showPopupMenus(), rightPressSent);
+                // A release clears the hover record, unless the verb-menu path takes it (stock 516.1689,
+                // tests/data/hover-world).
+                if ((p.kind == shell::MapPointer::Up || p.kind == shell::MapPointer::Released) &&
+                    shell::mapReleaseForgetsHover(popup))
+                    hover.released();
+                if (p.kind == shell::MapPointer::Released) continue;
+                static const bool traceInput = std::getenv("FUGUE_INPUT_TRACE") != nullptr;
+                if (traceInput) {
+                    uint32_t appid = UINT32_MAX;
+                    if (const auto named = shell::mapPointerTarget(p, w);
+                        named && named->kind != shell::MapPointerTarget::Turf && named->appid)
+                        appid = *named->appid;
+                    if (auto a = w.appearances.find(appid); a != w.appearances.end())
+                        std::fprintf(stderr, "[map-input] appid=%u name=%s appearanceFlags=%08x\n", appid,
+                                     model::plainAtomName(a->second.fields.name).c_str(),
+                                     a->second.fields.appearanceFlags);
+                    const auto& src = p.source ? p.source->click.over : proto::enc::nullRef();
+                    std::fprintf(stderr,
+                                 "[map-input] event=%d current=%d session=%llu z=%d over=%u:%u@%u,%u hud=%d "
+                                 "identity=%llu source=%u:%u params=%s flags=%08x\n",
+                                 int(p.kind), current, static_cast<unsigned long long>(p.session), p.z, c.over.kind,
+                                 c.over.ref, c.over.x, c.over.y, p.screen,
+                                 static_cast<unsigned long long>(p.targetIdentity), src.kind, src.ref,
+                                 proto::enc::clickParams(c).c_str(), im.mouseFlags());
+                }
+                if (p.kind == shell::MapPointer::Down && p.click.button == "right")
+                    rightPressSent = popup == shell::MapPopupAction::None;
+                // A transparent/iconless rectangle can belong to the menu stack
+                // even when there is no ordinary alpha hit. Validate each entry.
+                if (!current && !(popup == shell::MapPopupAction::Open && p.insideScene)) continue;
+                if (popup == shell::MapPopupAction::Open) {
+                    if (p.session != mapSession_ || p.z != w.viewZ || (p.surface && p.surface->expired())) continue;
+                    mapChoices.clear();
+                    shell::MapMenu menu;
+                    menu.token = ++mapMenuToken_;
+                    menu.global = p.global;
+                    menuZ = p.z;
+                    // The recorder's marker: where the click landed, what was stacked there, what the menu offers.
+                    std::string stacked, offered;
+                    {
+                        int group = 0;
+                        for (const auto& entry : shell::mapMenuStack(p, w, mapSession_)) {
+                            const auto& rendered = entry.rendered;
+                            const auto& ref = rendered.click.over;
+                            const auto& hit = entry.hit;
+                            const auto& name = entry.name;
+                            if (rec_)
+                                stacked += (stacked.empty() ? "" : ",") + std::string("{\"name\":") +
+                                           model::Recorder::quote(name) + ",\"kind\":" + std::to_string(ref.kind) +
+                                           ",\"ref\":" + std::to_string(ref.ref) + ",\"x\":" + std::to_string(entry.x) +
+                                           ",\"y\":" + std::to_string(entry.y) +
+                                           ",\"screen\":" + (rendered.screen ? "true" : "false") + "}";
+                            if (name.empty() || entry.verbs.empty()) continue;
+                            // The picture is taken now, from the scene the click was made on: stock's does not
+                            // change while the menu is open.
+                            const QImage icon = shell::mapMenuIcon(rendered);
+                            std::string verbs;
+                            for (const auto& verb : entry.verbs) {
+                                if (mapChoices.size() >= 1024) break;
+                                menu.items.push_back({group, QString::fromStdString(name),
+                                                      QString::fromStdString(model::menuVerbLabel(verb.verb)), icon});
+                                if (rec_) verbs += (verbs.empty() ? "" : ",") + model::Recorder::quote(verb.verb.name);
+                                MapChoice choice{hit, verb.verb.id, verb.viaArgument, name};
+                                choice.attachment = rendered;
+                                if (hit.target.kind != model::kTargetTurf) {
+                                    auto atom =
+                                        w.atoms.find(hit.target.ref |
+                                                     (hit.target.kind == model::kTargetMob ? model::kRegistryA : 0));
+                                    if (atom != w.atoms.end()) {
+                                        choice.key = atom->second.key;
+                                        choice.haveKey = atom->second.haveKey;
+                                        choice.lifetime = atom->second.renderIdentity;
+                                    }
+                                }
+                                mapChoices.push_back(std::move(choice));
+                            }
+                            if (rec_ && !verbs.empty())
+                                offered += (offered.empty() ? "" : ",") + std::string("{\"atom\":") +
+                                           model::Recorder::quote(name) + ",\"verbs\":[" + verbs + "]}";
+                            ++group;
+                        }
+                    }
+                    if (rec_)
+                        rec_->marker("menu", "\"px\":" + std::to_string(p.scenePixel.x()) +
+                                                 ",\"py\":" + std::to_string(p.scenePixel.y()) + ",\"tile\":[" +
+                                                 std::to_string(int(c.loc.x) + 1) + "," +
+                                                 std::to_string(int(c.loc.y) + 1) + "],\"hits\":[" + stacked +
+                                                 "],\"menu\":[" + offered + "]");
+                    emit mapMenuReady(menu);
+                    continue;
+                }
+                auto hooks = im.haveMouseSubs() ? im.hooks() : proto::enc::allMouseHooks();
+                auto event = p;
+                if (event.kind == shell::MapPointer::DoubleClick && !hooks.dblClick && hooks.click)
+                    event.kind = shell::MapPointer::Click;
+                // Popup right input is consumed, including Down/Up: independent
+                // stock receipts contain only a selected menu verb, not mouse hooks.
+                const bool wanted = popup == shell::MapPopupAction::None &&
+                                    shell::mapPointerWanted(event.kind, hooks, im.clientWheel());
+                const bool sent =
+                    wanted &&
+                    s.sendInput(C2S::Command, proto::enc::mouseWireBody(shell::mapPointerBody(event), s.wideVerbIds()));
+                if (traceInput)
+                    std::fprintf(stderr, "[map-input] event=%d wanted=%d sent=%d\n", int(event.kind), wanted, sent);
+            } else if (auto* pick = std::get_if<MapPickJob>(&j)) {
+                if (pick->token != mapMenuToken_ || pick->index < 0 || size_t(pick->index) >= mapChoices.size())
+                    continue;
+                auto choice = mapChoices[size_t(pick->index)];
+                mapChoices.clear();  // one invocation per popup
+                const auto& w = m.world();
+                if (w.viewZ != menuZ ||
+                    (choice.attachment && !shell::mapPointerCurrent(*choice.attachment, w, mapSession_)))
+                    continue;
+                auto& target = choice.hit.target;
+                // The same resolution the menu was built with, against the world as it is now.
+                const auto named =
+                    choice.attachment ? shell::mapPointerTarget(*choice.attachment, w) : std::nullopt;
+                if (!named || !named->appid) continue;
+                choice.hit.appid = *named->appid;
+                if (named->kind == shell::MapPointerTarget::Turf) {
+                    if (named->cell[2] != uint16_t(menuZ)) continue;
+                } else if (named->kind == shell::MapPointerTarget::Atom && !choice.attachment->visHit) {
+                    // A vis_contents member is pinned by the membership validation above, a nullspace child too; its
+                    // menu location remains the rendered holder's cell. An atom on the map follows its own position.
+                    auto atom = w.atoms.find(named->atom);
+                    if (atom == w.atoms.end() || !atom->second.hasPos || atom->second.z != menuZ ||
+                        w.resync.freed.count(atom->first) || atom->second.renderIdentity != choice.lifetime ||
+                        (choice.haveKey && (!atom->second.haveKey || atom->second.key != choice.key)))
+                        continue;
+                    target.x = atom->second.x;
+                    target.y = atom->second.y;
+                    choice.hit.appid = atom->second.appid;
+                }
+                auto offered = model::atomMenu(w, choice.hit.appid, target);
+                if (std::none_of(offered.begin(), offered.end(), [&](const auto& v) {
+                        return v.verb.id == choice.verb && v.viaArgument == choice.argument;
+                    }))
+                    continue;
+                auto verb = im.verbs().find(choice.verb);
+                if (verb == im.verbs().end()) continue;
+                uint32_t ref = target.kind == model::kTargetTurf
+                                   ? uint32_t(target.x - 1) | (uint32_t(target.y - 1) << 16)
+                                   : target.ref;
+                if (choice.argument) {
+                    model::VerbSrc src;
+                    if (!model::ownVerbSrc(w, choice.verb, src)) continue;
+                    const uint32_t dmRef =
+                        target.kind == model::kTargetTurf
+                            ? 0x01000000u | (uint32_t(target.x - 1) + uint32_t(target.y - 1) * uint32_t(w.bounds.maxX) +
+                                             uint32_t(menuZ) * uint32_t(w.bounds.maxX) * uint32_t(w.bounds.maxY))
+                            : model::dmRefOf(w, target);
+                    runResult(choice.name, net::InputModel::atomArgument(verb->second, {src.kind, src.ref}, target.kind,
+                                                                         ref, net::atomArgumentText(choice.name, dmRef),
+                                                                         w.haveSelf, choice.name, argAtoms));
+                } else {
+                    runResult(choice.name, net::InputModel::atomVerb(verb->second, {target.kind, ref}, choice.name,
+                                                                     w.haveSelf, argAtoms));
+                }
             } else if (auto* rj = std::get_if<StatRowJob>(&j)) {
                 const model::World& w = m.world();
                 proto::enc::AtomRef ref;
-                if (rj->row >= 0 && size_t(rj->row) < w.stat.lines.size() &&
+                if (lastStatView && shell::statRowCurrent(w, *lastStatView, rj->row, rj->generation) &&
                     model::statRowRef(w, model::statValueOf(w.stat.lines[size_t(rj->row)].value), ref)) {
                     model::StatRowClick c;
+                    // A click on a row clears the hover record, as one on a map does (stock 516.1689,
+                    // tests/data/hover-world panel pclick: the next step is an over report, MouseMove at the server).
+                    hover.released();
                     c.sub = rj->dbl ? proto::enc::kMouseDblClick : proto::enc::kMouseClick;
                     c.button = rj->button;
                     c.mods.ctrl = rj->mods & 1;
@@ -1049,7 +1145,9 @@ net::SessionEnding SessionWorker::runSession(net::Session& s, bool first, bool a
                     c.iconY = rj->iconY;
                     // Gated by the world's MouseSubs, as a map click is.
                     bool wanted = !im.haveMouseSubs() || (rj->dbl ? im.hooks().dblClick : im.hooks().click);
-                    bool ok = wanted && s.sendInput(C2S::Command, model::statRowClickBody(w, ref, c));
+                    bool ok =
+                        wanted && s.sendInput(C2S::Command, proto::enc::mouseWireBody(
+                                                                model::statRowClickBody(w, ref, c), s.wideVerbIds()));
                     std::fprintf(stderr, "[input] stat row %d \"%s\" %s: over=%u/%u control=%s %s\n", rj->row,
                                  w.stat.lines[size_t(rj->row)].name.c_str(), rj->dbl ? "dblclick" : "click", ref.kind,
                                  ref.ref, c.control.c_str(),
@@ -1068,10 +1166,13 @@ net::SessionEnding SessionWorker::runSession(net::Session& s, bool first, bool a
     };
 
     auto nextTick = std::chrono::steady_clock::now();
-    mapPace.next = nextTick;
-    size_t refusedLogged = 0;
-    uint64_t framesAtLastMap = ~0ull;
-    std::set<uint32_t> refusedSeen;
+    fugue::MapFrameClock mapClock(nextTick);
+    const bool traceFrames = std::getenv("FUGUE_FRAME_TRACE") != nullptr;
+    auto traceAt = nextTick;
+    uint64_t traceRuns = 0, traceMaps = 0, traceMissed = 0;
+    double traceWait = 0, traceActual = 0, traceCompose = 0, traceCompare = 0, traceMaxOver = 0;
+    double traceTerrain = 0, traceEntities = 0;
+    shell::EntityMap::Stats traceEntityStats;
     auto nextAudioLog = std::chrono::steady_clock::now();
     std::string lastAudioLine;
     // Each S2C::ResolveReply answer completes the oldest resolve in flight.
@@ -1143,105 +1244,190 @@ net::SessionEnding SessionWorker::runSession(net::Session& s, bool first, bool a
         s.resources().prioritize(sounds.takeWanted());
         feed.pump(nowMs(),
                   winReply);  // held winget queries: answered the moment the layout is measured, or empty at 3 s
-        {                     // wake for the next map frame, never later than 30 ms (the socket is serviced in between)
-            auto wait =
-                std::chrono::duration_cast<std::chrono::milliseconds>(mapPace.next - std::chrono::steady_clock::now())
-                    .count();
-            s.run(std::chrono::milliseconds(std::clamp<long long>(wait, 1, 30)));
+        auto now = std::chrono::steady_clock::now();
+        mapClock.setTiming(m.world().tickNanos, m.world().frameNanos, now);
+        sendHover();
+        auto wait = mapClock.wait(now, nextTick);
+        if (const auto at = hover.dueAt()) {  // a waiting hover report goes out on its own time
+            const auto left = std::chrono::ceil<std::chrono::milliseconds>(std::chrono::nanoseconds(*at - steadyNs()));
+            wait = std::clamp(left, std::chrono::milliseconds(0), wait);
+        }
+        s.run(wait);
+        if (traceFrames) {
+            double actual = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - now).count();
+            ++traceRuns;
+            traceWait += wait.count();
+            traceActual += actual;
+            traceMaxOver = std::max(traceMaxOver, actual - wait.count());
         }
         feed.pump(nowMs(), winReply);
-        auto now = std::chrono::steady_clock::now();
-        if (now >= mapPace.next) {
-            // The map runs at its own cadence (MapCadence), not the UI tick: a glide or animate() step is drawn at the
-            // instant it is assembled, so the hand-off rate is the motion's frame rate.
-            {
-                int64_t wall = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                                   std::chrono::system_clock::now().time_since_epoch())
-                                   .count();
-                bool fresh = framesIngested.load() != framesAtLastMap;
-                framesAtLastMap = framesIngested.load();
-                mapPace.assembled(now, fresh || mapInMotion(m.world(), wall));
-            }
-            // Map: assemble on this thread (the model's only thread), execute on RenderThread.
-            render::DrawList dl;
-            render::SceneStats ss;
-            ss.profilePreparation = profilePreparation;
-            std::string aerr;
-            int64_t clockNs = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                                  std::chrono::system_clock::now().time_since_epoch())
-                                  .count();
-            if (res.refusedRecipes().size() != refusedLogged) {
-                // An undrawable icon makes its atom invisible: log each refused recipe once.
-                // FUGUE_DUMP_REFUSED=<dir> also writes the refused bytes there.
-                static const QByteArray dumpDir = qgetenv("FUGUE_DUMP_REFUSED");
-                for (const auto& [rid, why] : res.refusedRecipes()) {
-                    if (!refusedSeen.insert(rid).second) continue;
-                    std::fprintf(stderr, "[icon] UNDRAWABLE res %08x: %s\n", rid, why.c_str());
-                    if (!dumpDir.isEmpty())
-                        if (const Bytes* b = res.bytesOf(rid))
-                            if (FILE* f = std::fopen((dumpDir.toStdString() + "/" +
-                                                      QString::number(rid, 16).rightJustified(8, '0').toStdString())
-                                                         .c_str(),
-                                                     "wb")) {
-                                std::fwrite(b->data(), 1, b->size(), f);
-                                std::fclose(f);
-                            }
-                }
-                refusedLogged = res.refusedRecipes().size();
-            }
-            // The default map's style is the maptext sheet (.maptext, .center, .black_outline), shared with MeasureText.
-            const auto prepareStart = std::chrono::steady_clock::now();
-            bool assembled = render::assembleMapControl(m, res, clockNs, dl, ss, &aerr, /*withHit=*/true,
-                                                        feed.live().defaultMapStyle(), &sceneCache);
-            const double prepareMs =
-                std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - prepareStart).count();
-            if (profilePreparation) tracePreparation({}, clockNs, prepareMs, ss, dl, assembled);
-            const bool clientHover =
-                im.clientHover() ||
-                im.clientMove();  // the map widgets post button-less motion only then (MapWidget::wantsHover)
-            // The scene is this thread's own until it is submitted.
-            if (assembled && dl.hit) std::const_pointer_cast<render::HitScene>(dl.hit)->clientHover = clientHover;
-            s.resources().prioritize(res.takeWanted());  // what this frame could not draw loads first
-            if (assembled) {
-                if (!dlLogged) {
-                    dlLogged = true;
-                    log("first draw list " + std::to_string(dl.outW) + "x" + std::to_string(dl.outH) +
-                        " unmodeled=" + ss.summary());
-                }
-                rt_->submit(std::move(dl), prepareMs);
-            } else if (aerr != lastAssembleErr) {
-                lastAssembleErr = aerr;
-                log("assemble: " + aerr);
-            }
-            // The secondary map controls (a .dmf's other MAPs, and the ones a winset created: vg's camera console): one list
-            // each, same clock.
-            for (const std::string& id : feed.live().secondaryMaps()) {
-                render::DrawList al;
-                render::SceneStats as;
-                as.profilePreparation = profilePreparation;
-                std::string e2;
-                const auto auxStart = std::chrono::steady_clock::now();
-                const bool auxAssembled = render::assembleSecondaryMap(m, res, clockNs, id, al, as, &e2,
-                                                                       feed.live().defaultMapStyle(), &sceneCache,
-                                                                       /*withHit=*/true);
-                const double auxMs =
-                    std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - auxStart).count();
-                if (profilePreparation) tracePreparation(id, clockNs, auxMs, as, al, auxAssembled);
-                if (auxAssembled) {
-                    if (al.hit) std::const_pointer_cast<render::HitScene>(al.hit)->clientHover = clientHover;
-                    rt_->submitAux(id, std::move(al), auxMs);
-                    lastAuxErr.erase(id);
-                } else if (auto& last = lastAuxErr[id]; e2 != last) {  // said once per new error, as the main map's
-                    last = e2;
-                    log("assemble " + id + ": " + e2);
-                }
-            }
-            s.resources().prioritize(res.takeWanted());
+        now = std::chrono::steady_clock::now();
+        const model::World& w = m.world();
+        // Timing and map bounds must not wait for the slower chat/stat tick.
+        mapClock.setTiming(w.tickNanos, w.frameNanos, now);
+        if (mapMetrics_) mapMetrics_->setPeriod(mapClock.periodNs());
+        if (w.tickNanos != lastTickNs || w.frameNanos != lastFrameNs) {
+            lastTickNs = w.tickNanos;
+            lastFrameNs = w.frameNanos;
+            emit frameTiming(lastTickNs, lastFrameNs);
         }
+        if (w.bounds.have && (w.bounds.shownW() != lastViewW || w.bounds.shownH() != lastViewH)) {
+            lastViewW = w.bounds.shownW();
+            lastViewH = w.bounds.shownH();
+            emit mapViewSize(lastViewW, lastViewH);
+        }
+
+        if (mapClock.due(now)) {
+            // The default scene uses the default MAP's live stylesheet/font.
+            // Named scenes are prepared independently below, on this worker too.
+            const auto skinGeneration = live->generation();
+            if (mapTextSkinGeneration != skinGeneration) {
+                const auto settings = live->defaultMapTextSettings();
+                bool validSize = true;
+                const double points =
+                    settings.size.empty() ? 0 : QString::fromStdString(settings.size).toDouble(&validSize);
+                entityMap.setMapTextStyle({QString::fromStdString(settings.style),
+                                           QString::fromStdString(settings.family), validSize ? points : -1});
+                mapTextSkinGeneration = skinGeneration;
+            }
+            const int64_t compositionStart = shell::MapMetrics::nowNs();
+            const int64_t renderNs = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                                         std::chrono::system_clock::now().time_since_epoch())
+                                         .count();
+            const auto readMapResource = [&](uint32_t id, QByteArray& bytes) {
+                Bytes data;
+                if (!s.resources().readStored(id, data)) {
+                    rscWanted.push_back(id);
+                    return false;
+                }
+                bytes = QByteArray(reinterpret_cast<const char*>(data.data()), qsizetype(data.size()));
+                return true;
+            };
+            auto map = turfMap.prepare(w, readMapResource, renderNs, false, entityMap.hudMargins());
+            // Admission domain is the tiles the presented source rectangle actually shows,
+            // which a glide can extend one tile beyond the eye-centred nominal view.
+            map.geometry.visibility = mapVisibility.prepare(
+                w, shell::MapVisibility::displayedCells(map.geometry.region, map.geometry.tile,
+                                                      shell::MapTurn(map.geometry.dir).rect(map.source)));
+            const int64_t terrainEnd = traceFrames ? shell::MapMetrics::nowNs() : 0;
+            shell::EntityMap::Stats entityStats;
+            auto sprites =
+                entityMap.prepare(w, map, readMapResource, renderNs, traceFrames ? &entityStats : nullptr, true);
+            const int64_t compositionEnd = shell::MapMetrics::nowNs();
+            const double compositionMs = double(compositionEnd - compositionStart) / 1e6;
+            if (traceFrames) {
+                traceTerrain += double(terrainEnd - compositionStart) / 1e6;
+                traceEntities += double(compositionEnd - terrainEnd) / 1e6;
+                traceEntityStats.candidates += entityStats.candidates;
+                traceEntityStats.visits += entityStats.visits;
+                traceEntityStats.appearanceDecodes += entityStats.appearanceDecodes;
+                traceEntityStats.frameDecodes += entityStats.frameDecodes;
+                traceEntityStats.resourceReads += entityStats.resourceReads;
+                traceEntityStats.traverseMs += entityStats.traverseMs;
+                traceEntityStats.sortMs += entityStats.sortMs;
+                traceEntityStats.pruneMs += entityStats.pruneMs;
+                traceEntityStats.assembleMs += entityStats.assembleMs;
+                traceEntityStats.templateBuilds += entityStats.templateBuilds;
+                traceEntityStats.instanceUpdates += entityStats.instanceUpdates;
+                traceEntityStats.culled += entityStats.culled;
+                traceEntityStats.sortedSprites += entityStats.sortedSprites;
+                traceEntityStats.sceneReuses += entityStats.sceneReuses;
+            }
+            const int64_t compareStart = shell::MapMetrics::nowNs();
+            map.geometry.session = mapSession_;
+            if (map.image.cacheKey() != lastMapFrame.image.cacheKey() || map.source != lastMapFrame.source ||
+                map.geometry != lastMapFrame.geometry || sprites != lastSprites) {
+                lastMapFrame = map;
+                lastSprites = sprites;
+                if (mapMailbox_) {
+                    if (mapMailbox_->publish(map.image, map.source, compositionStart, shell::MapMetrics::nowNs(),
+                                             map.geometry, sprites))
+                        emit mapFrameAvailable();
+                    if (atomTrace) {
+                        ++diagnosticMapPublication;
+                        diagnosticPublishedSprites = 0;
+                        for (const auto& sprite : sprites)
+                            if (sprite.atom == atomTrace->key && sprite.targetIdentity == atomTrace->map.lifetime &&
+                                (sprite.kind == shell::MapSprite::Entity || sprite.kind == shell::MapSprite::Master))
+                                ++diagnosticPublishedSprites;
+                    }
+                }
+            }
+            // Each subscription owns independent caches, master/target selection,
+            // immutable publication and GUI composition. Never retain the mailbox:
+            // its last GUI owner disappearing retires the worker scene next tick.
+            std::set<uint64_t> activeMaps;
+            if (mapRoutes_)
+                for (const auto& route : mapRoutes_->snapshot()) {
+                    activeMaps.insert(route.id);
+                    auto& state = namedScenes[route.id];
+                    if (!state) state = std::make_unique<NamedScene>(route.name);
+                    const auto namedStart = shell::MapMetrics::nowNs();
+                    const auto frame = state->scene.prepare(w, readMapResource, renderNs, mapSession_);
+                    const auto namedEnd = shell::MapMetrics::nowNs();
+                    route.mailbox->metrics()->setPeriod(mapClock.periodNs());
+                    route.mailbox->metrics()->composed(double(namedEnd - namedStart) / 1e6, 0);
+                    const auto& old = state->last;
+                    if (frame.terrain.image.cacheKey() != old.terrain.image.cacheKey() ||
+                        frame.terrain.source != old.terrain.source || frame.terrain.geometry != old.terrain.geometry ||
+                        frame.sprites != old.sprites) {
+                        state->last = frame;
+                        if (route.mailbox->publish(frame.terrain.image, frame.terrain.source, namedStart, namedEnd,
+                                                   frame.terrain.geometry, frame.sprites))
+                            emit mapFrameAvailable();
+                    }
+                }
+            std::erase_if(namedScenes, [&](const auto& entry) { return !activeMaps.count(entry.first); });
+            now = std::chrono::steady_clock::now();
+            const uint64_t missed = mapClock.completed(now);
+            if (mapMetrics_) mapMetrics_->composed(compositionMs, missed);
+            if (traceFrames) {
+                ++traceMaps;
+                traceMissed += missed;
+                traceCompose += compositionMs;
+                traceCompare += double(shell::MapMetrics::nowNs() - compareStart) / 1e6;
+            }
+        }
+        if (traceFrames && now - traceAt >= std::chrono::seconds(1)) {
+            double seconds = std::chrono::duration<double>(now - traceAt).count();
+            // map/s counts frames composed here; shown/s the map frames that reached the screen: the window had
+            // composed them and handed them on for display (QRhiWidget::frameSubmitted, counted by the map widget).
+            const double shown = mapMetrics_ ? mapMetrics_->snapshot().submittedPerSecond : 0;
+            std::fprintf(stderr,
+                         "[frame-trace] target=%.1f map/s=%.1f shown/s=%.1f missed/s=%.1f compose=%.3fms compare=%.3fms "
+                         "waits=%llu requested=%.3fms actual=%.3fms max-over=%.3fms\n",
+                         1e9 / mapClock.periodNs(), traceMaps / seconds, shown, traceMissed / seconds,
+                         traceMaps ? traceCompose / traceMaps : 0, traceMaps ? traceCompare / traceMaps : 0,
+                         static_cast<unsigned long long>(traceRuns), traceRuns ? traceWait / traceRuns : 0,
+                         traceRuns ? traceActual / traceRuns : 0, traceMaxOver);
+            std::fprintf(stderr,
+                         "[scene-trace] view=%dx%d atoms=%zu appearances=%zu sprites=%lld terrain=%.3fms "
+                         "entities=%.3fms cache=%dx%d\n",
+                         w.bounds.viewW, w.bounds.viewH, w.atoms.size(), w.appearances.size(),
+                         static_cast<long long>(lastSprites.size()), traceMaps ? traceTerrain / traceMaps : 0,
+                         traceMaps ? traceEntities / traceMaps : 0, lastMapFrame.image.width(),
+                         lastMapFrame.image.height());
+            const double attempts = double(std::max<uint64_t>(1, traceMaps));
+            std::fprintf(stderr,
+                         "[entity-trace] candidates=%.0f visits=%.0f culled=%.0f templates=%.1f instances=%.1f "
+                         "sorted=%.0f reuse/s=%.1f traverse=%.3fms sort=%.3fms assemble=%.3fms prune=%.3fms "
+                         "appearance-decodes/s=%.1f frame-decodes/s=%.1f resource-reads/s=%.1f\n",
+                         traceEntityStats.candidates / attempts, traceEntityStats.visits / attempts,
+                         traceEntityStats.culled / attempts, traceEntityStats.templateBuilds / attempts,
+                         traceEntityStats.instanceUpdates / attempts, traceEntityStats.sortedSprites / attempts,
+                         traceEntityStats.sceneReuses / seconds, traceEntityStats.traverseMs / attempts,
+                         traceEntityStats.sortMs / attempts, traceEntityStats.assembleMs / attempts,
+                         traceEntityStats.pruneMs / attempts, traceEntityStats.appearanceDecodes / seconds,
+                         traceEntityStats.frameDecodes / seconds, traceEntityStats.resourceReads / seconds);
+            traceEntityStats = {};
+            traceAt = now;
+            traceRuns = traceMaps = traceMissed = 0;
+            traceWait = traceActual = traceCompose = traceCompare = traceMaxOver = 0;
+            traceTerrain = traceEntities = 0;
+        }
+
         if (now < nextTick) continue;
         nextTick = now + std::chrono::milliseconds(kTickMs);
-        const model::World& w = m.world();
-
         // Tell the GUI once when the skin (SkinText, or the .dmf resource SkinResource names) has loaded.
         if (feed.counters().skinLoads != skinLoadsSeen) {
             skinLoadsSeen = feed.counters().skinLoads;
@@ -1251,11 +1437,6 @@ net::SessionEnding SessionWorker::runSession(net::Session& s, bool first, bool a
         if (QString n = QString::fromStdString(w.name); n != lastName) {
             lastName = n;
             emit worldName(n);
-        }
-        if (w.tickNanos != lastTickNs || w.frameNanos != lastFrameNs) {
-            lastTickNs = w.tickNanos;
-            lastFrameNs = w.frameNanos;
-            emit frameTiming(lastTickNs, lastFrameNs);
         }
         // The main window icon is re-resolved when its value changes, and on every tick until its file arrives.
         if (skin::IconResolver::Out io; icon.update(feed.live().mainIcon(), io)) {
@@ -1267,6 +1448,7 @@ net::SessionEnding SessionWorker::runSession(net::Session& s, bool first, bool a
         s.resources().prioritize(icon.takeWanted());
 
         flushChat();
+        servePageIcons();
         // Audio status is logged only when it changes.
         if (now >= nextAudioLog) {
             nextAudioLog = now + std::chrono::seconds(5);
@@ -1283,19 +1465,59 @@ net::SessionEnding SessionWorker::runSession(net::Session& s, bool first, bool a
                             " sink=" + player.sinkName());
             }
         }
-        int64_t statClock =
+        if (rsc_)
+            browseRecipes.pump(
+                w.resources,
+                [&](uint32_t id, QByteArray& bytes) {
+                    Bytes data;
+                    if (!s.resources().readStored(id, data)) {
+                        rscWanted.push_back(id);
+                        return false;
+                    }
+                    bytes = QByteArray(reinterpret_cast<const char*>(data.data()), qsizetype(data.size()));
+                    return true;
+                },
+                *rsc_);
+        statThumbnails.begin(
+            m.world(),
+            [&](uint32_t id, QByteArray& bytes) {
+                Bytes data;
+                if (!s.resources().readStored(id, data)) {
+                    rscWanted.push_back(id);
+                    return false;
+                }
+                bytes = QByteArray(reinterpret_cast<const char*>(data.data()), qsizetype(data.size()));
+                return true;
+            },
             std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch())
-                .count();
-        if (shell::StatView sv = buildStatView(m, res, statClock); !lastStatView || !(sv == *lastStatView)) {
+                .count());
+        if (shell::StatView sv = shell::buildStatView(m.world(), statThumbnails, atomTrace ? &*atomTrace : nullptr);
+            !lastStatView || !(sv == *lastStatView)) {
+            sv.generation = ++statGeneration_;
             lastStatView = sv;
             emit statView(sv);
+        }
+        if (atomTrace) {
+            const auto record = atomTraceOutput.sample(
+                *atomTrace, mapSession_, diagnosticMapPublication, diagnosticPublishedSprites,
+                lastStatView ? lastStatView->generation : 0,
+                std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count(),
+                mapMailbox_ ? &lastSprites : nullptr,
+                lastStatView && atomTrace->infoRow && *atomTrace->infoRow < unsigned(lastStatView->rows.size())
+                    ? &lastStatView->rows[int(*atomTrace->infoRow)].thumbnail
+                    : nullptr);
+            if (!record.isEmpty()) {
+                std::fputs("[atom-trace] ", stderr);
+                std::fwrite(record.constData(), 1, size_t(record.size()), stderr);
+                std::fflush(stderr);
+            }
         }
         for (const auto& [name, b] : w.browsers) {
             auto it = lastBrowse.find(name);
             if (it == lastBrowse.end() || it->second != b.html) {
                 lastBrowse[name] = b.html;
                 emit browseHtml(QString::fromStdString(name), QString::fromStdString(b.params),
-                                QString::fromStdString(b.html));
+                                QString::fromStdString(b.html), live->propertyRevision());
             }
         }
         for (auto it = lastBrowse.begin(); it != lastBrowse.end();) {
@@ -1309,7 +1531,7 @@ net::SessionEnding SessionWorker::runSession(net::Session& s, bool first, bool a
              live->cloneActions(cloneOpen)) {  // a winclone()d window: open while shown and holding a page
             if (a.open)
                 emit browseHtml(QString::fromStdString(a.name), QString::fromStdString(a.params),
-                                QString::fromStdString(a.html));
+                                QString::fromStdString(a.html), live->propertyRevision());
             else
                 emit browseClosed(QString::fromStdString(a.name));
         }

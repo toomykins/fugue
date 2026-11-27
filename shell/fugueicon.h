@@ -23,8 +23,7 @@ QIcon fugueIcon();
 // The same PNGs as (size, bytes), for an install into hicolor (pager -install-desktop).
 std::vector<std::pair<int, QByteArray>> fugueIconPngs();
 
-// A skin icon file's bytes -> the picture DreamSeeker shows (skin/winicon.h): a .dmi (a PNG carrying DMI
-// metadata) is its first state's first frame; any other image (png, ico, bmp, jpg, gif) is itself. Null = undecodable.
+// Decode a skin icon using Qt's image formats. Null = undecodable.
 QImage skinIconImage(const QByteArray& bytes);
 
 }  // namespace fugue::shell

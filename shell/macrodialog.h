@@ -19,8 +19,6 @@ class QMenuBar;
 
 namespace fugue::shell {
 
-class DisplaySettings;
-
 // One entry's editor. Splits a spec into key + modifier boxes and joins it back: CTRL+SHIFT+ALT+KEY[+REP][+UP].
 class MacroEditDialog : public QDialog {
     Q_OBJECT
@@ -66,22 +64,21 @@ private:
     QCheckBox* scope_;
 };
 
-// The stock Client menu, reduced to the items this client implements: Screenshot..., Reconnect, Macros..., Quit. Each
-// runs its client command (`.screenshot`, `.reconnect`, `.macros`, `.quit`) through `run`. A GPU build adds `display`'s
-// renderer and performance-metrics entries before Quit.
+// The stock Client menu, reduced to Screenshot..., Reconnect, Macros..., Quit.
 void addClientMenuItems(QMenu* client, const std::function<void(const QString&)>& run,
-                        DisplaySettings* display = nullptr);
+                        const std::function<void(bool)>& metrics = {}, bool metricsVisible = false);
 // The entries the game window's system menu gets: "Options & Messages" (`.options`) and the Client menu.
-void addSystemMenuItems(QMenu* m, const std::function<void(const QString&)>& run, DisplaySettings* display = nullptr);
+void addSystemMenuItems(QMenu* m, const std::function<void(const QString&)>& run,
+                        const std::function<void(bool)>& metrics = {}, bool metricsVisible = false);
 
 // The "Options and Messages" window, reduced to a menu bar with the Client menu (addClientMenuItems).
 class OptionsWindow : public QDialog {
     Q_OBJECT
 public:
-    explicit OptionsWindow(QWidget* parent = nullptr, DisplaySettings* display = nullptr);
+    explicit OptionsWindow(QWidget* parent = nullptr);
     QMenuBar* menuBar() const { return bar_; }
 signals:
-    void command(const QString& cmd);  // ".macros" or ".quit", routed like a menu item's command
+    void command(const QString& cmd);  // routed like a skin menu item's client command
 private:
     QMenuBar* bar_;
 };

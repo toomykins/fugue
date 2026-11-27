@@ -6,6 +6,7 @@
 // `parsePair` reads `%2c` as the comma it encodes (skin/winset.h). The store is a plain value (copyable); LiveSkin
 // (skin/liveskin.h) owns the one that matters and hands the GUI a COPY, so no reader ever races a writer.
 #pragma once
+#include <cstdint>
 #include <map>
 #include <string>
 #include <string_view>
@@ -20,6 +21,9 @@ class PropStore {
 public:
     void set(const std::string& target, const std::string& key, const std::string& val);
     bool get(const std::string& target, const std::string& key, std::string& out) const;
+    // Every accepted set is a write, even if its text is unchanged. Copies retain these stamps; no event log.
+    uint64_t revision(const std::string& target, const std::string& key) const;
+    uint64_t revision() const { return revision_; }
     void erase(const std::string& target, const std::string& key);
     void eraseTarget(const std::string& target);  // every key of one target (a destroyed runtime control)
     // window-qualified spelling first, then the bare elem name.
@@ -36,7 +40,12 @@ public:
     void clear() { p_.clear(); }
 
 private:
-    std::map<std::string, std::map<std::string, std::string>> p_;
+    struct Value {
+        std::string text;
+        uint64_t revision;
+    };
+    std::map<std::string, std::map<std::string, Value>> p_;
+    uint64_t revision_ = 0;  // do not reuse stamps after clear()/erase()
 };
 
 }  // namespace fugue::skin

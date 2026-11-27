@@ -1,0 +1,142 @@
+[
+  {
+    "phase": "shown",
+    "visible": "true",
+    "title": "Visibility Fixture",
+    "pings": 0,
+    "closes": 0,
+    "native_popups": [
+      "Visibility Fixture"
+    ]
+  },
+  {
+    "phase": "world-hidden",
+    "visible": "false",
+    "title": "Visibility Fixture",
+    "pings": 0,
+    "closes": 0,
+    "native_popups": []
+  },
+  {
+    "phase": "hidden-page-called",
+    "visible": "false",
+    "title": "Visibility Fixture",
+    "pings": 1,
+    "closes": 0,
+    "native_popups": []
+  },
+  {
+    "phase": "page-shown",
+    "visible": "true",
+    "title": "Visibility Fixture",
+    "pings": 1,
+    "closes": 0,
+    "native_popups": [
+      "Visibility Fixture"
+    ]
+  },
+  {
+    "phase": "unrelated-write",
+    "visible": "true",
+    "title": "Visibility Fixture",
+    "pings": 1,
+    "closes": 0,
+    "native_popups": [
+      "Visibility Fixture"
+    ]
+  },
+  {
+    "phase": "same-world-hide",
+    "visible": "false",
+    "title": "Visibility Fixture",
+    "pings": 1,
+    "closes": 0,
+    "native_popups": []
+  },
+  {
+    "phase": "rebrowse",
+    "visible": "true",
+    "title": "Visibility Fixture",
+    "pings": 1,
+    "closes": 0,
+    "native_popups": [
+      "Visibility Fixture"
+    ]
+  },
+  {
+    "phase": "world-shown",
+    "visible": "true",
+    "title": "Visibility Fixture",
+    "pings": 1,
+    "closes": 0,
+    "native_popups": [
+      "Visibility Fixture"
+    ]
+  },
+  {
+    "phase": "page-hidden",
+    "visible": "false",
+    "title": "Visibility Fixture",
+    "pings": 1,
+    "closes": 0,
+    "native_popups": []
+  },
+  {
+    "phase": "same-world-show",
+    "visible": "true",
+    "title": "Visibility Fixture",
+    "pings": 1,
+    "closes": 0,
+    "native_popups": [
+      "Visibility Fixture"
+    ]
+  },
+  {
+    "phase": "world-title",
+    "visible": "true",
+    "title": "World",
+    "pings": 1,
+    "closes": 0,
+    "native_popups": [
+      "World"
+    ]
+  },
+  {
+    "phase": "page-title",
+    "visible": "true",
+    "title": "Page",
+    "pings": 1,
+    "closes": 0,
+    "native_popups": [
+      "Page"
+    ]
+  },
+  {
+    "phase": "unrelated-title",
+    "visible": "true",
+    "title": "Page",
+    "pings": 1,
+    "closes": 0,
+    "native_popups": [
+      "Page"
+    ]
+  },
+  {
+    "phase": "same-world-title",
+    "visible": "true",
+    "title": "World",
+    "pings": 1,
+    "closes": 0,
+    "native_popups": [
+      "World"
+    ]
+  },
+  {
+    "phase": "closed",
+    "visible": "false",
+    "title": "",
+    "pings": 1,
+    "closes": 0,
+    "native_popups": []
+  }
+]

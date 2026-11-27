@@ -1,0 +1,17 @@
+window "main"
+    elem "main"
+        type = MAIN
+        size = 384x256
+        is-default = true
+        statusbar = false
+    elem "map"
+        type = MAP
+        size = 384x256
+        anchor1 = 0,0
+        anchor2 = 100,100
+        is-default = true
+        zoom = 0
+        zoom-mode = normal
+        font-family = "Arial"
+        font-size = 6
+        style = "img.icon { width:auto; height:auto } .outlined { -dm-text-outline:1px black } .caption { font-family:Arial; font-size:8px; color:lime; line-height:1.0; -dm-text-outline:1px black }"

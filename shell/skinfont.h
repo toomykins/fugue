@@ -1,10 +1,4 @@
-// skinfont: the font of a skin control (BUTTON, LABEL, INPUT, INFO) from its font-family, font-size and font-style,
-// and button and label text laid out the way stock DreamSeeker lays it out.
-//
-// Stock creates a GDI font per control: font-size is points at 96 dpi (unset or 0 is 9pt); no family or
-// `sans-serif` is the bitmap "MS Sans Serif", `monospace` the bitmap "Courier"; a family list takes the first that exists.
-// A bitmap face is drawn in a TrueType stand-in at the character height of the strike GDI picks, with text placed at the
-// strike's own advance widths so it is as wide as stock's whatever the stand-in.
+// Qt fonts for skin controls, selected from font-family, font-size and font-style.
 #pragma once
 #include <string>
 #include <QFont>
@@ -12,15 +6,12 @@
 #include <QPushButton>
 #include <QString>
 
-#include "render/dsmaptext.h"
-
 class QPainter;
 
 namespace fugue::shell {
 
 struct SkinFont {
     QFont font;
-    render::DsFace bitmap;
 };
 
 SkinFont skinControlFont(const std::string& family, const std::string& size, const std::string& style);

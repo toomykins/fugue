@@ -30,7 +30,8 @@ struct VerbArgSpec {
     uint8_t filter = 0, filterKind = 0;
 };
 struct VerbEntry {
-    uint16_t id = 0;
+    uint32_t id = 0;
+    bool wideId = false;
     std::string name, desc, category;
     uint8_t head = 0, src = 0, flags = 0;
     std::vector<VerbArgSpec> args;
@@ -59,7 +60,7 @@ struct SrcCandidate {
     VerbSrc src;
     std::string name;
     bool named = false;
-    std::optional<uint16_t> verb = std::nullopt;
+    std::optional<uint32_t> verb = std::nullopt;
     int dist = 0, cell = -1, carried = -1;
 };
 // A verb whose command line ran out before its arguments did. DreamSeeker does not refuse such a line: it opens a dialog
@@ -148,6 +149,7 @@ bool parseListResolveReply(ByteSpan b, uint8_t& kind, uint32_t& value);
 class InputModel {
 public:
     // Feed every s2c frame (plain body). Cheap; ignores types it does not need.
+    void setWideVerbIds(bool wide) { wideVerbIds_ = wide; }
     void onFrame(uint16_t type, ByteSpan body);
 
     bool haveMouseSubs() const { return haveSubs_; }
@@ -157,12 +159,12 @@ public:
     bool clientWheel() const { return extra_ & kMouseExtraWheel; }
     // client.show_popup_menus; DreamDaemon resends MouseSubs whenever it changes.
     bool showPopupMenus() const { return !(flags_ & kMouseFlagNoPopupMenus); }
-    // The world declares a client hover proc: stock reports every change of the atom under the pointer (render::HoverTracker).
+    // The world declares a client hover proc: stock reports every change of the atom under the pointer through its hover subscription.
     bool clientHover() const { return flags_ & kMouseFlagHover; }
     // The world declares client/MouseMove: stock also reports every pointer step over any atom.
     bool clientMove() const { return extra_ & kMouseExtraMove; }
 
-    const std::map<uint16_t, VerbEntry>& verbs() const { return verbs_; }
+    const std::map<uint32_t, VerbEntry>& verbs() const { return verbs_; }
     const VerbEntry* verbByName(const std::string& name) const;  // case-insensitive exact
     // The verb a command line names, and the rest of the line in `rest`. *firstWord: named by the first word.
     const VerbEntry* matchVerb(const std::string& line, std::string& rest, bool* firstWord = nullptr) const;
@@ -173,7 +175,7 @@ public:
     // The verb's candidate srcs (model::verbSrcCandidates), asked for every verb id of the typed name. None: nothing is
     // sent and nothing shown. Otherwise one id and src is picked (input.cpp, srcBetter) and goes out under the id it
     // carries, or the player is asked which (`srcChoice`) when only atoms the line would have to name carry it.
-    using SrcResolver = std::function<std::vector<SrcCandidate>(uint16_t verbId)>;
+    using SrcResolver = std::function<std::vector<SrcCandidate>(uint32_t verbId)>;
     // The atoms a typed atom argument may name (model::verbArgCandidates), or nullopt for an argument DreamSeeker does
     // not resolve itself (text, num, `in world`, a runtime list). A token names a candidate by its whole name or its
     // last words, with `-` for a space and a backslashed character matching only itself (atomTyped's table). A
@@ -221,7 +223,8 @@ public:
     void clearListReplies() { listReplies_.clear(); }
 
 private:
-    std::map<uint16_t, VerbEntry> verbs_;
+    std::map<uint32_t, VerbEntry> verbs_;
+    bool wideVerbIds_ = false;
     std::deque<std::pair<uint8_t, uint32_t>> listReplies_;
     bool haveSubs_ = false;
     uint32_t flags_ = 0, extra_ = 0;

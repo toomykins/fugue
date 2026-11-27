@@ -2,9 +2,11 @@
 // through byond:// navigations and cef_to_byond, and is called by the server through pageCall(). DOM state is read back with
 // runJavaScript; nothing here compares pixels.
 #include <cmath>
+#include <memory>
 #include <QApplication>
 #include <QElapsedTimer>
 #include <QFile>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QNetworkAccessManager>
@@ -15,13 +17,15 @@
 #include <QTemporaryDir>
 #include <QWebEngineProfile>
 #include <QtTest>
+#include "tests/testmain.h"
 #include <QLineEdit>
 #include "shell/browsehost.h"
 #include "shell/localorigin.h"
 #include "shell/focusfilter.h"
+#include "shell/inputrouter.h"
 #include "shell/skinsync.h"
 #include "shell/skinwindow.h"
-#include "app/renderthread.h"
+#include "shell/mapwidget.h"
 #include "skin/skinfeed.h"
 #include "skin/usermacros.h"
 #include "proto/msg.h"
@@ -31,14 +35,21 @@
 using namespace fugue::shell;
 
 static QVariant ev(BrowserPane* p, const QString& js, int ms = 8000) {
-    QVariant r;
-    bool done = false;
-    p->page()->runJavaScript(js, [&](const QVariant& v) {
-        r = v;
-        done = true;
+    // A callback can arrive after the wait times out; do not capture stack locals.
+    struct Result {
+        QVariant value;
+        bool done = false;
+    };
+    auto result = std::make_shared<Result>();
+    p->page()->runJavaScript(js, [result](const QVariant& v) {
+        result->value = v;
+        result->done = true;
     });
-    QTest::qWaitFor([&] { return done; }, ms);
-    return r;
+    if (!QTest::qWaitFor([&] { return result->done; }, ms)) {
+        QTest::qFail("Timed out waiting for JavaScript evaluation", __FILE__, __LINE__);
+        return {};
+    }
+    return result->value;
 }
 static QString evs(BrowserPane* p, const QString& js) { return ev(p, js).toString(); }
 
@@ -46,12 +57,15 @@ static QString evs(BrowserPane* p, const QString& js) { return ev(p, js).toStrin
 static QWidget* focusPage(BrowserPane* p) {
     p->window()->activateWindow();
     p->setFocus();
-    QTest::qWaitFor(
-        [&] {
-            QWidget* f = qApp->focusWidget();
-            return f && (f == p || p->isAncestorOf(f)) && !(p->findField() && f == p->findField());
-        },
-        5000);
+    if (!QTest::qWaitFor(
+            [&] {
+                QWidget* f = qApp->focusWidget();
+                return f && (f == p || p->isAncestorOf(f)) && !(p->findField() && f == p->findField());
+            },
+            5000)) {
+        QTest::qFail("Timed out waiting for browser page focus", __FILE__, __LINE__);
+        return nullptr;
+    }
     return qApp->focusWidget();
 }
 static const char* kFindPage =
@@ -71,7 +85,11 @@ static Http get(const QString& url, const QByteArray& host = {}) {
     QElapsedTimer t;
     t.start();
     QNetworkReply* r = nam.get(rq);
-    QTest::qWaitFor([&] { return r->isFinished(); }, 5000);
+    if (!QTest::qWaitFor([&] { return r->isFinished(); }, 5000)) {
+        QTest::qFail("Timed out waiting for HTTP response", __FILE__, __LINE__);
+        delete r;
+        return {};
+    }
     Http h;
     h.status = r->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
     h.type = r->header(QNetworkRequest::ContentTypeHeader).toString();
@@ -183,9 +201,80 @@ private slots:
         st->put(99, "torchlogo.gif", "GIF");
         st->alias("titlescreen.png", 99);
         QCOMPARE(get(host->origin()->base() + "titlescreen.png").body, QByteArray("GIF"));
-        // announced for a blind type (a sound): nothing is held for it
+        // Media is also a browser asset: an announced Ogg waits for its bytes.
         st->declare("song.ogg", 5);
-        QVERIFY(get(host->origin()->base() + "song.ogg").ms < 500);  // no hold (holds are >= 1400 ms)
+        QTimer::singleShot(120, [st] { st->put(5, "sound/song.ogg", "OGGBYTES"); });
+        h = get(host->origin()->base() + "song.ogg");
+        QCOMPARE(h.status, 200);
+        QCOMPARE(h.body, QByteArray("OGGBYTES"));
+        QVERIFY(h.type.startsWith("audio/"));
+    }
+    void mediaResources_data() {
+        QTest::addColumn<QString>("extension");
+        QTest::addColumn<QString>("mimePrefix");
+        for (const auto* ext : {"ogg", "OGG", "wav", "mp3", "mid", "midi", "flac", "opus"})
+            QTest::newRow(ext) << QString(ext) << QString("audio/");
+        for (const auto* ext : {"mp4", "webm", "ogv"}) QTest::newRow(ext) << QString(ext) << QString("video/");
+        // Retention/serving is independent of Chromium's codec support, not a media whitelist.
+        for (const auto* ext : {"mod", "xm", "it", "s3m", "unknown-extension"})
+            QTest::newRow(ext) << QString(ext) << QString();
+    }
+    void mediaResources() {
+        QFETCH(QString, extension);
+        QFETCH(QString, mimePrefix);
+        auto st = std::make_shared<BrowseRscStore>();
+        LocalOrigin origin(st);
+        QVERIFY(origin.listening());
+        const auto name = "media." + extension;
+        st->declare(name.toStdString(), 1);
+        QCOMPARE(st->waitFor(name.toStdString()), BrowseRscStore::Wait::Announced);
+        const std::string bytes("binary\0payload", 14);
+        st->put(1, ("sound/" + name).toStdString(), bytes);
+        QCOMPARE(st->waitFor(name.toStdString()), BrowseRscStore::Wait::No);
+        const auto response = get(origin.urlFor(name));
+        QCOMPARE(response.status, 200);
+        QCOMPARE(response.body, QByteArray::fromStdString(bytes));
+        QVERIFY2(response.type.startsWith(mimePrefix), qPrintable(response.type));
+        // Alias resolution and replacement must work just like scripts/images.
+        st->alias("alias." + extension.toStdString(), 1);
+        QCOMPARE(get(origin.urlFor("alias." + extension)).body, response.body);
+        st->put(1, ("sound/" + name).toStdString(), "replacement");
+        QCOMPARE(get(origin.urlFor(name)).body, QByteArray("replacement"));
+    }
+    // tgui's DmIcon loads "[0xc0000NN]?state=...": the origin asks the session thread through the store and serves
+    // what it answers, a PNG or nothing.
+    void iconReferences() {
+        auto st = std::make_shared<BrowseRscStore>();
+        LocalOrigin origin(st);
+        QStringList asked;
+        QTimer session;
+        connect(&session, &QTimer::timeout, [&] {
+            for (const std::string& key : st->takeWantedIcons()) {
+                asked << QString::fromStdString(key);
+                st->putIcon(key, key.find("state=none") == std::string::npos ? "PNG bytes" : "");
+            }
+        });
+        session.start(10);
+        const auto drawn = get(origin.urlFor("[0xc000002]") + "?state=crowbar&dir=2&movement=false&frame=1");
+        QCOMPARE(drawn.status, 200);
+        QCOMPARE(drawn.type, QString("image/png"));
+        QCOMPARE(drawn.body, QByteArray("PNG bytes"));
+        QCOMPARE(asked, QStringList{"[0xc000002]?state=crowbar&dir=2&movement=false&frame=1"});
+        QCOMPARE(get(origin.urlFor("[0xc000002]") + "?state=none").status, 404);
+        QCOMPARE(get(origin.urlFor("[0xc000002]") + "?state=crowbar&dir=2&movement=false&frame=1").body, drawn.body);
+        QCOMPARE(asked.size(), 2);  // answered once, served from the store after that
+    }
+    void browserResourceLimits() {
+        BrowseRscStore st;
+        std::string bytes;
+        st.put(1, "oversized.ogg", std::string((32u << 20) + 1, 'x'));
+        QVERIFY(!st.get("oversized.ogg", bytes));
+        for (const auto* name : {"world.dmf", "icon.DMI"}) {
+            st.declare(name, 2);
+            st.put(2, name, "not browser media");
+            QCOMPARE(st.waitFor(name), BrowseRscStore::Wait::No);
+            QVERIFY(!st.get(name, bytes));
+        }
     }
 
     // A held request takes one of Chromium's 6 connections to the origin. Unnamed records are common (most names a page asks for are unannounced), so
@@ -396,7 +485,7 @@ private slots:
         ev(p, "window.wg = ''; location = 'byond://winget?id=pop2&property=size,is-visible%3Btype&callback=gotWinget'");
         QVERIFY(QTest::qWaitFor([&] { return !evs(p, "window.wg").isEmpty(); }, 5000));
         QJsonObject o = QJsonDocument::fromJson(evs(p, "window.wg").toUtf8()).object();
-        QVERIFY(o.value("size").isString() && o.value("size").toString().contains('x'));
+        QVERIFY(o.value("size").isObject() && o.value("size").toObject().value("x").toInt() > 0);
         QCOMPARE(o.value("is-visible").toBool(), true);
         QCOMPARE(o.value("type").toString(), QString("MAIN"));  // a browse() popup is a WINDOW
         QCOMPARE(topics->count(), 0);                           // answered locally, NEVER a Topic
@@ -648,6 +737,299 @@ private slots:
         win = nullptr;
     }
 
+    void browserInnerBackground() {
+        // Hidden skin-declared browser: adopt the existing document on show.
+        const auto skin = QString::fromUtf8(kDockSkin).replace(
+            "elem \"ghost\"\n\t\ttype = BROWSER",
+            "elem \"ghost\"\n\t\ttype = BROWSER\n\t\tinner-background-color = transparent");
+        QVERIFY(win->loadSkin(skin.toStdString()).isEmpty());
+        win->showBrowse("ghost", "window=ghost", "<script>window.retained=42</script>");
+        auto* pane = win->browseHost()->paneFor("ghost");
+        QVERIFY(pane);
+        QTRY_VERIFY_WITH_TIMEOUT(pane->ready(), 8000);
+        auto live = win->live();
+        live->winset("ghost", "is-visible=true");
+        win->syncFromLive();
+        QCOMPARE(win->browseHost()->paneFor("ghost"), pane);
+        QCOMPARE(pane->page()->backgroundColor(), QColor(Qt::transparent));
+        auto* ordinary = qobject_cast<BrowserPane*>(win->controlWidget("mainwindow.brw"));
+        QVERIFY(ordinary);
+        QCOMPARE(ordinary->page()->backgroundColor(), QColor(Qt::white));
+        const auto loads = win->browseHost()->origin()->stats().pages;
+        auto set = [&](const char* target, const char* value) {
+            auto result = live->winset(target, std::string("inner-background-color=") + value);
+            QVERIFY(result.unhandled.empty());
+            win->syncFromLive();
+        };
+        set("mainwindow.ghost", "#123456");
+        QCOMPARE(pane->page()->backgroundColor(), QColor(0x12, 0x34, 0x56));
+        set("ghost", "transparent");  // bare and qualified names: last writer wins
+        QCOMPARE(pane->page()->backgroundColor(), QColor(Qt::transparent));
+        std::string value;
+        QVERIFY(live->winget("ghost", "inner-background-color", value));
+        QCOMPARE(value, std::string("transparent"));
+        set("ghost", "#12345678");
+        QCOMPARE(pane->page()->backgroundColor(),
+                 QColor(Qt::white));  // unsupported partial backing alpha must not reach Chromium
+        set("ghost", "none");
+        QCOMPARE(pane->page()->backgroundColor(), QColor(Qt::white));
+        QCOMPARE(evs(pane, "retained"), QString("42"));
+        QCOMPARE(win->browseHost()->origin()->stats().pages, loads);
+    }
+    void localOutputMacroReachesTheAddressedBrowser() {
+        const QString html = R"(<script>
+          window.calls=[];
+          window.update=function(s){calls.push(JSON.parse(s).type)};
+          window.api={collect:function(){calls.push(Array.from(arguments))}};
+          window.output=api.collect;
+        </script>)";
+        win->showBrowse("brw", "window=brw", html);
+        win->showBrowse("ghost", "window=ghost", html);
+        auto* h = win->browseHost();
+        auto* ghost = h->paneFor("ghost");
+        auto* other = h->paneFor("brw");
+        QVERIFY(ghost && other);
+        QVERIFY(!ghost->ready());
+        auto command = [&](const std::string& text) {
+            const auto r = routeCommand(text, "", false);
+            return r.kind == Route::Output &&
+                   win->clientOutput(QString::fromStdString(r.text), QString::fromStdString(r.arg));
+        };
+        // Output before READY goes to the hidden page, not to the first browser in mainwindow.
+        const std::string toggle = "%7B%22type%22%3A%22toggle%22%2C%22payload%22%3Anull%7D";
+        QVERIFY(command(".output mainwindow.ghost:update " + toggle));
+        QVERIFY(QTest::qWaitFor([&] { return ghost->ready() && other->ready(); }, 15000));
+        QVERIFY(QTest::qWaitFor([&] { return evs(ghost, "JSON.stringify(calls)") == "[\"toggle\"]"; }, 5000));
+        QCOMPARE(evs(other, "JSON.stringify(calls)"), QString("[]"));
+        // TG's Escape order: show/adopt the browser, then deliver the toggle locally.
+        const auto lines = macroCommandLines(
+            ".winset \"mainwindow.ghost.is-visible=true\"\r\n.output mainwindow.ghost:update " + toggle);
+        for (const auto& line : lines) {
+            const auto r = routeCommand(line, "", false);
+            if (r.kind == Route::Winset) {
+                win->live()->clientWinset(r.winsetBody);
+                win->syncFromLive();
+            } else {
+                QVERIFY(command(line));
+            }
+        }
+        QCOMPARE(h->paneFor("ghost"), ghost);  // same document after adoption
+        QVERIFY(
+            QTest::qWaitFor([&] { return evs(ghost, "JSON.stringify(calls)") == "[\"toggle\",\"toggle\"]"; }, 5000));
+        QCOMPARE(evs(other, "JSON.stringify(calls)"), QString("[]"));
+        QVERIFY(command(".output mainwindow.brw:api.collect a%26b&%2526&%22%3Bwindow.injected%3Dtrue%3B%2F%2F&"));
+        QVERIFY(QTest::qWaitFor([&] { return ev(other, "calls.length").toInt() == 1; }, 5000));
+        const auto args = QJsonDocument::fromJson(evs(other, "JSON.stringify(calls[0])").toUtf8()).array();
+        QCOMPARE(args.size(), 4);
+        QCOMPARE(args[0].toString(), QString("a&b"));
+        QCOMPARE(args[1].toString(), QString("%26"));
+        QCOMPARE(args[2].toString(), QString("\";window.injected=true;//"));
+        QCOMPARE(args[3].toString(), QString());
+        QVERIFY(!ev(other, "Boolean(window.injected)").toBool());
+        QVERIFY(command(".output mainwindow.brw:output"));
+        QVERIFY(QTest::qWaitFor([&] { return ev(other, "calls.length").toInt() == 2; }, 5000));
+        QCOMPARE(evs(other, "JSON.stringify(calls[1])"), QString("[\"\"]"));
+        QVERIFY(command(".output mainwindow.brw:__proto__.collect ignored"));
+        QCOMPARE(ev(other, "calls.length").toInt(), 2);  // existing function-path safety retained
+        QVERIFY(!win->clientOutput("", "x"));
+        QVERIFY(!win->clientOutput("mainwindow.brw", "x"));  // non-call .output forms remain unsupported
+    }
+    void dynamicBrowserPreloadAndDottedCalls() {
+        auto live = win->live();
+        auto* host = win->browseHost();
+        // Actual server ordering: parent comes after type, size and pos.
+        auto result = live->winset(
+            "floating",
+            "type=browser;size=1x1;pos=0,0;parent=mainwindow;anchor1=0,0;is-visible=0;is-disabled=1;use-title=1");
+        QVERIFY(result.unhandled.empty());
+        win->showBrowse("floating", "window=floating", R"(<style>body{background:red}</style><script>
+          window.controller = new class { constructor(){this.calls=[];}
+            init(s){this.calls.push('init:'+s)} update(s){this.calls.push('update:'+s)} hide(){this.calls.push('hide')} };
+        </script>)");
+        auto* p = host->paneFor("floating");
+        QVERIFY(p);
+        QVERIFY(!host->popupFor("floating"));
+        QVERIFY(p->isHidden());
+        QCOMPARE(p->size(), QSize(1, 1));
+        const QString hostile = "quotes '\" \\ ; & \\n </script> \u2028";
+        win->pageCall("floating", "controller.init", {hostile});
+        win->pageCall("floating", "controller.update", {"second"});
+        win->pageCall("floating", "controller.hide", {});
+        for (const auto& path : {"controller.init();evil=1", "controller.__proto__.init", "controller.constructor",
+                                 "controller..init", "controller['init']"})
+            win->pageCall("floating", path, {});
+        QTRY_VERIFY_WITH_TIMEOUT(p->ready(), 8000);
+        auto calls = QJsonDocument::fromJson(evs(p, "JSON.stringify(controller.calls)").toUtf8()).array();
+        QCOMPARE(calls.size(), 3);
+        QCOMPARE(calls[0].toString(), "init:" + hostile);
+        QCOMPARE(calls[1].toString(), QString("update:second"));
+        QCOMPARE(calls[2].toString(), QString("hide"));
+        QCOMPARE(p->callsRun(), 3);
+        ev(p,
+           R"(window.answer=''; BYOND.winset('floating',{isVisible:true,size:'120x60',pos:'15,30'}).then(()=>BYOND.winget('floating',['size','isVisible','pos'])).then(v=>answer=JSON.stringify(v)))");
+        QTRY_VERIFY_WITH_TIMEOUT(!evs(p, "answer").isEmpty(), 5000);
+        auto answer = QJsonDocument::fromJson(evs(p, "answer").toUtf8()).object();
+        QVERIFY(answer["size"].isObject());
+        QVERIFY(answer["is-visible"].toBool());
+        QTRY_VERIFY(!p->isHidden());
+        QCOMPARE(p->size(), QSize(qRound(120 / win->devicePixelRatioF()), qRound(60 / win->devicePixelRatioF())));
+        QVERIFY(p->testAttribute(Qt::WA_TransparentForMouseEvents));
+        QCOMPARE(p->focusPolicy(), Qt::NoFocus);
+        const auto pages = host->origin()->stats().pages;
+        live->winset("floating", "is-visible=false");
+        win->syncFromLive();
+        QVERIFY(p->isHidden());
+        live->winset("floating", "is-visible=true");
+        win->syncFromLive();
+        QCOMPARE(host->paneFor("floating"), p);
+        QCOMPARE(host->origin()->stats().pages, pages);
+        QCOMPARE(evs(p, "controller.calls.length"), QString("3"));
+        // A callback from a retired document cannot change the control.
+        const auto oldDocument = p->document();
+        win->showBrowse("floating", "window=floating", "<b>replacement</b>");
+        QTRY_VERIFY_WITH_TIMEOUT(p->ready(), 5000);
+        ev(p, QString("fetch('/%1/__bridge?pane=%2',{method:'POST',body:'byond://"
+                      "winset?id=floating&is-visible=false&__fugueDocument=%3'})")
+                  .arg(host->origin()->secret())
+                  .arg(p->paneId())
+                  .arg(oldDocument));
+        QTest::qWait(150);
+        QVERIFY(!p->isHidden());
+        ev(p, "domainStorage.setItem('cache','value');window.syncValue=domainStorage.getItem('cache')");
+        QCOMPARE(evs(p, "syncValue"), QString("value"));
+        QPointer<BrowserPane> old = p;
+        live->winset("floating", "parent=null");
+        win->syncFromLive();
+        QVERIFY(old.isNull());
+        QVERIFY(!host->paneFor("floating"));
+        QVERIFY(!win->declaresBrowser("floating"));
+        live->winset("floating", "parent=mainwindow;type=browser;size=1x1;is-visible=0");
+        win->showBrowse("floating", "window=floating", "<script>window.fresh=true</script>");
+        p = host->paneFor("floating");
+        QVERIFY(p);
+        QTRY_VERIFY_WITH_TIMEOUT(p->ready(), 5000);
+        QCOMPARE(ev(p, "fresh").toBool(), true);
+        QCOMPARE(ev(p, "typeof controller").toString(), QString("undefined"));
+        live->winset("floating", "parent=none");
+        win->syncFromLive();
+        QVERIFY(!host->paneFor("floating"));
+    }
+    void embeddedMapLifecycle() {
+        auto* host = win->browseHost();
+        win->live()->setPopups({"previewhost"});
+        win->showBrowse("previewhost", "window=previewhost;size=300x300", "<p>MAP host</p>");
+        auto* pane = host->paneFor("previewhost");
+        QVERIFY(pane);
+        QTRY_VERIFY_WITH_TIMEOUT(pane->ready(), 8000);
+        const auto before = win->mapRoutes()->snapshot().size();
+        const QString create = "byond://winset?id=preview&parent=previewhost&type=map&pos=12,24&size=120x160";
+        host->handleCall(pane, fugue::model::parseByondUrl(create.toStdString()));
+        win->syncFromLive();
+        QPointer<QWidget> map = win->controlWidget("previewhost.preview");
+        QVERIFY(map);
+        QVERIFY(dynamic_cast<MapWidget*>(map.data()));
+        QCOMPARE(map->parentWidget(), pane);
+        const auto dpr = win->devicePixelRatioF();
+        QCOMPARE(map->pos(), QPoint(qRound(12 / dpr), qRound(24 / dpr)));
+        QCOMPARE(map->size(), QSize(qRound(120 / dpr), qRound(160 / dpr)));
+        QCOMPARE(win->mapRoutes()->snapshot().size(), before + 1);
+        win->live()->winset("preview", "parent=");
+        win->syncFromLive();
+        QVERIFY(map.isNull());
+        QCOMPARE(win->mapRoutes()->snapshot().size(), before);
+        host->handleCall(pane, fugue::model::parseByondUrl(create.toStdString()));
+        win->syncFromLive();
+        map = win->controlWidget("previewhost.preview");
+        QVERIFY(map);
+        win->closeBrowse("previewhost");
+        QTRY_VERIFY(map.isNull());  // popup deletion is also route retirement
+        QCOMPARE(win->mapRoutes()->snapshot().size(), before);
+    }
+    void runtimeQueuesAndRetirement() {
+        auto live = win->live();
+        auto* host = win->browseHost();
+        live->winset("queued", "parent=mainwindow;type=browser;is-visible=0;size=1x1");
+        const QString html = "<script>window.n=0;window.tick=()=>n++;</script>";
+        win->showBrowse("queued", "window=queued", html);
+        auto* pane = host->paneFor("queued");
+        QVERIFY(pane);
+        for (int i = 0; i < 1100; ++i) pane->callPage("tick", {});
+        QTRY_VERIFY_WITH_TIMEOUT(pane->ready(), 8000);
+        QCOMPARE(pane->callsRun(), 1024);
+        QTRY_COMPARE(evs(pane, "n"), QString("1024"));
+        win->showBrowse("queued", "window=queued", html);
+        pane->callPage("tick", {});  // queued for a document that never becomes ready
+        win->showBrowse("queued", "window=queued", html);
+        QTRY_VERIFY_WITH_TIMEOUT(pane->ready(), 8000);
+        QCOMPARE(evs(pane, "n"), QString("0"));
+        ev(pane, "window.rejected=0;for(let i=0;i<300;i++)BYOND.winget('queued',['size']).catch(()=>rejected++);");
+        QTRY_COMPARE(evs(pane, "rejected"), QString("44"));
+        QPointer<BrowserPane> old = pane;
+        live->clearRuntimeBrowsers();
+        win->syncFromLive();
+        QVERIFY(old.isNull());
+        // Disconnect/recreate while the replacement document is still loading.
+        live->winset("queued", "parent=mainwindow;type=browser;is-visible=0;size=1x1");
+        win->showBrowse("queued", "window=queued", html);
+        old = host->paneFor("queued");
+        QVERIFY(old);
+        win->pageCall("queued", "tick", {});
+        live->clearRuntimeBrowsers();
+        win->syncFromLive();
+        QVERIFY(old.isNull());
+        QVERIFY(!host->paneFor("queued"));
+        live->winset("queued", "parent=mainwindow;type=browser;is-visible=0;size=1x1");
+        win->showBrowse("queued", "window=queued", html);
+        old = host->paneFor("queued");
+        QVERIFY(win->loadSkin(kDockSkin).isEmpty());
+        win->syncFromLive();
+        QVERIFY(old.isNull());
+    }
+    // Stock 516.1688: a browser in an unattached pane runs even with its own is-visible=true.
+    // Its ready handshake may be what tells the server to attach the pane (TG's chat startup).
+    void anUnattachedPaneRunsBeforeAttachment() {
+        const char* skin = R"(window "main"
+    elem "main"
+        type = MAIN
+        size = 400x300
+        is-default = true
+    elem "split"
+        type = CHILD
+        size = 400x300
+window "chatpane"
+    elem "chatpane"
+        type = MAIN
+        size = 400x300
+        is-pane = true
+    elem "chatbrowser"
+        type = BROWSER
+        size = 400x300
+)";
+        QVERIFY(win->loadSkin(skin).isEmpty());
+        auto* h = win->browseHost();
+        QVERIFY(!win->declaresHiddenBrowser("chatbrowser"));
+        QVERIFY(!win->controlWidget("chatpane.chatbrowser"));
+        QSignalSpy topics(h, &BrowseHost::byondLink);
+        h->open("chatbrowser", "window=chatbrowser",
+                "<p id=state>waiting</p><script>window.n=0;"
+                "window.tick=()=>document.getElementById('state').textContent=String(++n);"
+                "window.onload=()=>location.href='byond://?ready=unattached';</script>");
+        auto* p = h->paneFor("chatbrowser");
+        QVERIFY(p);
+        QVERIFY(h->isHiddenPage("chatbrowser"));
+        QVERIFY(!h->popupFor("chatbrowser"));
+        QTRY_VERIFY_WITH_TIMEOUT(p->ready(), 15000);
+        QTRY_COMPARE(topics.count(), 1);
+        h->pageCall("chatbrowser", "tick", {});
+        QTRY_COMPARE(evs(p, "n"), QString("1"));
+        win->live()->winset("main.split", "left=chatpane");
+        win->syncFromLive();
+        QCOMPARE(win->controlWidget("chatpane.chatbrowser"), static_cast<QWidget*>(p));
+        QVERIFY(p->isVisible());
+        QVERIFY(!h->isHiddenPage("chatbrowser"));
+        QCOMPARE(evs(p, "document.getElementById('state').textContent"), QString("1"));
+        QCOMPARE(topics.count(), 1);  // adoption did not reload/re-run the startup script
+    }
     void aDeclaredNameGoesIntoTheControlAnUndeclaredOneIntoAWindow() {
         BrowseHost* h = win->browseHost();
         QVERIFY(win->declaresBrowser("brw"));
@@ -777,8 +1159,127 @@ private slots:
         QVERIFY(!p->findOpen());
         qApp->removeEventFilter(&filt);
     }
+    void propertySnapshotsRetainDistinctWriteRevisions() {
+        fugue::skin::PropStore props;
+        props.set("Probe", "is-visible", "0");
+        const auto first = props.revision("probe", "IS-VISIBLE");
+        QVERIFY(first != 0);
+        const auto snapshot = props;
+        props.set("probe", "is-visible", "0");
+        QVERIFY(props.revision("probe", "is-visible") > first);
+        QCOMPARE(snapshot.revision("probe", "is-visible"), first);
+        props.set("other", "text", "unrelated");
+        const auto beforeClear = props.revision();
+        props.clear();
+        QCOMPARE(props.revision("probe", "is-visible"), uint64_t(0));
+        props.set("probe", "is-visible", "0");
+        QVERIFY(props.revision("probe", "is-visible") > beforeClear);
+    }
+    void clonedPopupVisibilityHonorsRevisions() {
+        fugue::skin::LiveSkin live;
+        QVERIFY(live.load("window \"main\"\n elem \"main\"\n  type = MAIN\n  is-default = true\n").empty());
+        live.cloneWindow("Cloned");
+        QVERIFY(live.setClonePage("Cloned.browser", "<b>clone</b>"));
+        live.winset("Cloned", "is-visible=1");
+        std::map<std::string, uint64_t> open;
+        auto actions = live.cloneActions(open);
+        QCOMPARE(actions.size(), size_t(1));
+        QVERIFY(actions[0].open);
+        const auto beforeHide = live.propertyRevision();
+        live.winset("Cloned", "is-visible=0");
+        live.setPopupShown("cloned", true, beforeHide);  // stale, mixed-case GUI callback
+        QVERIFY(!live.cloneWindows()[0].shown);
+        actions = live.cloneActions(open);
+        QCOMPARE(actions.size(), size_t(1));
+        QVERIFY(!actions[0].open);
+        live.winset("Cloned", "is-visible=1");
+        live.setPopupShown("CLONED", false, live.propertyRevision());  // accepted player close
+        QVERIFY(!live.cloneWindows()[0].shown);
+        QCOMPARE(live.wingetParams("Cloned", "is-visible"), std::string("false"));
+        live.winset("Cloned", "is-visible=");
+        QVERIFY(!live.cloneWindows()[0].shown);  // normalized empty write also updates popup state
+    }
+    void coalescedBrowsePreservesLaterPopupWinsets() {
+        auto live = win->live();
+        live->setPopups({"probe"});
+        const auto atBrowse = live->propertyRevision();
+        const auto older = live->snapshot().props;
+        live->winset("probe", "is-visible=0");  // arrives after browse, before the GUI handles either
+        win->showBrowse("probe", "window=probe", "<title>Probe</title><b>hidden</b>", atBrowse);
+        auto* h = win->browseHost();
+        auto* w = h->popupFor("probe");
+        QVERIFY(w && !w->isVisible());
+        QCOMPARE(live->wingetParams("probe", "is-visible"), std::string("false"));
+        h->syncPopupProps(older);
+        QVERIFY(!w->isVisible());
+        live->setPopupShown("probe", true, atBrowse);  // stale GUI publication cannot overwrite the world
+        QCOMPARE(live->wingetParams("probe", "is-visible"), std::string("false"));
+        live->winset("probe", "is-visible=1");
+        win->syncFromLive();
+        QVERIFY(w->isVisible());
+        h->close("probe");
+    }
+    // Stock 516.1688: tests/data/popup-visibility-world. Hiding retains the document and does not run on-close.
+    void popupVisibilityFollowsWorldAndPageWrites() {
+        auto live = win->live();
+        auto* h = win->browseHost();
+        live->setPopups({"probe"});
+        const QString html = "<title>Visibility Fixture</title><script>window.n=0;window.tick=()=>++n;</script>";
+        h->open("probe", "window=probe;size=240x160;can_resize=0", html);
+        auto* p = h->paneFor("probe");
+        auto* w = h->popupFor("probe");
+        QVERIFY(p && w);
+        QTRY_VERIFY_WITH_TIMEOUT(p->ready(), 15000);
+        QSignalSpy closed(h, &BrowseHost::popupClosedByPlayer);
+        QSignalSpy onClose(h, &BrowseHost::onCloseCommand);
+        live->winset("probe", "on-close=probe-closed;is-visible=0");
+        win->syncFromLive();
+        QVERIFY(!w->isVisible());
+        QCOMPARE(live->wingetParams("probe", "is-visible"), std::string("false"));
+        h->pageCall("probe.browser", "tick", {});
+        QTRY_COMPARE(evs(p, "n"), QString("1"));
+        QCOMPARE(h->paneFor("probe"), p);
+
+        auto pageVisible = [&](bool shown) {
+            ev(p, QString("location.href='byond://winset?id=probe&is-visible=%1'").arg(shown ? "true" : "false"));
+        };
+        pageVisible(true);
+        QTRY_VERIFY(w->isVisible());
+        QCOMPARE(live->wingetParams("probe", "is-visible"), std::string("true"));
+        live->winset("mainwindow", "title=unrelated");
+        win->syncFromLive();
+        QVERIFY(w->isVisible());
+        // Identical world value is a NEW write, not an unchanged snapshot to ignore.
+        live->winset("probe", "is-visible=0");
+        win->syncFromLive();
+        QVERIFY(!w->isVisible());
+        h->open("probe", "window=probe;size=240x160;can_resize=0", html);
+        QTRY_VERIFY_WITH_TIMEOUT(p->ready(), 15000);
+        QVERIFY(w->isVisible());
+        QCOMPARE(live->wingetParams("probe", "is-visible"), std::string("true"));
+        live->winset("mainwindow", "title=unrelated-again");
+        win->syncFromLive();
+        QVERIFY(w->isVisible());
+
+        live->winset("probe", "is-visible=1");
+        win->syncFromLive();
+        pageVisible(false);
+        QTRY_VERIFY(!w->isVisible());
+        QCOMPARE(live->wingetParams("probe", "is-visible"), std::string("false"));
+        live->winset("probe", "is-visible=1");
+        win->syncFromLive();
+        QVERIFY(w->isVisible());
+        QCOMPARE(live->wingetParams("probe", "is-visible"), std::string("true"));
+        QCOMPARE(closed.count(), 0);
+        QCOMPARE(onClose.count(), 0);
+        h->close("probe");
+        live->setPopups({});
+        QCOMPARE(live->wingetParams("probe", "is-visible"), std::string("false"));
+        QCOMPARE(live->wingetParams("probe", "title"), std::string());
+        QCOMPARE(onClose.count(), 0);
+    }
     // Stock DreamSeeker 516: winset(M, "p3", "title=Winset332") retitles an open popup. The last writer wins against the page's own title
-    // (both set the title), so an unchanged prop is not re-applied on every sync.
+    // (both set the title): unchanged snapshots must not replay old writes, but repeated world writes do apply.
     void aWorldWinsetOfTitleRetitlesAPopup() {
         BrowseHost* h = win->browseHost();
         win->live()->setPopups({"pda"});
@@ -794,6 +1295,11 @@ private slots:
         win->live()->winset("mainwindow", "title=\"other\"");  // some unrelated change bumps the skin's generation
         win->syncFromLive();
         QCOMPARE(w->windowTitle(), QString("Page again"));
+        QCOMPARE(win->live()->wingetParams("pda", "title"), std::string("Page again"));
+        win->live()->winset("pda", "title=\"From World\"");
+        win->syncFromLive();
+        QCOMPARE(w->windowTitle(), QString("From World"));
+        QCOMPARE(win->live()->wingetParams("pda", "title"), std::string("From World"));
         h->close("pda");
     }
     void aPageForAnUnplacedControlIsHeldUntilItExists() {
@@ -1016,7 +1522,13 @@ window "fancy"
     }
     // A hidden 1x1 BROWSER fed by browse() with no window of its own, then driven by output() to SetMusic. The page runs
     // windowless, and its play() starts with no user gesture. The page reports "playing" back as a Topic.
+    void aHiddenControlsPageRunsWindowlessAndAutoplays_data() {
+        QTest::addColumn<bool>("localResource");
+        QTest::newRow("data-url") << false;
+        QTest::newRow("browse-rsc") << true;
+    }
     void aHiddenControlsPageRunsWindowlessAndAutoplays() {
+        QFETCH(bool, localResource);
         BrowseHost* h = win->browseHost();
         QVERIFY(win->declaresHiddenBrowser("ghost"));
         QVERIFY(win->declaresHiddenBrowser("mainwindow.ghost2"));
@@ -1040,8 +1552,12 @@ window "fancy"
         wav += "data";
         le(n * 2, 4);
         for (int i = 0; i < n; i++) le(uint32_t(int16_t(8000 * std::sin(2 * M_PI * 440 * i / rate))) & 0xffff, 2);
-        // The browse_rsc store holds no sound file (BrowseRscStore::blind), so the track arrives as a URL. A data: URL stands in for a stream.
-        const QString url = "data:audio/wav;base64," + QString::fromLatin1(QByteArray::fromStdString(wav).toBase64());
+        // Exercise both streamed media and a named browse_rsc asset (TG menu's path).
+        // The latter deliberately arrives after Chromium requests it; no data-URL bypass.
+        const QString url =
+            localResource ? "menu-tone.wav"
+                          : "data:audio/wav;base64," + QString::fromLatin1(QByteArray::fromStdString(wav).toBase64());
+        if (localResource) h->store()->declare("menu-tone.wav", 9001);
         QSignalSpy topics(win, &SkinWindow::byondLink);
         // A jukebox page, reduced: SetMusic(url, time, volume) calls play() with no gesture and reports which page played.
         auto page = [](const char* who) {
@@ -1056,10 +1572,10 @@ function SetMusic(url, time, volume) {
         // both spellings vg could use: the window-qualified one (vg's own) and the bare control
         win->showBrowse("mainwindow.ghost", "window=mainwindow.ghost", page("one"));
         win->showBrowse("ghost2", "window=ghost2", page("two"));
-        for (const char* n : {"mainwindow.ghost", "ghost2"}) {
-            QVERIFY(h->isHiddenPage(n));
-            QVERIFY(!h->popupFor(n));  // NOT a floating window
-            BrowserPane* p = h->paneFor(n);
+        for (const char* name : {"mainwindow.ghost", "ghost2"}) {
+            QVERIFY(h->isHiddenPage(name));
+            QVERIFY(!h->popupFor(name));  // NOT a floating window
+            BrowserPane* p = h->paneFor(name);
             QVERIFY2(p, "a hidden page has a pane");
             QVERIFY(p->isHidden());
             QVERIFY(QTest::qWaitFor([&] { return p->ready(); }, 15000));
@@ -1068,7 +1584,17 @@ function SetMusic(url, time, volume) {
                 !win->controlWidget("mainwindow.ghost2"));  // no rectangle in the skin
         // output(list2params(url, time, volume), "mainwindow.ghost2:SetMusic") as the session delivers it: the target names the control;
         // "mainwindow" alone names neither page.
-        win->pageCall("mainwindow.ghost2", "SetMusic", {url, "0", "50"});
+        if (localResource) {
+            const auto route = routeCommand(".output mainwindow.ghost2:SetMusic menu-tone.wav&0&50", "", false);
+            QCOMPARE(route.kind, Route::Output);
+            QVERIFY(win->clientOutput(QString::fromStdString(route.text), QString::fromStdString(route.arg)));
+        } else {
+            win->pageCall("mainwindow.ghost2", "SetMusic", {url, "0", "50"});
+        }
+        if (localResource) {
+            QVERIFY(QTest::qWaitFor([&] { return h->origin()->held() > 0; }, 3000));
+            h->store()->put(9001, "sound/generated-tone.wav", wav);
+        }
         auto saw = [&](const char* q) {
             for (auto& a : topics)
                 if (a.at(0).toUrl().toEncoded().contains(q)) return true;
@@ -1110,104 +1636,6 @@ function SetMusic(url, time, volume) {
         QVERIFY(QTest::qWaitFor([&] { return !evs(p, "window.wg").isEmpty(); }, 5000));
         o = QJsonDocument::fromJson(evs(p, "window.wg").toUtf8()).object();
         QCOMPARE(o.value("hotkeymode.T.command").toString(), QString("say"));
-    }
-
-    // tgui's ByondUi creates a map control inside its window with winset(parent=<window>, type=map, pos, size); pos and
-    // size can be fractional. The map sits at pos inside the popup's client area, and parent= removes it.
-    void aTguiByondUiMapLivesInsideItsWindow() {
-        const QString id = "camera_console_[0x2000002]_map";
-        win->live()->setPopups({"tgui-window-1"});
-        win->showBrowse("tgui-window-1", "window=tgui-window-1;size=500x400", "<div>camera console</div>");
-        BrowseHost* h = win->browseHost();
-        BrowserPane* p = h->paneFor("tgui-window-1");
-        QVERIFY(p);
-        QVERIFY(QTest::qWaitFor([&] { return p->ready(); }, 15000));
-        QWidget* popup = h->popupFor("tgui-window-1");
-        QVERIFY(popup);
-        ev(p, "location = 'byond://winset?parent=tgui-window-1&id=' + encodeURIComponent('" + id +
-                  "') + '&type=map&pos=' + "
-                  "encodeURIComponent('8.25,60') + '&size=' + encodeURIComponent('300.5x200')");
-        QVERIFY(QTest::qWaitFor(
-            [&] {
-                win->syncFromLive();
-                return win->auxMap(id) != nullptr;
-            },
-            5000));
-        MapWidget* m = win->auxMap(id);
-        QCOMPARE(m->parentWidget(), popup);
-        QCOMPARE(m->geometry(), QRect(8, 60, 301, 200));
-        QVERIFY(!m->isHidden());
-        QImage img(96, 96, QImage::Format_RGBX8888);
-        img.fill(Qt::red);
-        win->setAuxMapFrame(id, img);
-        QCOMPARE(m->framesShown(), uint64_t(1));
-        QCOMPARE(m->imageRect(), QRect(50, 0, 200, 200));  // auto-fit, centred in the 301x200 control
-        ev(p, "location = 'byond://winset?parent=&id=' + encodeURIComponent('" + id + "')");
-        QVERIFY(QTest::qWaitFor(
-            [&] {
-                win->syncFromLive();
-                return win->auxMap(id) == nullptr;
-            },
-            5000));
-        h->close("tgui-window-1");
-    }
-
-    // ByondUi unmounts (`parent=`) and mounts again with an unchanged scene. The remounted widget must still get a
-    // frame through the real RenderThread, wired as app/main.cpp wires it.
-    void aRemountedTguiMapGetsAFrame() {
-        const QString id = "camera_console_[0x2000003]_map";
-        RenderThread rt;
-        connect(&rt, &RenderThread::auxFrame, win, &fugue::shell::SkinWindow::setAuxMapFrame, Qt::QueuedConnection);
-        auto conn = connect(win, &fugue::shell::SkinWindow::auxMapBuilt, win,
-                            [&rt](const QString& i) { rt.forgetAux(i.toStdString()); });
-        rt.start();
-        struct Stop {
-            RenderThread& r;
-            QMetaObject::Connection c;
-            ~Stop() {
-                QObject::disconnect(c);
-                r.requestStop();
-                r.wait();
-            }
-        } stop{rt, conn};
-        win->live()->setPopups({"tgui-window-2"});
-        win->showBrowse("tgui-window-2", "window=tgui-window-2;size=500x400", "<div>camera console</div>");
-        BrowseHost* h = win->browseHost();
-        BrowserPane* p = h->paneFor("tgui-window-2");
-        QVERIFY(p);
-        QVERIFY(QTest::qWaitFor([&] { return p->ready(); }, 15000));
-        const QString mount = "location = 'byond://winset?parent=tgui-window-2&id=' + encodeURIComponent('" + id +
-                              "') + '&type=map&pos=0,0&size=200x200'";
-        fugue::render::DrawList dl;
-        dl.outW = 64;
-        dl.outH = 64;
-        ev(p, mount);
-        QVERIFY(QTest::qWaitFor(
-            [&] {
-                win->syncFromLive();
-                return win->auxMap(id) != nullptr;
-            },
-            5000));
-        rt.submitAux(id.toStdString(), dl);
-        QVERIFY(QTest::qWaitFor([&] { return win->auxMap(id)->framesShown() == 1; }, 5000));
-        ev(p, "location = 'byond://winset?parent=&id=' + encodeURIComponent('" + id + "')");
-        QVERIFY(QTest::qWaitFor(
-            [&] {
-                win->syncFromLive();
-                return win->auxMap(id) == nullptr;
-            },
-            5000));
-        ev(p, mount);
-        QVERIFY(QTest::qWaitFor(
-            [&] {
-                win->syncFromLive();
-                return win->auxMap(id) != nullptr;
-            },
-            5000));
-        QCOMPARE(win->auxMap(id)->framesShown(), uint64_t(0));
-        rt.submitAux(id.toStdString(), dl);  // the SAME list
-        QVERIFY(QTest::qWaitFor([&] { return win->auxMap(id) && win->auxMap(id)->framesShown() == 1; }, 5000));
-        h->close("tgui-window-2");
     }
 };
 
@@ -1253,7 +1681,8 @@ private slots:
         QVERIFY2(p, "the control is built at the winset, hidden");
         QCOMPARE(p->parentWidget(), win);
         QVERIFY(p->isHidden());
-        QVERIFY(!p->isEnabled());  // is-disabled
+        QVERIFY(
+            p->testAttribute(Qt::WA_TransparentForMouseEvents));  // is-disabled: no hit testing, the page still runs
         QCOMPARE(h->paneFor(id), p);
         QVERIFY2(QTest::qWaitFor([&] { return p->ready(); }, 15000), "its page runs while hidden");
         // output(.., "tooltipN:tooltip.init"): a dotted function name, called on its object
@@ -1332,12 +1761,9 @@ private slots:
         BrowserPane* p = win->runtimeBrowser(id);
         QVERIFY(p);
         QVERIFY(QTest::qWaitFor([&] { return p->ready(); }, 15000));
-        QImage img(480, 480, QImage::Format_RGBX8888);
-        img.fill(Qt::black);
-        win->setMapFrame(img);
-        auto* map = qobject_cast<MapWidget*>(win->controlWidget("mapwindow.map"));
+        auto* map = dynamic_cast<MapWidget*>(win->controlWidget("mapwindow.map"));
         QVERIFY(map);
-        const QRect shown = map->imageRect().intersected(map->rect());
+        const QSize shown = map->presentedViewSize();
         ev(p,
            "window.ws = ''; BYOND.winget('mapwindow.map', ['size', 'viewSize']).then(function (o) { window.ws = "
            "JSON.stringify(o); })");
@@ -1357,22 +1783,23 @@ private slots:
     }
 };
 
-int main(int argc, char** argv) {
+template<class Test>
+static int runBrowserTest(int argc, char** argv) {
     registerSchemes();
     QApplication app(argc, argv);
-    int rc = 0;
-    {
-        BrowseTest t;
-        rc |= QTest::qExec(&t, argc, argv);
-    }
-    {
-        DockTest t;
-        rc |= QTest::qExec(&t, argc, argv);
-    }
-    {
-        RuntimeBrowserTest t;
-        rc |= QTest::qExec(&t, argc, argv);
-    }
-    return rc;
+    Test test;
+    return QTest::qExec(&test, argc, argv);
+}
+
+int FUGUE_TEST_ENTRY(int argc, char** argv) {
+    return runBrowserTest<BrowseTest>(argc, argv);
+}
+
+int fugue_run_browse_dock(int argc, char** argv) {
+    return runBrowserTest<DockTest>(argc, argv);
+}
+
+int fugue_run_browse_runtime(int argc, char** argv) {
+    return runBrowserTest<RuntimeBrowserTest>(argc, argv);
 }
 #include "browse_test.moc"

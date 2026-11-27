@@ -2,6 +2,7 @@
 #include "platform/file.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
@@ -9,10 +10,14 @@
 #include <fstream>
 #include <map>
 #include <memory>
+#include <mutex>
+#include <set>
 #include <sstream>
 #include <string>
 #include <vector>
 
+#include <QByteArray>
+#include <QCryptographicHash>
 #include <QFont>
 #include <QFontDatabase>
 #include <QImage>
@@ -29,6 +34,7 @@
 
 namespace fugue::shell {
 namespace {
+std::atomic<uint64_t> g_fontGeneration{0};
 
 uint16_t be16(const QByteArray& t, int o) { return uint16_t((uint8_t(t[o]) << 8) | uint8_t(t[o + 1])); }
 
@@ -140,12 +146,32 @@ void installTrueTypeMetrics() {
     });
 }
 
+bool addResourceFont(const QByteArray& file) {
+    static std::mutex mutex;
+    static std::set<QByteArray> added;
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        if (!added.insert(QCryptographicHash::hash(file, QCryptographicHash::Sha1)).second) return false;
+    }
+    if (QFontDatabase::addApplicationFontFromData(file) < 0) return false;
+    // Both hooks forget what they resolved and drew when they are set: a family that was missing is asked for again.
+    installTrueTypeMetrics();
+    installMaptextGlyphs();
+    g_fontGeneration++;
+    return true;
+}
+uint64_t resourceFontGeneration() { return g_fontGeneration; }
+
 void installMaptextGlyphs() {
     auto files = std::make_shared<std::map<std::string, std::vector<render::FonStrike>>>();
+    // Windows has two files of each face, digitised for 96 and for 120 dpi, and stock draws from both.
     for (const auto& [family, file] : {std::pair<std::string, std::string>{"small fonts", "smalle.fon"},
+                                       {"small fonts", "smallf.fon"},
                                        {"ms sans serif", "sserife.fon"},
-                                       {"courier", "coure.fon"}})
-        if (auto s = loadBitmapFace(file); !s.empty()) (*files)[family] = std::move(s);
+                                       {"ms sans serif", "sseriff.fon"},
+                                       {"courier", "coure.fon"},
+                                       {"courier", "courf.fon"}})
+        for (auto& strike : loadBitmapFace(file)) (*files)[family].push_back(std::move(strike));
     render::setGlyphRasterizer([files](const render::DsFace& face, char32_t cp, render::GlyphMask& out) {
         if (face.bitmap) {
             auto it = files->find(face.family);

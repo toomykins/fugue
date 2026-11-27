@@ -3,6 +3,7 @@
 #include <sys/stat.h>
 #include <QTemporaryDir>
 #include <QtTest>
+#include "tests/testmain.h"
 #include <filesystem>
 #include <fstream>
 #include "net/bytes.h"
@@ -521,5 +522,5 @@ private slots:
     }
 };
 
-QTEST_APPLESS_MAIN(RscStoreTest)
+FUGUE_TEST_APPLESS_MAIN(RscStoreTest)
 #include "rscstore_test.moc"

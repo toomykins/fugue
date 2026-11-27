@@ -4,59 +4,43 @@
 // pending offset toward the newest target); dropping the unfinished 30% instead jumps the view ~10 px a step.
 // tests/data/glidenpc-world: two non-player mobs falling behind their steps, which the catch-up keeps bounded.
 #include <QtTest>
+#include "tests/recordedinput.h"
+#include "tests/testmain.h"
 #include <cmath>
-#include <fstream>
-#include <sstream>
 #include "model/world.h"
 
 using namespace fugue;
 using namespace fugue::model;
 
 namespace {
-struct Frame {
-    int64_t ms;
-    uint16_t type;
-    Bytes body;
-};
-
-std::vector<Frame> loadFrames(const char* fixture = "glide-world") {
-    std::ifstream in(std::string(FUGUE_TEST_DATA_DIR) + "/" + fixture + "/frames.txt");
-    std::vector<Frame> out;
-    std::string line;
-    while (std::getline(in, line)) {
-        if (line.empty() || line[0] == '#') continue;
-        std::istringstream ss(line);
-        Frame f;
-        std::string typ, hex;
-        ss >> f.ms >> typ >> hex;
-        f.type = uint16_t(std::stoul(typ, nullptr, 16));
-        for (size_t i = 0; i + 1 < hex.size(); i += 2)
-            f.body.push_back(uint8_t(std::stoul(hex.substr(i, 2), nullptr, 16)));
-        out.push_back(std::move(f));
-    }
-    return out;
-}
+using Frame = testinput::TimedRecordedFrame;
+// A synthetic epoch keeps replay deterministic; elapsed milliseconds and frame
+// order come from the recording. This is not the stock capture's wall clock.
+constexpr int64_t replayEpochNs = 1'700'000'000'000'000'000;
 
 // The map's drawn position (image px: +x right, +y down) and the player's sprite relative to it, sampled every ms.
 struct Sample {
     double mapX, mapY, spriteX, spriteY;
 };
+struct PlayerTrace {
+    std::vector<Sample> samples;
+    int ingestErrors = 0;
+};
 
-std::vector<Sample> replay(const std::vector<Frame>& frames) {
-    constexpr int64_t base = 1'700'000'000'000'000'000;
+PlayerTrace replay(const std::vector<Frame>& frames) {
     Session s;
-    std::vector<Sample> out;
+    PlayerTrace out;
     size_t k = 0;
-    for (int64_t t = frames.front().ms; t <= frames.back().ms + 400; t++) {
-        while (k < frames.size() && frames[k].ms <= t) {
-            s.setIngestClockNs(base + frames[k].ms * 1'000'000);
-            s.ingest(frames[k].type, ByteSpan(frames[k].body.data(), frames[k].body.size()));
+    for (int64_t t = frames.front().elapsedMs; t <= frames.back().elapsedMs + 400; t++) {
+        while (k < frames.size() && frames[k].elapsedMs <= t) {
+            s.setIngestClockNs(replayEpochNs + frames[k].elapsedMs * 1'000'000);
+            s.ingest(frames[k].frame.type, frames[k].frame.body);
             k++;
         }
         const World& w = s.world();
         auto it = w.atoms.find(w.selfRef | kRegistryA);
         if (!w.haveEye || it == w.atoms.end()) continue;
-        int64_t now = base + t * 1'000'000;
+        int64_t now = replayEpochNs + t * 1'000'000;
         int sx, sy;
         eyeScrollOffset(w, now, sx, sy);
         const Atom& m = it->second;
@@ -67,8 +51,9 @@ std::vector<Sample> replay(const std::vector<Frame>& frames) {
         p.mapY = w.eyeY * 32.0 + sy;
         p.spriteX = (m.x - w.eyeX) * 32.0 + gx + sx;
         p.spriteY = -((m.y - w.eyeY) * 32.0 + gy) + sy;
-        out.push_back(p);
+        out.samples.push_back(p);
     }
+    out.ingestErrors = s.ingestErrors();
     return out;
 }
 
@@ -77,23 +62,23 @@ std::vector<Sample> replay(const std::vector<Frame>& frames) {
 struct NpcTrace {
     double worst[2] = {0, 0};
     std::vector<int64_t> legStart[2], legSettle[2];
+    int ingestErrors = 0;
 };
 
 NpcTrace replayNpcs(const std::vector<Frame>& frames) {
-    constexpr int64_t base = 1'700'000'000'000'000'000;
     Session s;
     NpcTrace out;
     uint32_t ids[2] = {0, 0};
     int lastX[2] = {0, 0};
     size_t k = 0;
-    for (int64_t t = frames.front().ms; t <= frames.back().ms + 1500; t++) {
-        while (k < frames.size() && frames[k].ms <= t) {
-            s.setIngestClockNs(base + frames[k].ms * 1'000'000);
-            s.ingest(frames[k].type, ByteSpan(frames[k].body.data(), frames[k].body.size()));
+    for (int64_t t = frames.front().elapsedMs; t <= frames.back().elapsedMs + 1500; t++) {
+        while (k < frames.size() && frames[k].elapsedMs <= t) {
+            s.setIngestClockNs(replayEpochNs + frames[k].elapsedMs * 1'000'000);
+            s.ingest(frames[k].frame.type, frames[k].frame.body);
             k++;
         }
         const World& w = s.world();
-        int64_t now = base + t * 1'000'000;
+        int64_t now = replayEpochNs + t * 1'000'000;
         for (const auto& [id, a] : w.atoms) {  // red starts on (14,14), blue on (14,25)
             if (!a.hasPos || a.x != 14 || ids[0] == id || ids[1] == id) continue;
             if (a.y == 14 && !ids[0]) {
@@ -123,6 +108,7 @@ NpcTrace replayNpcs(const std::vector<Frame>& frames) {
                 out.legSettle[i].back() = t;  // a screen px at the oracle's zoom
         }
     }
+    out.ingestErrors = s.ingestErrors();
     return out;
 }
 
@@ -169,20 +155,36 @@ private slots:
     // The view never jumps: at 1 ms sampling a diagonal 10.67 px/tick glide moves well under 2 px per ms, even when
     // catching up. Without the carry each re-armed step jumps the unfinished part of the last one.
     void viewMovesContinuously() {
-        auto frames = loadFrames();
-        QVERIFY(frames.size() > 20);
-        auto v = replay(frames);
+        std::vector<Frame> frames; QString error;
+        QVERIFY2(testinput::readTimedRecordedFrames(QString(FUGUE_TEST_DATA_DIR)+"/glide-world/frames.txt",frames,error),qPrintable(error));
+        QCOMPARE(frames.size(),size_t(29));
+        QCOMPARE(frames.front().elapsedMs,198);
+        QCOMPARE(frames.back().elapsedMs,1782);
+        const auto trace = replay(frames);
+        QCOMPARE(trace.ingestErrors,0);
+        const auto& v = trace.samples;
         QVERIFY(v.size() > 500);
         QVERIFY2(largestMapStep(v) < 2, qPrintable(QString("largest step %1 px").arg(largestMapStep(v))));
         setModelMutation(30);  // control: re-arm from the tile, dropping what was left
-        double dropped = largestMapStep(replay(frames));
+        const auto control = replay(frames);
+        QCOMPARE(control.ingestErrors,0);
+        double dropped = largestMapStep(control.samples);
         QVERIFY2(dropped > 8, qPrintable(QString("control's largest step %1 px").arg(dropped)));
     }
 
     // The player's sprite stays where the view puts it: sprite and view carry the same offset, including the first
     // step, whose Pos arrives before the same frame binds the appearance with the new glide size.
     void spriteHoldsStill() {
-        auto v = replay(loadFrames());
+        std::vector<Frame> frames; QString error;
+        QVERIFY2(testinput::readTimedRecordedFrames(QString(FUGUE_TEST_DATA_DIR)+"/glide-world/frames.txt",frames,error),qPrintable(error));
+        QCOMPARE(frames.size(),size_t(29));
+        QCOMPARE(frames.front().elapsedMs,198);
+        QCOMPARE(frames.back().elapsedMs,1782);
+        const auto trace = replay(frames);
+        QCOMPARE(trace.ingestErrors,0);
+        const auto& v = trace.samples;
+        QVERIFY(v.size() > 500);
+        QVERIFY(largestMapStep(v) > 0); // sprite stability must be observed during actual movement
         double worst = 0;
         for (const Sample& p : v) worst = std::max({worst, std::fabs(p.spriteX), std::fabs(p.spriteY)});
         QVERIFY2(worst <= 1, qPrintable(QString("sprite strayed %1 px").arg(worst)));
@@ -223,9 +225,13 @@ private slots:
     // leg settles when stock DreamSeeker's does: under the pixel oracle (100 fps, 46.4 px tiles) the diagonal mover was
     // drawn off its tile 710-720 ms after its leg's first step and the slow cardinal one 930-940 ms, over four legs each.
     void npcMoversStayBounded() {
-        auto frames = loadFrames("glidenpc-world");
-        QVERIFY(frames.size() > 30);
+        std::vector<Frame> frames; QString error;
+        QVERIFY2(testinput::readTimedRecordedFrames(QString(FUGUE_TEST_DATA_DIR)+"/glidenpc-world/frames.txt",frames,error),qPrintable(error));
+        QCOMPARE(frames.size(),size_t(43));
+        QCOMPARE(frames.front().elapsedMs,100);
+        QCOMPARE(frames.back().elapsedMs,3729);
         NpcTrace tr = replayNpcs(frames);
+        QCOMPARE(tr.ingestErrors,0);
         const int64_t ds[2] = {715, 935};
         for (int i = 0; i < 2; i++) {
             QVERIFY2(tr.worst[i] <= kGlideMaxTiles + 1e-9,
@@ -240,9 +246,10 @@ private slots:
         QVERIFY(tr.worst[1] > 1.9);  // the slow mover reaches the bound
         setModelMutation(31);        // control: the move only adds, never catches up or is bounded
         NpcTrace ctl = replayNpcs(frames);
+        QCOMPARE(ctl.ingestErrors,0);
         QVERIFY2(ctl.worst[1] > 3, qPrintable(QString("control trailed %1 tiles").arg(ctl.worst[1])));
     }
 };
 
-QTEST_GUILESS_MAIN(GlideCarryTest)
+FUGUE_TEST_GUILESS_MAIN(GlideCarryTest)
 #include "glidecarry_test.moc"

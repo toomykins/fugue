@@ -1,15 +1,14 @@
-// Shell input wiring (offscreen QPA): the map widget turns Qt mouse events into MapPointer values hit-tested against the scene the frame was drawn from;
-// a key no macro binds, an arrow included, sends nothing; routeCommand classifies a macro or typed command. Mouse frame sequences are in
-// tests/mousechain_test.cpp.
+// Shell input wiring: key bindings, command routing and macro dialogs (offscreen QPA).
 #include <QApplication>
+#include <QCursor>
 #include <QLineEdit>
 #include <QMenu>
 #include <QSignalSpy>
 #include <QtTest>
+#include "tests/testmain.h"
 #include "shell/browserpane.h"
 #include "shell/focusfilter.h"
 #include "shell/inputrouter.h"
-#include "shell/screenshot.h"
 #include <QTemporaryDir>
 #include "shell/macrodialog.h"
 #include <QCheckBox>
@@ -17,13 +16,11 @@
 #include <QToolButton>
 #include <QTreeWidget>
 #include "net/input.h"
-#include "shell/mapwidget.h"
 #include "shell/skinfont.h"
 #include "shell/skinwindow.h"
 #include <QLabel>
 
 using namespace fugue::shell;
-using namespace fugue::render;
 
 static const char* kSkin = R"(macro "m"
 	elem "q"
@@ -66,60 +63,6 @@ window "main"
 		anchor2 = 100,100
 )";
 
-static HitPtr oneAtomScene() {
-    auto s = std::make_shared<HitScene>();
-    s->cols = s->rows = 15;
-    s->originX = s->originY = 1;
-    s->atoms.push_back({"thing", 1, kAtomObj, 9, 3, 3, false});
-    auto sp = std::make_shared<Sprite>();
-    sp->w = sp->h = 32;
-    sp->px.assign(32 * 32 * 4, 255);
-    s->world.push_back({sp, 2 * 32, (14 - 2) * 32, 0});  // cell (3,3)
-    return s;
-}
-
-// oneAtomScene, with "thing" declaring a hover proc (appearance flag 0x800).
-static HitPtr hoverScene() {
-    auto s = std::make_shared<HitScene>(*oneAtomScene());
-    s->atoms[0].hover = true;
-    s->anyHover = true;
-    return s;
-}
-
-// The default map and a second .dmf MAP, side by side.
-static const char* kTwoMaps = R"(window "main"
-	elem "main"
-		type = MAIN
-		size = 800x480
-		is-default = true
-	elem "map"
-		type = MAP
-		pos = 0,0
-		size = 480x480
-		icon-size = 32
-	elem "map2"
-		type = MAP
-		pos = 500,0
-		size = 192x192
-		icon-size = 0
-)";
-
-// A secondary map's scene: hud2 (ref 4, a screen object declaring hover) in cell 1,1 of a 3x3 box.
-static HitPtr map2Scene() {
-    auto s = std::make_shared<HitScene>();
-    s->secondary = true;
-    s->cols = s->rows = 3;
-    HitAtom a{"hud2", 1, kAtomObj, 4, 0, 0, true};
-    a.hover = true;
-    s->atoms.push_back(a);
-    auto sp = std::make_shared<Sprite>();
-    sp->w = sp->h = 32;
-    sp->px.assign(32 * 32 * 4, 255);
-    s->world.push_back({sp, 0, 64, 0});
-    s->anyHover = true;
-    return s;
-}
-
 struct KeySeen : QObject {
     QList<int> keys;
     bool eventFilter(QObject*, QEvent* e) override {
@@ -134,7 +77,6 @@ class InputTest : public QObject {
     FocusFilter* filt = nullptr;
 private slots:
     void initTestCase() {
-        qRegisterMetaType<MapPointer>();
         win = new SkinWindow;
         QVERIFY2(win->loadSkin(kSkin).isEmpty(), "skin parses");
         win->resize(win->designSize());
@@ -144,9 +86,6 @@ private slots:
         auto t = win->macros();
         filt->setMacros(t.sets.at(t.active));
         qApp->installEventFilter(filt);
-        QImage f(480, 480, QImage::Format_RGBX8888);
-        f.fill(Qt::black);
-        win->setMapFrame(f, oneAtomScene());
     }
     void cleanupTestCase() {
         qApp->removeEventFilter(filt);
@@ -154,729 +93,6 @@ private slots:
         delete win;
     }
 
-    void skinRightClickParamReachesTheWidget() { QVERIFY(win->map()->rightClickToWire()); }
-
-    void pressMoveReleaseBecomePointerValues() {
-        QSignalSpy spy(win->map(), &MapWidget::pointer);
-        // cell (3,3): image x 64..95, y from the top 12*32.. => (80, 400)
-        QTest::mousePress(win->map(), Qt::LeftButton, Qt::NoModifier, QPoint(80, 400));
-        QTest::mouseMove(win->map(), QPoint(120, 400));
-        QTest::mouseRelease(win->map(), Qt::LeftButton, Qt::ShiftModifier, QPoint(120, 400));
-        QCOMPARE(spy.count(), 3);
-        auto p0 = spy.at(0).at(0).value<MapPointer>();
-        QCOMPARE(int(p0.kind), int(MapPointer::Press));
-        QCOMPARE(p0.ev.imgX, 80);
-        QCOMPARE(p0.ev.imgY, 400);
-        QCOMPARE(p0.ev.button, 1);
-        QVERIFY(p0.scene);
-        Naming n;
-        QVERIFY(nameMouse(*p0.scene, p0.ev.imgX, p0.ev.imgY, n));  // the scene travels with the event
-        QCOMPARE(n.overRef, 9u);
-        QCOMPARE(int(spy.at(1).at(0).value<MapPointer>().kind), int(MapPointer::Move));
-        auto p2 = spy.at(2).at(0).value<MapPointer>();
-        QCOMPARE(int(p2.kind), int(MapPointer::Release));
-        QVERIFY(p2.ev.mods.shift);
-    }
-    void rightClickNotDeclaredIsLocal() {
-        win->map()->setRightClickToWire(false);
-        QSignalSpy spy(win->map(), &MapWidget::pointer);
-        QSignalSpy menu(win->map(), &MapWidget::localMenuRequested);
-        QTest::mouseClick(win->map(), Qt::RightButton, Qt::NoModifier, QPoint(80, 400));
-        QCOMPARE(spy.count(), 0);
-        QCOMPARE(menu.count(), 1);
-        QCOMPARE(menu.at(0).at(1).toString(), QString("thing"));
-        win->map()->setRightClickToWire(true);
-        QTest::mouseClick(win->map(), Qt::RightButton, Qt::NoModifier, QPoint(80, 400));
-        QCOMPARE(spy.count(), 2);  // press + release, on the wire path
-        QCOMPARE(spy.at(0).at(0).value<MapPointer>().ev.button, 3);
-    }
-    // client.show_popup_menus, as stock DreamDaemon 516 sends it: the whole 0x003b again, FormatFlags bit 28 set while it is
-    // FALSE ("Fugue Popup" world, a verb toggling it). Stock DreamSeeker then shows no menu and sends the right click as
-    // MouseDown/MouseUp/Click with right=1, on a map whose right-click is false.
-    void popupMenusOffSendsTheRightClick() {
-        auto body = [](const char* hex) {
-            QByteArray b = QByteArray::fromHex(hex);
-            return fugue::Bytes(b.begin(), b.end());
-        };
-        const fugue::Bytes on =
-            body("010001010001000007000000042160000402ea01000000436f6d6d616e647300ff9406000004020000");
-        const fugue::Bytes off =
-            body("010001010001000007000000042160100402ea01000000436f6d6d616e647300ff9406000004020000");
-        fugue::net::InputModel im;
-        QVERIFY(im.showPopupMenus());  // the default, before any 0x003b
-        im.onFrame(fugue::S2C::MouseSubs, off);
-        QVERIFY(!im.showPopupMenus());
-        QVERIFY(im.hooks().click);  // the click subscription is unchanged
-        im.onFrame(fugue::S2C::MouseSubs, on);
-        QVERIFY(im.showPopupMenus());
-
-        MapWidget* m = win->map();
-        m->setRightClickToWire(false);
-        m->setPopupMenus(false);
-        QVERIFY(m->rightClickToWire());
-        QSignalSpy spy(m, &MapWidget::pointer);
-        QSignalSpy menu(m, &MapWidget::localMenuRequested);
-        QTest::mouseClick(m, Qt::RightButton, Qt::NoModifier, QPoint(80, 400));
-        QCOMPARE(menu.count(), 0);
-        QCOMPARE(spy.count(), 2);
-        QCOMPARE(spy.at(0).at(0).value<MapPointer>().ev.button, 3);
-        m->setPopupMenus(true);
-        QTest::mouseClick(m, Qt::RightButton, Qt::NoModifier, QPoint(80, 400));
-        QCOMPARE(menu.count(), 1);
-        QCOMPARE(spy.count(), 2);
-        m->setRightClickToWire(true);
-    }
-    // The right button's two reads of client.show_popup_menus, measured on stock DreamSeeker 516 (GAME-CLIENT-SERVER-516.md
-    // 9.1.1): the press sends MouseDown only with the flag FALSE, and the release decides the rest.
-    void rightPressWithTheFlagOnWaitsForTheRelease() {
-        MapWidget* m = win->map();
-        m->setRightClickToWire(false);
-        m->setPopupMenus(true);
-        QSignalSpy spy(m, &MapWidget::pointer);
-        QSignalSpy menu(m, &MapWidget::localMenuRequested);
-        QSignalSpy menuAt(m, &MapWidget::localMenuPointer);
-        QTest::mousePress(m, Qt::RightButton, Qt::NoModifier, QPoint(80, 400));
-        QCOMPARE(menu.count(), 0);  // not at the press
-        QCOMPARE(menuAt.count(), 0);
-        QCOMPARE(spy.count(), 0);
-        QTest::mouseRelease(m, Qt::RightButton, Qt::NoModifier, QPoint(80, 400));
-        QCOMPARE(menu.count(), 1);
-        QCOMPARE(menuAt.count(), 1);
-        QCOMPARE(spy.count(), 0);
-    }
-    // The flag went FALSE while the button was down (the pointer moved onto vg's camera static): no menu, and the release
-    // reaches the wire as MouseUp and Click without a MouseDown.
-    void flagOffByTheReleaseSendsTheClickWithoutAPress() {
-        MapWidget* m = win->map();
-        m->setRightClickToWire(false);
-        m->setPopupMenus(true);
-        QSignalSpy spy(m, &MapWidget::pointer);
-        QSignalSpy menu(m, &MapWidget::localMenuRequested);
-        QTest::mousePress(m, Qt::RightButton, Qt::NoModifier, QPoint(80, 400));
-        m->setPopupMenus(false);
-        QTest::mouseRelease(m, Qt::RightButton, Qt::NoModifier, QPoint(80, 400));
-        QCOMPARE(menu.count(), 0);
-        QCOMPARE(spy.count(), 1);
-        auto p = spy.at(0).at(0).value<MapPointer>();
-        QCOMPARE(int(p.kind), int(MapPointer::Release));
-        QVERIFY(p.pressUnsent);
-        QCOMPARE(p.ev.button, 3);
-        QCOMPARE(p.ev.imgX, 80);
-        QCOMPARE(p.ev.imgY, 400);
-        m->setPopupMenus(true);
-    }
-    // A press sent with the flag FALSE finishes as a click whatever the flag has become, and opens no menu.
-    void sentPressFinishesAsAClickWhenTheFlagComesBack() {
-        MapWidget* m = win->map();
-        m->setRightClickToWire(false);
-        m->setPopupMenus(false);
-        QSignalSpy spy(m, &MapWidget::pointer);
-        QSignalSpy menu(m, &MapWidget::localMenuRequested);
-        QTest::mousePress(m, Qt::RightButton, Qt::NoModifier, QPoint(80, 400));
-        m->setPopupMenus(true);
-        QTest::mouseRelease(m, Qt::RightButton, Qt::NoModifier, QPoint(80, 400));
-        QCOMPARE(menu.count(), 0);
-        QCOMPARE(spy.count(), 2);
-        QCOMPARE(int(spy.at(0).at(0).value<MapPointer>().kind), int(MapPointer::Press));
-        auto p = spy.at(1).at(0).value<MapPointer>();
-        QCOMPARE(int(p.kind), int(MapPointer::Release));
-        QVERIFY(!p.pressUnsent);
-    }
-    // A right press outside the open verb menu closes it and is consumed (stock sends no MouseDown for it); its release then
-    // acts as a right release of its own. Qt's popup grab swallows both, so the release is delivered to a window that is not
-    // the map here, as it is on X11.
-    QMenu* openVerbMenu() {
-        auto* menu = new QMenu(win);
-        menu->addAction("poke");
-        MapWidget::watchPopup(menu);
-        menu->popup(win->map()->mapToGlobal(QPoint(300, 100)));
-        QTest::qWaitForWindowExposed(menu);
-        return menu;
-    }
-    void rightPressOutsideTheMenuClosesItAndItsReleaseOpensANewOne() {
-        MapWidget* m = win->map();
-        m->setRightClickToWire(false);
-        m->setPopupMenus(true);
-        QSignalSpy spy(m, &MapWidget::pointer);
-        QSignalSpy menu(m, &MapWidget::localMenuRequested);
-        QMenu* old = openVerbMenu();
-        const QPoint g = m->mapToGlobal(QPoint(80, 400));
-        QTest::mousePress(old, Qt::RightButton, Qt::NoModifier, old->mapFromGlobal(g));
-        QVERIFY(!old->isVisible());
-        QCOMPARE(spy.count(), 0);   // consumed: no MouseDown
-        QCOMPARE(menu.count(), 0);  // and nothing opens at the press
-        QTest::mouseRelease(win, Qt::RightButton, Qt::NoModifier, win->mapFromGlobal(g));
-        QCOMPARE(menu.count(), 1);
-        QCOMPARE(spy.count(), 0);
-        QTest::mouseRelease(win, Qt::RightButton, Qt::NoModifier, win->mapFromGlobal(g));  // taken once
-        QCOMPARE(menu.count(), 1);
-        delete old;
-    }
-    void rightPressOutsideTheMenuWithTheFlagOffSendsUpAndClick() {
-        MapWidget* m = win->map();
-        m->setRightClickToWire(false);
-        m->setPopupMenus(true);
-        QSignalSpy spy(m, &MapWidget::pointer);
-        QSignalSpy menu(m, &MapWidget::localMenuRequested);
-        QMenu* old = openVerbMenu();
-        const QPoint g = m->mapToGlobal(QPoint(80, 400));
-        QTest::mousePress(old, Qt::RightButton, Qt::NoModifier, old->mapFromGlobal(g));
-        m->setPopupMenus(false);  // the hover the close reports turned it off
-        QTest::mouseRelease(win, Qt::RightButton, Qt::NoModifier, win->mapFromGlobal(g));
-        QCOMPARE(menu.count(), 0);
-        QCOMPARE(spy.count(), 1);
-        auto p = spy.at(0).at(0).value<MapPointer>();
-        QCOMPARE(int(p.kind), int(MapPointer::Release));
-        QVERIFY(p.pressUnsent);
-        QCOMPARE(p.ev.imgX, 80);
-        QCOMPARE(p.ev.imgY, 400);
-        m->setPopupMenus(true);
-        delete old;
-    }
-    // Where the platform replays the closing press to the map, it is the same consumed press and its own release.
-    void replayedClosingPressIsConsumedToo() {
-        MapWidget* m = win->map();
-        m->setRightClickToWire(false);
-        m->setPopupMenus(false);  // already off at the press: a sent press would be a MouseDown
-        QSignalSpy spy(m, &MapWidget::pointer);
-        QMenu* old = openVerbMenu();
-        QTest::mousePress(m, Qt::RightButton, Qt::NoModifier, QPoint(80, 400));
-        QCOMPARE(spy.count(), 0);
-        QTest::mouseRelease(m, Qt::RightButton, Qt::NoModifier, QPoint(80, 400));
-        QCOMPARE(spy.count(), 1);
-        QVERIFY(spy.at(0).at(0).value<MapPointer>().pressUnsent);
-        m->setPopupMenus(true);
-        delete old;
-    }
-    // A press inside the menu, or the left button outside it, is the menu's own business.
-    void pressesTheMenuKeepsAreNotConsumed() {
-        MapWidget* m = win->map();
-        m->setRightClickToWire(false);
-        m->setPopupMenus(true);
-        QSignalSpy menu(m, &MapWidget::localMenuRequested);
-        QMenu* old = openVerbMenu();
-        QTest::mousePress(old, Qt::RightButton, Qt::NoModifier, QPoint(5, 5));
-        QTest::mouseRelease(old, Qt::RightButton, Qt::NoModifier, QPoint(5, 5));
-        QTest::mouseRelease(win, Qt::RightButton, Qt::NoModifier, win->mapFromGlobal(m->mapToGlobal(QPoint(80, 400))));
-        QCOMPARE(menu.count(), 0);
-        old->hide();
-        old = openVerbMenu();
-        QTest::mousePress(old, Qt::LeftButton, Qt::NoModifier, old->mapFromGlobal(m->mapToGlobal(QPoint(80, 400))));
-        QVERIFY(!old->isVisible());
-        QTest::mouseRelease(win, Qt::LeftButton, Qt::NoModifier, win->mapFromGlobal(m->mapToGlobal(QPoint(80, 400))));
-        QTest::mouseRelease(win, Qt::RightButton, Qt::NoModifier, win->mapFromGlobal(m->mapToGlobal(QPoint(80, 400))));
-        QCOMPARE(menu.count(), 0);
-        delete old;
-    }
-    // The verb popup swallows the pointer's motion; when it closes, the atom under the pointer is reported at once (with
-    // right=1 while the button is still down), so the flag follows what is under the pointer and not what was under it
-    // when the popup opened.
-    void popupCloseReportsTheHover() {
-        QImage f(480, 480, QImage::Format_RGBX8888);
-        f.fill(Qt::black);
-        win->setMapFrame(f, hoverScene());
-        MapWidget* m = win->map();
-        QEvent leave0(QEvent::Leave);
-        QCoreApplication::sendEvent(m, &leave0);
-        QCoreApplication::processEvents();
-        QSignalSpy spy(m, &MapWidget::pointer);
-        m->reportHoverAfterPopup(m->mapToGlobal(QPoint(81, 401)), false);
-        QCOMPARE(spy.count(), 1);
-        auto p = spy.at(0).at(0).value<MapPointer>();
-        QCOMPARE(int(p.kind), int(MapPointer::Hover));
-        QVERIFY(!p.motion);
-        QCOMPARE(p.ev.button, 0);
-        QCOMPARE(p.ev.imgX, 81);
-        QCOMPARE(p.ev.imgY, 401);
-        m->reportHoverAfterPopup(m->mapToGlobal(QPoint(81, 401)), true);  // the same pixel again: still reported
-        QCOMPARE(spy.count(), 2);
-        QCOMPARE(spy.at(1).at(0).value<MapPointer>().ev.button, 3);
-        QEvent leave(QEvent::Leave);
-        QCoreApplication::sendEvent(m, &leave);
-        QCoreApplication::processEvents();
-        win->setMapFrame(f, oneAtomScene());
-        QTest::mouseMove(m, QPoint(70, 401));  // the post after the last hover scene
-    }
-    // DreamSeeker's status bar names the atom under the pointer (DM Reference, `statusbar`), with no button held.
-    // See MapWidget::updateHover for what it names and the one way it differs from stock.
-    void statusBarNamesTheAtomUnderThePointer() {
-        QLabel* bar = win->statusBar();
-        QVERIFY(bar && !bar->isHidden());
-        auto s = std::make_shared<HitScene>(*oneAtomScene());
-        auto sp = s->world[0].sprite;
-        s->atoms.push_back({"ghost", 0, kAtomObj, 10, 5, 5, false});  // mouse_opacity 0
-        s->world.push_back({sp, 4 * 32, (14 - 4) * 32, 1});           // cell (5,5)
-        s->atoms.push_back({"", 1, kAtomObj, 11, 7, 7, false});       // name = ""
-        s->world.push_back({sp, 6 * 32, (14 - 6) * 32, 2});           // cell (7,7)
-        s->atoms.push_back({"space", 1, kAtomTurf, 0, 9, 9, false});  // vg's space marker, as the scene hands it over
-        s->world.push_back({sp, 8 * 32, (14 - 8) * 32, 3});           // cell (9,9)
-        QImage f(480, 480, QImage::Format_RGBX8888);
-        f.fill(Qt::black);
-        win->setMapFrame(f, s);
-        QSignalSpy wire(win->map(), &MapWidget::pointer);
-        QTest::mouseMove(win->map(), QPoint(80, 400));  // over "thing"
-        QCOMPARE(bar->text(), QString("thing"));
-        QTest::mouseMove(win->map(), QPoint(10, 10));  // over no sprite at all
-        QCOMPARE(bar->text(), QString());
-        QTest::mouseMove(win->map(), QPoint(4 * 32 + 5, 10 * 32 + 5));  // mouse_opacity 0: nothing under it
-        QCOMPARE(bar->text(), QString());
-        QTest::mouseMove(win->map(), QPoint(6 * 32 + 5, 8 * 32 + 5));  // nameless atom: blank, not a label
-        QCOMPARE(bar->text(), QString());
-        QTest::mouseMove(win->map(), QPoint(8 * 32 + 5, 6 * 32 + 5));  // the marker is dropped upstream
-        QCOMPARE(bar->text(), QString("space"));
-        QCOMPARE(wire.count(), 0);  // nothing on this map declares a hover proc: no pointer is posted
-        // a new frame re-resolves under a still pointer: the atom moved away
-        win->setMapFrame(f, oneAtomScene());
-        QCOMPARE(bar->text(), QString());
-        QTest::mouseMove(win->map(), QPoint(80, 400));
-        QCOMPARE(bar->text(), QString("thing"));
-        QEvent leave(QEvent::Leave);
-        QCoreApplication::sendEvent(win->map(), &leave);  // off the map: blank
-        QCOMPARE(bar->text(), QString());
-    }
-    // Button-less motion is a Hover pointer (render::HoverTracker decides what reaches the wire), one per image pixel; a
-    // new atom under a still pointer is a Hover with motion = false; leaving the control is a Leave. Nothing is a Hover
-    // while a button is held. Every pointer names the map control.
-    void hoverMotionBecomesHoverPointers() {
-        QImage f(480, 480, QImage::Format_RGBX8888);
-        f.fill(Qt::black);
-        win->setMapFrame(f, hoverScene());
-        QEvent leave0(QEvent::Leave);
-        QCoreApplication::sendEvent(win->map(), &leave0);
-        QCoreApplication::processEvents();
-        QSignalSpy spy(win->map(), &MapWidget::pointer);
-        QTest::mouseMove(win->map(), QPoint(81, 401));
-        QTest::mouseMove(win->map(), QPoint(81, 401));
-        QCOMPARE(spy.count(), 1);
-        auto p = spy.at(0).at(0).value<MapPointer>();
-        QCOMPARE(int(p.kind), int(MapPointer::Hover));
-        QVERIFY(p.motion);
-        QCOMPARE(p.control, std::string("main.map"));
-        QCOMPARE(p.ev.imgX, 81);
-        QCOMPARE(p.ev.imgY, 401);
-        QCOMPARE(p.ev.button, 0);
-        QVERIFY(p.scene);
-        auto empty = std::make_shared<HitScene>(*hoverScene());
-        empty->world.clear();
-        win->setMapFrame(f, empty);  // the atom left the cell under the pointer
-        QCOMPARE(spy.count(), 2);
-        p = spy.at(1).at(0).value<MapPointer>();
-        QCOMPARE(int(p.kind), int(MapPointer::Hover));
-        QVERIFY(!p.motion);
-        win->setMapFrame(f, empty);  // nothing changed
-        QCOMPARE(spy.count(), 2);
-        win->setMapFrame(f, hoverScene());
-        QCOMPARE(spy.count(), 3);
-        QTest::mousePress(win->map(), Qt::LeftButton, Qt::NoModifier, QPoint(80, 400));
-        QTest::mouseMove(win->map(), QPoint(120, 400));
-        QTest::mouseRelease(win->map(), Qt::LeftButton, Qt::NoModifier, QPoint(120, 400));
-        QCOMPARE(spy.count(), 6);
-        for (int i = 3; i < 6; i++) {
-            p = spy.at(i).at(0).value<MapPointer>();
-            QVERIFY(p.kind != MapPointer::Hover);
-            QCOMPARE(p.control, std::string("main.map"));
-        }
-        QEvent leave(QEvent::Leave);
-        QCoreApplication::sendEvent(win->map(), &leave);
-        QCOMPARE(spy.count(), 6);  // posted after the event that caused it (leaveGoesAfterTheNextMapsMotion)
-        QCoreApplication::processEvents();
-        QCOMPARE(spy.count(), 7);
-        p = spy.at(6).at(0).value<MapPointer>();
-        QCOMPARE(int(p.kind), int(MapPointer::Leave));
-        QCOMPARE(p.control, std::string("main.map"));
-        win->setMapFrame(f, oneAtomScene());
-    }
-    // Button-less motion is posted only while something could report it: a hover proc on this map's atoms or the
-    // world's client hover proc. The post after the last such scene still goes, so the report ending a hover is sent.
-    void hoverIsPostedOnlyWhenSomethingWantsIt() {
-        QImage f(480, 480, QImage::Format_RGBX8888);
-        f.fill(Qt::black);
-        win->setMapFrame(f, oneAtomScene());
-        QTest::mouseMove(win->map(), QPoint(70, 401));  // the post after an earlier test's hover scene
-        QSignalSpy spy(win->map(), &MapWidget::pointer);
-        QTest::mouseMove(win->map(), QPoint(81, 401));
-        QTest::mouseMove(win->map(), QPoint(90, 401));
-        QCOMPARE(spy.count(), 0);
-        auto client = std::make_shared<HitScene>(*oneAtomScene());
-        client->clientHover = true;
-        win->setMapFrame(f, client);
-        QTest::mouseMove(win->map(), QPoint(91, 401));
-        QCOMPARE(spy.count(), 1);
-        win->setMapFrame(f, oneAtomScene());
-        QTest::mouseMove(win->map(), QPoint(92, 401));
-        QTest::mouseMove(win->map(), QPoint(93, 401));
-        QCOMPARE(spy.count(), 2);
-        QEvent leave(QEvent::Leave);
-        QCoreApplication::sendEvent(win->map(), &leave);
-        QCoreApplication::processEvents();
-    }
-    // A new frame under a still pointer is not re-checked while any button is down, a press the map kept off the wire
-    // (the letterbox) included.
-    void stillPointerRecheckWaitsForEveryButton() {
-        win->map()->setIconSize(32);
-        QImage small(160, 160, QImage::Format_RGBX8888);
-        small.fill(Qt::black);
-        auto one = std::make_shared<HitScene>(*hoverScene());
-        one->cols = one->rows = 5;
-        one->world[0].y = 2 * 32;
-        win->setMapFrame(small, one);
-        QRect ir = win->map()->imageRect();
-        QSignalSpy spy(win->map(), &MapWidget::pointer);
-        QTest::mouseMove(win->map(), ir.topLeft() + QPoint(2 * 32 + 5, 2 * 32 + 5));
-        QCOMPARE(spy.count(), 1);
-        QTest::mousePress(win->map(), Qt::LeftButton, Qt::NoModifier, QPoint(1, 1));  // on the letterbox: no Press
-        QCOMPARE(spy.count(), 1);
-        QTest::mouseMove(win->map(), ir.topLeft() + QPoint(2 * 32 + 5, 2 * 32 + 5));
-        auto gone = std::make_shared<HitScene>(*one);
-        gone->world.clear();
-        win->setMapFrame(small, gone);
-        QCOMPARE(spy.count(), 1);
-        QTest::mouseRelease(win->map(), Qt::LeftButton, Qt::NoModifier, ir.topLeft() + QPoint(2 * 32 + 5, 2 * 32 + 5));
-        win->setMapFrame(small, one);
-        QCOMPARE(spy.count(), 2);
-        win->map()->setIconSize(0);
-        QImage f(480, 480, QImage::Format_RGBX8888);
-        f.fill(Qt::black);
-        win->setMapFrame(f, oneAtomScene());
-        QEvent leave(QEvent::Leave);
-        QCoreApplication::sendEvent(win->map(), &leave);
-        QCoreApplication::processEvents();
-    }
-    // Stock sends nothing when its right-click menu opens over the map; a leave held for it goes when the menu closes
-    // with the pointer elsewhere.
-    void noLeaveForTheLocalMenu() {
-        QImage f(480, 480, QImage::Format_RGBX8888);
-        f.fill(Qt::black);
-        win->setMapFrame(f, hoverScene());
-        QSignalSpy spy(win->map(), &MapWidget::pointer);
-        QMenu menu;
-        menu.addAction("poke");
-        menu.popup(win->map()->mapToGlobal(QPoint(80, 400)));
-        QVERIFY(QApplication::activePopupWidget());
-        QEvent leave(QEvent::Leave);
-        QCoreApplication::sendEvent(win->map(), &leave);
-        QCoreApplication::processEvents();
-        for (const auto& args : spy) QVERIFY(args.at(0).value<MapPointer>().kind != MapPointer::Leave);
-        QCursor::setPos(win->mapToGlobal(QPoint(-50, -50)));
-        menu.hide();
-        QCoreApplication::processEvents();
-        QVERIFY(!spy.isEmpty());
-        QCOMPARE(int(spy.last().at(0).value<MapPointer>().kind), int(MapPointer::Leave));
-        win->setMapFrame(f, oneAtomScene());
-    }
-    // A second .dmf MAP is a secondary map: built, named by its full id, fed by setAuxMapFrame with its scene, announced
-    // by mapReady. Leaving one map for the other, the new map's report comes first and the old map's leave after it, as
-    // stock sends them; a drag from one map onto the other names the map under the pointer.
-    void secondDmfMapTakesInput() {
-        win->hide();  // button-less test motion moves the cursor: only this window may be under it
-        struct Reshow {
-            SkinWindow* w;
-            ~Reshow() {
-                w->show();
-                w->activateWindow();
-            }
-        } reshow{win};
-        SkinWindow w;
-        QSignalSpy ready(&w, &SkinWindow::mapReady);
-        QVERIFY(w.loadSkin(kTwoMaps).isEmpty());
-        w.resize(w.designSize());
-        w.show();
-        QVERIFY(QTest::qWaitForWindowExposed(&w));
-        MapWidget* m2 = w.auxMap("map2");
-        QVERIFY(m2 && w.map() && m2 != w.map());
-        QCOMPARE(m2->controlId(), std::string("main.map2"));
-        QCOMPARE(w.mapWidgets().size(), 2);
-        QCOMPARE(ready.count(), 2);
-        QImage f(480, 480, QImage::Format_RGBX8888), f2(96, 96, QImage::Format_RGBX8888);  // map2 shows f2 at 2x
-        f.fill(Qt::black);
-        f2.fill(Qt::black);
-        w.setMapFrame(f, hoverScene());
-        w.setAuxMapFrame("map2", f2, map2Scene());
-        QVERIFY(m2->hitScene());
-        std::vector<MapPointer> seen;
-        for (MapWidget* m : w.mapWidgets())
-            connect(m, &MapWidget::pointer, &w, [&seen](const MapPointer& p) { seen.push_back(p); });
-        QTest::mouseMove(w.map(), QPoint(80, 400));
-        QCoreApplication::processEvents();
-        seen.clear();
-        QTest::mouseMove(m2, QPoint(32, 160));  // Qt: the old map's leave, then the new map's motion
-        QCoreApplication::processEvents();
-        QTest::mouseMove(m2, QPoint(33, 161));  // the same image pixel, but the leave ended the hover: posted
-        QCOMPARE(int(seen.size()), 3);
-        QCOMPARE(int(seen[0].kind), int(MapPointer::Hover));
-        QCOMPARE(seen[0].control, std::string("main.map2"));
-        QCOMPARE(int(seen[1].kind), int(MapPointer::Leave));
-        QCOMPARE(seen[1].control, std::string("main.map"));
-        QCOMPARE(int(seen[2].kind), int(MapPointer::Hover));
-        QCOMPARE(seen[2].ev.imgX, seen[0].ev.imgX);
-        QCOMPARE(seen[2].ev.imgY, seen[0].ev.imgY);
-        QTest::mouseMove(m2, QPoint(32, 161));
-        QCOMPARE(int(seen.size()), 3);
-        seen.clear();
-        QTest::mousePress(w.map(), Qt::LeftButton, Qt::NoModifier, QPoint(80, 400));
-        QPoint over2 = w.map()->mapFromGlobal(m2->mapToGlobal(QPoint(32, 160)));
-        QTest::mouseMove(w.map(), over2);
-        QTest::mouseRelease(w.map(), Qt::LeftButton, Qt::NoModifier, over2);
-        QCOMPARE(int(seen.size()), 3);
-        QCOMPARE(seen[0].control, std::string("main.map"));
-        // winX/winY are screen pixels on both controls, so the drag threshold measures the real distance.
-        const QPoint g0 = w.map()->mapToGlobal(QPoint(80, 400)), g2 = m2->mapToGlobal(QPoint(32, 160));
-        QCOMPARE(seen[0].ev.winX, g0.x());
-        QCOMPARE(seen[0].ev.winY, g0.y());
-        for (int i : {1, 2}) {
-            QCOMPARE(seen[size_t(i)].control, std::string("main.map2"));
-            QCOMPARE(seen[size_t(i)].scene, m2->hitScene());
-            QCOMPARE(seen[size_t(i)].ev.imgX, 16);
-            QCOMPARE(seen[size_t(i)].ev.imgY, 80);
-            QCOMPARE(seen[size_t(i)].ev.winX, g2.x());
-            QCOMPARE(seen[size_t(i)].ev.winY, g2.y());
-        }
-        w.hide();
-    }
-    // While a button is held the topmost window under the pointer decides what a motion or release names: a camera map
-    // in a popup lying over the main map is that map, the popup's page is the popup's window id, and outside every
-    // window is no control at all. No leave follows for the main map when the release lands on the popup.
-    void heldPointerNamesTheTopmostWindow() {
-        win->hide();
-        struct Reshow {
-            SkinWindow* w;
-            ~Reshow() {
-                w->show();
-                w->activateWindow();
-            }
-        } reshow{win};
-        SkinWindow w;
-        QVERIFY(w.loadSkin(kTwoMaps).isEmpty());
-        w.resize(w.designSize());
-        w.show();
-        QVERIFY(QTest::qWaitForWindowExposed(&w));
-        QImage f(480, 480, QImage::Format_RGBX8888), f2(96, 96, QImage::Format_RGBX8888);
-        f.fill(Qt::black);
-        f2.fill(Qt::black);
-        w.setMapFrame(f, oneAtomScene());
-        auto* popup = new QWidget(&w, Qt::Dialog);  // a browse() popup, as shell/browsehost.cpp makes one
-        popup->setProperty("fugueControl", "campop");
-        auto* cam = new MapWidget(popup);
-        cam->setControlId("campop.cam");
-        cam->setGeometry(10, 10, 96, 96);
-        cam->setFrame(f2, map2Scene());
-        popup->setGeometry(QRect(w.map()->mapToGlobal(QPoint(200, 200)), QSize(200, 200)));
-        popup->show();
-        popup->raise();
-        QVERIFY(QTest::qWaitForWindowExposed(popup));
-        std::vector<MapPointer> seen;
-        connect(w.map(), &MapWidget::pointer, &w, [&seen](const MapPointer& p) {
-            if (p.kind != MapPointer::Hover) seen.push_back(p);
-        });
-        const QPoint overCam = w.map()->mapFromGlobal(cam->mapToGlobal(QPoint(40, 40)));
-        const QPoint overPage = w.map()->mapFromGlobal(popup->mapToGlobal(QPoint(150, 150)));
-        QVERIFY(w.map()->rect().contains(overCam) && w.map()->rect().contains(overPage));
-        QCOMPARE(QApplication::widgetAt(w.map()->mapToGlobal(overCam)), cam);
-
-        QTest::mousePress(w.map(), Qt::LeftButton, Qt::NoModifier, QPoint(80, 400));
-        QTest::mouseMove(w.map(), overCam);
-        QTest::mouseRelease(w.map(), Qt::LeftButton, Qt::NoModifier, overCam);
-        QCOMPARE(int(seen.size()), 3);
-        QCOMPARE(seen[0].control, std::string("main.map"));
-        for (int i : {1, 2}) {
-            QCOMPARE(seen[size_t(i)].control, std::string("campop.cam"));
-            QCOMPARE(seen[size_t(i)].scene, cam->hitScene());
-            QVERIFY(!seen[size_t(i)].offMap);
-            QCOMPARE(seen[size_t(i)].ev.imgX, 40);
-            QCOMPARE(seen[size_t(i)].ev.imgY, 40);
-        }
-        QEvent leave(QEvent::Leave);
-        QCoreApplication::sendEvent(w.map(), &leave);
-        QCoreApplication::processEvents();
-        QCOMPARE(int(seen.size()), 3);
-
-        seen.clear();
-        QTest::mousePress(w.map(), Qt::LeftButton, Qt::NoModifier, QPoint(80, 400));
-        QTest::mouseRelease(w.map(), Qt::LeftButton, Qt::NoModifier, overPage);
-        QCOMPARE(int(seen.size()), 2);
-        QVERIFY(seen[1].offMap);
-        QCOMPARE(seen[1].control, std::string("campop"));
-        QVERIFY(!seen[1].scene);
-
-        seen.clear();
-        const QPoint outside = w.map()->mapFromGlobal(w.frameGeometry().bottomRight() + QPoint(200, 200));
-        QTest::mousePress(w.map(), Qt::LeftButton, Qt::NoModifier, QPoint(80, 400));
-        QTest::mouseRelease(w.map(), Qt::LeftButton, Qt::NoModifier, outside);
-        QCOMPARE(int(seen.size()), 2);
-        QVERIFY(seen[1].offMap);
-        QCOMPARE(seen[1].control, std::string());
-
-        // Inside the map control, over its letterbox, the pixel is extrapolated rather than clamped to the edge.
-        w.map()->setIconSize(32);
-        QImage small(160, 160, QImage::Format_RGBX8888);
-        small.fill(Qt::black);
-        w.setMapFrame(small, oneAtomScene());
-        const QRect ir = w.map()->imageRect();
-        seen.clear();
-        QTest::mousePress(w.map(), Qt::LeftButton, Qt::NoModifier, ir.topLeft() + QPoint(5, 5));
-        QTest::mouseRelease(w.map(), Qt::LeftButton, Qt::NoModifier, ir.topLeft() + QPoint(-20, 5));
-        QCOMPARE(int(seen.size()), 2);
-        QVERIFY(!seen[1].offMap);
-        QCOMPARE(seen[1].ev.imgX, -20);
-        w.hide();
-    }
-    // Where the platform does not report window positions (Wayland puts every top-level window at 0,0, so widgetAt follows
-    // creation order), only the pressed control and its own window are looked at: a popup created later and reported over
-    // the main map is not seen. A map with no scene yet is still that map.
-    void heldPointerWithoutWindowPositions() {
-        win->hide();
-        struct Reshow {
-            SkinWindow* w;
-            ~Reshow() {
-                MapWidget::setWindowPositionsKnown({});
-                w->show();
-                w->activateWindow();
-            }
-        } reshow{win};
-        SkinWindow w;
-        QVERIFY(w.loadSkin(kTwoMaps).isEmpty());
-        w.resize(w.designSize());
-        w.show();
-        QVERIFY(QTest::qWaitForWindowExposed(&w));
-        QImage f(480, 480, QImage::Format_RGBX8888);
-        f.fill(Qt::black);
-        w.setMapFrame(f, oneAtomScene());
-        MapWidget* m2 = w.auxMap("map2");
-        QVERIFY(m2 && !m2->hitScene());
-        auto* popup = new QWidget(&w, Qt::Dialog);
-        popup->setProperty("fugueControl", "campop");
-        popup->setGeometry(w.geometry());
-        popup->show();
-        popup->raise();
-        QVERIFY(QTest::qWaitForWindowExposed(popup));
-        const QPoint onMap(50, 50), onMap2 = w.map()->mapFromGlobal(m2->mapToGlobal(QPoint(20, 20)));
-        QVERIFY(popup->isAncestorOf(QApplication::widgetAt(w.map()->mapToGlobal(onMap))) ||
-                QApplication::widgetAt(w.map()->mapToGlobal(onMap)) == popup);
-        MapWidget::setWindowPositionsKnown(false);
-        std::vector<MapPointer> seen;
-        connect(w.map(), &MapWidget::pointer, &w, [&seen](const MapPointer& p) {
-            if (p.kind != MapPointer::Hover) seen.push_back(p);
-        });
-
-        QTest::mousePress(w.map(), Qt::LeftButton, Qt::NoModifier, QPoint(80, 400));
-        QTest::mouseMove(w.map(), onMap);
-        QTest::mouseRelease(w.map(), Qt::LeftButton, Qt::NoModifier, onMap);
-        QCOMPARE(int(seen.size()), 3);
-        for (int i : {1, 2}) {
-            QVERIFY(!seen[size_t(i)].offMap);
-            QCOMPARE(seen[size_t(i)].control, std::string("main.map"));
-            QCOMPARE(seen[size_t(i)].scene, w.map()->hitScene());
-        }
-
-        seen.clear();
-        QTest::mousePress(w.map(), Qt::LeftButton, Qt::NoModifier, QPoint(80, 400));
-        QTest::mouseRelease(w.map(), Qt::LeftButton, Qt::NoModifier, onMap2);
-        QCOMPARE(int(seen.size()), 2);
-        QVERIFY(!seen[1].offMap);
-        QCOMPARE(seen[1].control, std::string("main.map2"));
-        QVERIFY(!seen[1].scene);
-
-        // A control lying on the map in the same window (vg's mapwindow.credits browser) is what a release over it names.
-        auto* overlay = new QWidget(w.map()->parentWidget());
-        overlay->setProperty("fugueControl", "main.overlay");
-        overlay->setGeometry(QRect(w.map()->mapTo(w.map()->parentWidget(), QPoint(100, 100)), QSize(60, 60)));
-        overlay->show();
-        overlay->raise();
-        seen.clear();
-        QTest::mousePress(w.map(), Qt::LeftButton, Qt::NoModifier, QPoint(80, 400));
-        QTest::mouseRelease(w.map(), Qt::LeftButton, Qt::NoModifier, QPoint(120, 120));
-        QCOMPARE(int(seen.size()), 2);
-        QVERIFY(seen[1].offMap);
-        QCOMPARE(seen[1].control, std::string("main.overlay"));
-        delete overlay;
-
-        seen.clear();
-        const QPoint outside = w.map()->mapFromGlobal(w.frameGeometry().bottomRight() + QPoint(200, 200));
-        QTest::mousePress(w.map(), Qt::LeftButton, Qt::NoModifier, QPoint(80, 400));
-        QTest::mouseRelease(w.map(), Qt::LeftButton, Qt::NoModifier, outside);
-        QCOMPARE(int(seen.size()), 2);
-        QVERIFY(seen[1].offMap);
-        QCOMPARE(seen[1].control, std::string());
-        w.hide();
-    }
-    void letterboxAndMissingSceneSendNothing() {
-        QSignalSpy spy(win->map(), &MapWidget::pointer);
-        win->map()->setIconSize(32);
-        QImage small(160, 160, QImage::Format_RGBX8888);
-        small.fill(Qt::black);
-        win->setMapFrame(small, oneAtomScene());
-        QRect ir = win->map()->imageRect();
-        QVERIFY(ir.width() < win->map()->width());
-        QTest::mousePress(win->map(), Qt::LeftButton, Qt::NoModifier, QPoint(1, 1));  // in the letterbox
-        QTest::mouseRelease(win->map(), Qt::LeftButton, Qt::NoModifier, QPoint(1, 1));
-        QCOMPARE(spy.count(), 0);
-        // inside the image the pointer maps through the zoom: image centre pixel
-        QTest::mouseClick(win->map(), Qt::LeftButton, Qt::NoModifier, ir.center());
-        QCOMPARE(spy.count(), 2);
-        auto p = spy.at(0).at(0).value<MapPointer>();
-        QVERIFY(std::abs(p.ev.imgX - 80) <= 1 && std::abs(p.ev.imgY - 80) <= 1);
-        QImage f(480, 480, QImage::Format_RGBX8888);
-        f.fill(Qt::black);
-        win->setMapFrame(f, oneAtomScene());
-    }
-    // A vertical notch over the map is a Wheel pointer naming the map control; a horizontal one sends nothing, except
-    // Alt+wheel, which Qt on X11 delivers as horizontal and stock sends as a vertical notch.
-    void wheelNotchBecomesAWheelPointer() {
-        QCOMPARE(win->map()->controlId(), std::string("main.map"));
-        QSignalSpy spy(win->map(), &MapWidget::pointer);
-        auto wheel = [&](QPoint angle, Qt::KeyboardModifiers mods, Qt::MouseButtons buttons = Qt::NoButton) {
-            QWheelEvent e(QPointF(80, 400), win->map()->mapToGlobal(QPointF(80, 400)), QPoint(), angle, buttons, mods,
-                          Qt::NoScrollPhase, false);
-            QCoreApplication::sendEvent(win->map(), &e);
-        };
-        wheel(QPoint(0, 120), Qt::NoModifier, Qt::LeftButton);
-        QCOMPARE(spy.count(), 1);
-        auto p = spy.at(0).at(0).value<MapPointer>();
-        QCOMPARE(int(p.kind), int(MapPointer::Wheel));
-        QCOMPARE(p.wheelY, 120);
-        QCOMPARE(p.ev.imgX, 80);
-        QCOMPARE(p.ev.imgY, 400);
-        QCOMPARE(p.ev.button, 1);
-        wheel(QPoint(-120, 0), Qt::NoModifier);
-        QCOMPARE(spy.count(), 1);
-        wheel(QPoint(-120, 0), Qt::AltModifier);
-        QCOMPARE(spy.count(), 2);
-        p = spy.at(1).at(0).value<MapPointer>();
-        QCOMPARE(p.wheelY, -120);
-        QVERIFY(p.ev.mods.alt);
-    }
-    // A natively presented frame has no QImage in the widget: wheel, click, hover and the local menu use its size.
-    void externalFrameTakesPointers() {
-        MapWidget* map = win->map();
-        win->setMapExternalFrame(QSize(480, 480), oneAtomScene(), [] { return QImage(); });
-        QVERIFY(map->hasFrame());
-        QSignalSpy spy(map, &MapWidget::pointer);
-        QWheelEvent e(QPointF(80, 400), map->mapToGlobal(QPointF(80, 400)), QPoint(), QPoint(0, 120), Qt::NoButton,
-                      Qt::NoModifier, Qt::NoScrollPhase, false);
-        QCoreApplication::sendEvent(map, &e);
-        QCOMPARE(spy.count(), 1);
-        auto p = spy.at(0).at(0).value<MapPointer>();
-        QCOMPARE(int(p.kind), int(MapPointer::Wheel));
-        QCOMPARE(p.ev.imgX, 80);
-        QCOMPARE(p.ev.imgY, 400);
-        QPoint cell(2 * 32 + 5, 12 * 32 + 5);  // the atom at (3,3)
-        QTest::mouseClick(map, Qt::LeftButton, Qt::NoModifier, cell);
-        QCOMPARE(spy.count(), 3);
-        QCOMPARE(int(spy.at(1).at(0).value<MapPointer>().kind), int(MapPointer::Press));
-        QMouseEvent move(QEvent::MouseMove, QPointF(cell), map->mapToGlobal(QPointF(cell)), Qt::NoButton, Qt::NoButton,
-                         Qt::NoModifier);
-        QCoreApplication::sendEvent(map, &move);
-        QCOMPARE(map->hoverName(), QString("thing"));
-        QSignalSpy menu(map, &MapWidget::localMenuRequested);
-        map->setRightClickToWire(false);
-        QTest::mouseClick(map, Qt::RightButton, Qt::NoModifier, cell);
-        map->setRightClickToWire(true);
-        QCOMPARE(menu.count(), 1);
-        QCOMPARE(menu.at(0).at(1).toString(), QString("thing"));
-        QImage f(480, 480, QImage::Format_RGBX8888);
-        f.fill(Qt::black);
-        win->setMapFrame(f, oneAtomScene());
-    }
     // Stock DreamSeeker walks only through a binding: an arrow nothing binds sends nothing, and the release of one whose
     // press ran a binding sends nothing unless it has a +UP binding of its own.
     void arrowsRunOnlyTheirBindings() {
@@ -1283,6 +499,7 @@ private slots:
         QTest::newRow(".north") << ".north" << false << int(Route::Move) << 1 << true << "";
         QTest::newRow(".southwest up") << ".SouthWest" << true << int(Route::Move) << 10 << false << "";
         QTest::newRow(".center") << ".center" << false << int(Route::Move) << 0 << true << "";
+        QTest::newRow(".north with an argument") << ".north 3" << false << int(Route::Unsupported) << 0 << true << ".north 3";
         QTest::newRow("macro swap") << ".winset \"mainwindow.macro=hotkeymode mapwindow.map.focus=true\"" << false
                                     << int(Route::SetMacroSet) << 0 << true << "hotkeymode";
         QTest::newRow("winset no macro") << ".winset \"rpanewindow.left=;\"" << false << int(Route::Winset) << 0 << true
@@ -1291,13 +508,13 @@ private slots:
                                          << "rpane.lbl.text=hi";
         QTest::newRow("quit") << ".quit" << false << int(Route::Quit) << 0 << true << "";
         QTest::newRow("reconnect") << ".Reconnect" << false << int(Route::Reconnect) << 0 << true << "";
-        QTest::newRow("unknown dot cmd is NOT a verb")
-            << ".profile" << false << int(Route::Unsupported) << 0 << true << ".profile";
         QTest::newRow("screenshot dialog") << ".screenshot" << false << int(Route::Screenshot) << 0 << true << "";
         QTest::newRow("screenshot auto") << ".screenshot auto" << false << int(Route::Screenshot) << 0 << true
                                          << "auto";
-        QTest::newRow("screenshot AUTO") << "  .Screenshot  AUTO " << false << int(Route::Screenshot) << 0 << true
-                                         << "auto";
+        QTest::newRow("screenshot case and whitespace")
+            << "  .Screenshot\t AUTO " << false << int(Route::Screenshot) << 0 << true << "auto";
+        QTest::newRow("unknown dot cmd is NOT a verb")
+            << ".profile" << false << int(Route::Unsupported) << 0 << true << ".profile";
         QTest::newRow(".macros opens the macro editor") << ".macros" << false << int(Route::Macros) << 0 << true << "";
         QTest::newRow(".options opens Options and Messages")
             << ".options" << false << int(Route::Options) << 0 << true << "";
@@ -1319,6 +536,30 @@ private slots:
         QCOMPARE(lines(".winset \"input.text=hello\"\r\nlg two"), QString(".winset \"input.text=hello\"|lg two"));
         QCOMPARE(lines(""), QString());
     }
+    void localOutputRouting() {
+        const std::string payload = "%7B%22type%22%3A%22toggle%22%2C%22payload%22%3Anull%7D";
+        const auto r = routeCommand(".output mapwindow.escape_menu:update " + payload, "", false);
+        QCOMPARE(r.kind, Route::Output);
+        QCOMPARE(r.text, std::string("mapwindow.escape_menu:update"));
+        QCOMPARE(r.arg, payload);  // not decoded until the page-call argument split
+        const auto spaced = routeCommand("  .OuTpUt\tother.control:api.receive\t a%26b&%2526&  ", "", false);
+        QCOMPARE(spaced.kind, Route::Output);
+        QCOMPARE(spaced.text, std::string("other.control:api.receive"));
+        QCOMPARE(spaced.arg, std::string("a%26b&%2526&"));
+        const auto empty = routeCommand(".output page:update", "", false);
+        QCOMPARE(empty.kind, Route::Output);
+        QVERIFY(empty.arg.empty());
+        QCOMPARE(routeWorldCommand(".output page:update x").kind, Route::Output);
+        QCOMPARE(routeWorldCommand(".output").kind, Route::Unsupported);  // malformed, still never a verb
+        QCOMPARE(routeCommand(".outputting x", "", false).kind, Route::Unsupported);
+        const auto lines = macroCommandLines(
+            ".winset \"mapwindow.escape_menu.is-visible=true\"\r\n.output mapwindow.escape_menu:update " + payload +
+            "\r\nReset-Held-Keys");
+        QCOMPARE(lines.size(), size_t(3));
+        QCOMPARE(routeCommand(lines[0], "", false).kind, Route::Winset);
+        QCOMPARE(routeCommand(lines[1], "", false).kind, Route::Output);
+        QCOMPARE(routeCommand(lines[2], "", false).kind, Route::Command);
+    }
     // `.output control text` runs locally: tg's say hotkey opens tgui_say with `.output tgui_say.browser:update <json>`.
     void dotOutputIsLocal() {
         Route r = routeCommand(".output tgui_say.browser:update %7B%22type%22%3A%22open%22%7D", "", false);
@@ -1337,6 +578,133 @@ private slots:
         QCOMPARE(QString::fromStdString(routeCommand("KeyDown [[*]]", "\\", false).text), QString("KeyDown \"\\\\\""));
         QCOMPARE(QString::fromStdString(routeCommand("lg Q \"[[*]]\" [[*]]", "", false).text),
                  QString("lg Q \"\" "));  // not an Any macro
+    }
+    // Stock 516.1688 macro-params-world: top-left control pixels, not bottom-left icon
+    // pixels or letterbox-adjusted coordinates. Qt retains its logical-pixel sizing contract.
+    void mapMacroParameters() {
+        struct RestoreFocus {
+            SkinWindow* w;
+            ~RestoreFocus() {
+                w->activateWindow();
+                w->map()->setFocus();
+            }
+        } focus{win};
+        SkinWindow local;
+        QVERIFY(local.loadSkin(kSkin).isEmpty());
+        local.resize(local.designSize());
+        local.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&local));
+        local.live()->winset("map", "pos=30,20;size=300x200");
+        local.syncFromLive();
+        QWidget* map = local.map();
+        QVERIFY(map);
+        QCOMPARE(map->size(), QSize(300, 200));
+        struct RestoreCursor {
+            QPoint pos = QCursor::pos();
+            ~RestoreCursor() { QCursor::setPos(pos); }
+        } restore;
+        auto expand = [&](const char* command) {
+            return QString::fromStdString(local.expandMapCommandParams(command));
+        };
+        for (const QPoint point :
+             {QPoint(100, 50), QPoint(0, 0), QPoint(299, 199), QPoint(-10, -10), QPoint(119, 241)}) {
+            QCursor::setPos(map->mapToGlobal(point));
+            QCOMPARE(expand("[[map.mouse-pos]] [[map.size]]"), QString("%1 %2 300 200").arg(point.x()).arg(point.y()));
+            QCOMPARE(expand("[[main.map.mouse-pos]] [[MAP.size]] [[map.size]]"),
+                     QString("%1 %2 300 200 300 200").arg(point.x()).arg(point.y()));
+            QCOMPARE(expand(R"("[[map.mouse-pos]]" "[[main.map.size]]")"),
+                     QString("\"%1,%2\" \"300,200\"").arg(point.x()).arg(point.y()));
+        }
+        QCOMPARE(expand("KeyDown [[*]] [[map.size]]"), QString("KeyDown [[*]] 300 200"));
+        // Preserve unsupported parameters/controls rather than inventing coordinates.
+        const char* unsupported = "[[missing.size]] [[input.size]] [[map.unknown]] [[map.size";
+        QCOMPARE(expand(unsupported), QString::fromLatin1(unsupported));
+        QCOMPARE(expand(R"(Record \"[[map.size]]\" "[[map.size]]")"),
+                 QString::fromLatin1(R"(Record \"300 200\" "300,200")"));
+        local.live()->winset("map", "pos=60,40;size=360x240");
+        local.syncFromLive();
+        QCursor::setPos(map->mapToGlobal(QPoint(25, 35)));
+        QCOMPARE(expand("[[map.mouse-pos]] [[map.size]]"), QString("25 35 360 240"));
+    }
+    void fiveArgumentKeyMacrosReachVerbPackets() {
+        using namespace fugue;
+        struct RestoreFocus {
+            SkinWindow* w;
+            ~RestoreFocus() {
+                w->activateWindow();
+                w->map()->setFocus();
+            }
+        } focus{win};
+        SkinWindow local;
+        QVERIFY(local.loadSkin(kSkin).isEmpty());
+        local.resize(local.designSize());
+        local.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&local));
+        local.live()->winset("map", "pos=30,20;size=300x200");
+        local.syncFromLive();
+        FocusFilter filter;
+        skin::MacroSet macros;
+        skin::editUserMacro(macros, "", "Any", "KeyDown [[*]] [[map.mouse-pos]] [[map.size]]");
+        skin::editUserMacro(macros, "", "Any+UP", "KeyUp [[*]] [[map.mouse-pos]] [[map.size]]");
+        filter.setMacros(macros);
+        qApp->installEventFilter(&filter);
+        local.map()->setFocus();
+        QVERIFY(QTest::qWaitFor([&] { return qApp->focusWidget() == local.map(); }));
+        struct RestoreCursor {
+            QPoint pos = QCursor::pos();
+            ~RestoreCursor() { QCursor::setPos(pos); }
+        } restore;
+        std::vector<Route> routed;
+        connect(&filter, &FocusFilter::macroFired, &local, [&](const QString& key, const QString& command, bool up) {
+            for (const auto& line : macroCommandLines(command.toStdString()))
+                routed.push_back(routeCommand(local.expandMapCommandParams(line), key.toStdString(), up));
+        });
+        QCursor::setPos(local.map()->mapToGlobal(QPoint(100, 50)));
+        QTest::keyPress(local.map(), Qt::Key_W);
+        QCursor::setPos(local.map()->mapToGlobal(QPoint(-10, -10)));
+        QTest::keyRelease(local.map(), Qt::Key_W);
+        QTest::keyClick(local.map(), Qt::Key_Up);
+        QCOMPARE(routed.size(), size_t(4));
+        for (bool wide : {false, true}) {
+            net::InputModel input;
+            input.setWideVerbIds(wide);
+            for (uint16_t id : {uint16_t(10), uint16_t(11)}) {
+                Bytes ad;
+                if (wide)
+                    putLe32(ad, id);
+                else
+                    putLe16(ad, id);
+                const std::string name = id == 10 ? "KeyDown" : "KeyUp";
+                ad.insert(ad.end(), name.begin(), name.end());
+                ad.insert(ad.end(), {0, 0, 0, 0, 8, 0, 5});   // name/desc/category, head/src/flags, argc
+                for (uint32_t mask : {4u, 8u, 8u, 8u, 8u}) {  // text, four numbers
+                    putLe32(ad, mask);
+                    ad.insert(ad.end(), {0, 0});
+                }
+                input.onFrame(0x0011, ad);
+            }
+            QCOMPARE(input.verbs().size(), size_t(2));
+            auto source = [](uint32_t) { return std::vector<net::SrcCandidate>{{{8, 0}, "", false}}; };
+            // The original failure is a local refusal, not a server movement decision.
+            const auto bad = input.verbCommand("KeyDown \"W\" [[map.mouse-pos]] [[map.size]]", true, source);
+            QVERIFY(!bad.error.empty());
+            QVERIFY(bad.frames.empty());
+            for (size_t i = 0; i < routed.size(); ++i) {
+                QCOMPARE(routed[i].kind, Route::Command);
+                const auto result = input.verbCommand(routed[i].text, true, source);
+                QVERIFY2(result.error.empty(), result.error.c_str());
+                QVERIFY(!result.missing && !result.resolve);
+                QCOMPARE(result.frames.size(), size_t(1));
+                std::vector<proto::enc::VerbArg> args(5);
+                args[0].str = i < 2 ? "W" : "North";
+                const float numbers[] = {i == 0 ? 100.f : -10.f, i == 0 ? 50.f : -10.f, 300.f, 200.f};
+                for (size_t n = 0; n < 4; ++n) {
+                    args[n + 1].tag = 1;
+                    args[n + 1].num = numbers[n];
+                }
+                QCOMPARE(result.frames[0].body, proto::enc::encodeVerb(uint16_t(10 + i % 2), 8, 0, args, wide));
+            }
+        }
     }
     // Embedded winget: tg's `Any` macro carries the map's mouse position and size as four numbers.
     void embeddedWingetFormats() {
@@ -1393,39 +761,6 @@ private slots:
         QCOMPARE(QString::fromStdString(r.text), QString("nanoclose [0x21004c7]"));
         QCOMPARE(int(routeWorldCommand(".quit").kind), int(Route::Quit));  // builtins still local
         QCOMPARE(int(routeWorldCommand(".winset \"a.is-visible=false\"").kind), int(Route::Winset));
-    }
-    // .screenshot naming + save, as stock DreamSeeker 516 writes them (shell/screenshot.h). Writes only into a temp dir.
-    void screenshotNamingMatchesDreamSeeker() {
-        QDateTime t(QDate(2000, 1, 2), QTime(2, 46, 29));
-        QCOMPARE(screenshotBaseName("shotworld", t), QString("shotworld 2000-01-02 024629"));
-        QCOMPARE(screenshotBaseName("/vg/ Sta:tion* 13?", t),
-                 QString("vg Station 13 2000-01-02 024629"));  // stock drops the bad characters, not replaces them
-        QCOMPARE(screenshotBaseName("", t), QString("screenshot 2000-01-02 024629"));
-        QCOMPARE(withPngSuffix("/x/zq"), QString("/x/zq.png"));
-        QCOMPARE(withPngSuffix("/x/zq.png"), QString("/x/zq.png"));
-        QCOMPARE(withPngSuffix(""), QString(""));  // a cancelled dialog stays cancelled
-    }
-    void screenshotSavesTheNativeFrameAndNeverOverwrites() {
-        QTemporaryDir tmp;
-        QVERIFY(tmp.isValid());
-        QImage frame(352, 352, QImage::Format_RGBX8888);  // view 5 at 32 px
-        frame.fill(QColor(200, 40, 40));
-        frame.setPixelColor(7, 9, QColor(40, 40, 200));
-        QDateTime t(QDate(2000, 1, 2), QTime(2, 43, 14));
-        QString dir = tmp.filePath("screenshots");  // does not exist yet: the save creates it
-        QString p1 = screenshotAutoPath(dir, "shotworld", t);
-        QCOMPARE(p1, dir + "/shotworld 2000-01-02 024314.png");
-        QString err;
-        QVERIFY2(saveScreenshot(frame, p1, &err), qPrintable(err));
-        QImage back(p1);
-        QCOMPARE(back.size(), QSize(352, 352));
-        QVERIFY(!back.hasAlphaChannel());
-        QCOMPARE(back.pixelColor(7, 9), QColor(40, 40, 200));
-        QCOMPARE(back.pixelColor(0, 0), QColor(200, 40, 40));
-        QString p2 = screenshotAutoPath(dir, "shotworld", t);  // F2+REP inside one second
-        QCOMPARE(p2, dir + "/shotworld 2000-01-02 024314 2.png");
-        QVERIFY(!saveScreenshot(QImage(), p2, &err));
-        QVERIFY(!QFileInfo::exists(p2));
     }
     // Client > Macros (skin/usermacros.h, as stock DreamSeeker 516 behaves): the player's lists fire only for a key the skin's set leaves unbound,
     // this game's list before the global one; typing in the macro editor fires nothing.
@@ -1588,7 +923,7 @@ window "mainwindow"
         QCOMPARE(got, QStringList({"Rest", "zap userR", "Rest", "zap hotkeyR", "Rest", "zap userR"}));
     }
     // The top-left system menu (shell/macrodialog.h): the window icon in the menu bar's top-left corner, opening
-    // "Options & Messages" and Client > Screenshot... / Reconnect / Macros... / Quit, each routed as the client command it names.
+    // "Options & Messages" and the Client menu route local commands, never server verbs.
     void systemMenuSitsTopLeftAndLeadsToMacros() {
         static const char* kMenuSkin = R"(menu "menu"
 	elem
@@ -1639,15 +974,28 @@ window "mainwindow"
         QVERIFY(client);
         QStringList items;
         for (QAction* a : client->actions()) items << (a->isSeparator() ? QString("-") : a->text());
-        QCOMPARE(items, QStringList({"&Screenshot...", "&Reconnect", "-", "&Macros...", "-", "&Quit"}));
+        QCOMPARE(items, QStringList(
+                            {"&Screenshot...", "&Reconnect", "-", "&Macros...", "&Performance metrics", "-", "&Quit"}));
         QSignalSpy cmd(&w, &SkinWindow::menuCommand);
+        QAction* metrics = client->actions().at(4);
+        QVERIFY(metrics->isCheckable());
+        QVERIFY(!metrics->isChecked());
+        metrics->trigger();
+        QVERIFY(w.mapMetricsVisible());
+        QVERIFY(metrics->isChecked());
+        QCOMPARE(cmd.count(), 0);  // local toggle never becomes a server command
+        w.setMapMetricsVisible(false);
+        QVERIFY(!metrics->isChecked());
         sys->actions().at(0)->trigger();
         client->actions().at(3)->trigger();
         client->actions().at(1)->trigger();
-        QCOMPARE(cmd.count(), 3);
+        client->actions().at(0)->trigger();
+        QCOMPARE(cmd.count(), 4);
         QCOMPARE(int(routeCommand(cmd.at(0).at(0).toString().toStdString(), "", false).kind), int(Route::Options));
         QCOMPARE(int(routeCommand(cmd.at(1).at(0).toString().toStdString(), "", false).kind), int(Route::Macros));
         QCOMPARE(int(routeCommand(cmd.at(2).at(0).toString().toStdString(), "", false).kind), int(Route::Reconnect));
+        QCOMPARE(int(routeCommand(cmd.at(3).at(0).toString().toStdString(), "", false).kind), int(Route::Screenshot));
+        QCOMPARE(routeWorldCommand(".screenshot auto").kind, Route::Screenshot);
     }
     void optionsWindowLeadsToMacros() {
         OptionsWindow w;
@@ -1678,7 +1026,7 @@ window "mainwindow"
     }
 };
 
-int main(int argc, char** argv) {
+int FUGUE_TEST_ENTRY(int argc, char** argv) {
     registerSchemes();
     QApplication app(argc, argv);
     InputTest t;

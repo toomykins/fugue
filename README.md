@@ -4,7 +4,7 @@ Fugue is a native Linux, macOS and Windows client and launcher for BYOND games, 
 servers that run stock BYOND, without a BYOND install and without Wine. It is engineered for /vg/station. It is
 unofficial and not affiliated with BYOND.
 
-**Status:** early software. It plays full /vg/station rounds, other BYOND games may work, and bugs are expected.
+**Status:** the rewritten GPU renderer supports terrain, entities, HUDs, lighting and selected effects. BYOND appearance, input and UI parity remain incomplete; see [docs/RENDERING.md](docs/RENDERING.md) for the architecture and limitations.
 
 ![Fugue playing /vg/station as the AI, with the camera list and the crew monitor open](docs/images/vgstation.png)
 
@@ -37,7 +37,7 @@ Details and prerequisites are in [docs/BUILDING.md](docs/BUILDING.md):
 
 ```bash
 cmake -G Ninja -S . -B build -DFUGUE_RELEASE=ON
-ninja -C build
+cmake --build build --parallel "$(cmake -P cmake/BuildJobs.cmake)"
 ```
 
 On macOS, follow the [Homebrew and app bundle instructions](docs/BUILDING.md#macos).

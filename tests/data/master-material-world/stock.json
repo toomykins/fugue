@@ -1,0 +1,443 @@
+{
+  "stock": "DreamSeeker/DreamDaemon 516.1688",
+  "source": "build/master-material-probe/stock-guarded/result.json",
+  "phases": [
+    {
+      "case": "control",
+      "label": "00-control",
+      "golden": "stock-control.png",
+      "clicks": [
+        {
+          "point": [40,168],
+          "expected": {"kind":"Click","target":"master","over":null,"location":null,"locationXYZ":null,"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"2:9,2:24"}}
+        },
+        {
+          "point": [60,168],
+          "expected": {"kind":"Click","target":"floor","over":null,"location":"floor","locationXYZ":[2,2,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"29","icon-y":"24","left":"1","button":"left","screen-loc":"2:29,2:24"}}
+        },
+        {
+          "point": [104,104],
+          "expected": {"kind":"Click","target":"red","over":null,"location":"floor","locationXYZ":[4,4,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"4:9,4:24"}}
+        }
+      ]
+    },
+    {
+      "case": "matrix",
+      "label": "01-matrix",
+      "golden": "stock-matrix.png",
+      "clicks": [
+        {
+          "point": [40,168],
+          "expected": {"kind":"Click","target":"master","over":null,"location":null,"locationXYZ":null,"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"2:9,2:24"}}
+        },
+        {
+          "point": [60,168],
+          "expected": {"kind":"Click","target":"floor","over":null,"location":"floor","locationXYZ":[2,2,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"29","icon-y":"24","left":"1","button":"left","screen-loc":"2:29,2:24"}}
+        },
+        {
+          "point": [104,104],
+          "expected": {"kind":"Click","target":"red","over":null,"location":"floor","locationXYZ":[4,4,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"4:9,4:24"}}
+        }
+      ]
+    },
+    {
+      "case": "matrix-white",
+      "label": "02-matrix-white",
+      "golden": "stock-matrix-white.png",
+      "clicks": [
+        {
+          "point": [40,168],
+          "expected": {"kind":"Click","target":"master","over":null,"location":null,"locationXYZ":null,"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"2:9,2:24"}}
+        },
+        {
+          "point": [60,168],
+          "expected": {"kind":"Click","target":"floor","over":null,"location":"floor","locationXYZ":[2,2,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"29","icon-y":"24","left":"1","button":"left","screen-loc":"2:29,2:24"}}
+        },
+        {
+          "point": [104,104],
+          "expected": {"kind":"Click","target":"red","over":null,"location":"floor","locationXYZ":[4,4,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"4:9,4:24"}}
+        }
+      ]
+    },
+    {
+      "case": "matrix-offset",
+      "label": "03-matrix-offset",
+      "golden": "stock-matrix-offset.png",
+      "clicks": [
+        {
+          "point": [40,168],
+          "expected": {"kind":"Click","target":"master","over":null,"location":null,"locationXYZ":null,"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"2:9,2:24"}}
+        },
+        {
+          "point": [60,168],
+          "expected": {"kind":"Click","target":"floor","over":null,"location":"floor","locationXYZ":[2,2,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"29","icon-y":"24","left":"1","button":"left","screen-loc":"2:29,2:24"}}
+        },
+        {
+          "point": [104,104],
+          "expected": {"kind":"Click","target":"red","over":null,"location":"floor","locationXYZ":[4,4,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"4:9,4:24"}}
+        }
+      ]
+    },
+    {
+      "case": "matrix-childmatrix-leafplane",
+      "label": "04-matrix-childmatrix-leafplane",
+      "golden": "stock-matrix-childmatrix-leafplane.png",
+      "clicks": [
+        {
+          "point": [40,168],
+          "expected": {"kind":"Click","target":"master","over":null,"location":null,"locationXYZ":null,"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"41","icon-y":"56","left":"1","button":"left","screen-loc":"2:9,2:24"}}
+        },
+        {
+          "point": [60,168],
+          "expected": {"kind":"Click","target":"floor","over":null,"location":"floor","locationXYZ":[2,2,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"29","icon-y":"24","left":"1","button":"left","screen-loc":"2:29,2:24"}}
+        },
+        {
+          "point": [104,104],
+          "expected": {"kind":"Click","target":"red","over":null,"location":"floor","locationXYZ":[4,4,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"4:9,4:24"}}
+        }
+      ]
+    },
+    {
+      "case": "matrix-childscalar-leafplane",
+      "label": "05-matrix-childscalar-leafplane",
+      "golden": "stock-matrix-childscalar-leafplane.png",
+      "clicks": [
+        {
+          "point": [40,168],
+          "expected": {"kind":"Click","target":"master","over":null,"location":null,"locationXYZ":null,"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"41","icon-y":"56","left":"1","button":"left","screen-loc":"2:9,2:24"}}
+        },
+        {
+          "point": [60,168],
+          "expected": {"kind":"Click","target":"floor","over":null,"location":"floor","locationXYZ":[2,2,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"29","icon-y":"24","left":"1","button":"left","screen-loc":"2:29,2:24"}}
+        },
+        {
+          "point": [104,104],
+          "expected": {"kind":"Click","target":"red","over":null,"location":"floor","locationXYZ":[4,4,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"4:9,4:24"}}
+        }
+      ]
+    },
+    {
+      "case": "parent-scalar-childmatrix-leafplane",
+      "label": "06-parent-scalar-childmatrix-leafplane",
+      "golden": "stock-parent-scalar-childmatrix-leafplane.png",
+      "clicks": [
+        {
+          "point": [40,168],
+          "expected": {"kind":"Click","target":"master","over":null,"location":null,"locationXYZ":null,"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"41","icon-y":"56","left":"1","button":"left","screen-loc":"2:9,2:24"}}
+        },
+        {
+          "point": [60,168],
+          "expected": {"kind":"Click","target":"floor","over":null,"location":"floor","locationXYZ":[2,2,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"29","icon-y":"24","left":"1","button":"left","screen-loc":"2:29,2:24"}}
+        },
+        {
+          "point": [104,104],
+          "expected": {"kind":"Click","target":"red","over":null,"location":"floor","locationXYZ":[4,4,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"4:9,4:24"}}
+        }
+      ]
+    },
+    {
+      "case": "matrix-nested",
+      "label": "07-matrix-nested",
+      "golden": "stock-matrix-nested.png",
+      "clicks": [
+        {
+          "point": [40,168],
+          "expected": {"kind":"Click","target":"master","over":null,"location":null,"locationXYZ":null,"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"2:9,2:24"}}
+        },
+        {
+          "point": [60,168],
+          "expected": {"kind":"Click","target":"floor","over":null,"location":"floor","locationXYZ":[2,2,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"29","icon-y":"24","left":"1","button":"left","screen-loc":"2:29,2:24"}}
+        },
+        {
+          "point": [104,104],
+          "expected": {"kind":"Click","target":"red","over":null,"location":"floor","locationXYZ":[4,4,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"4:9,4:24"}}
+        }
+      ]
+    },
+    {
+      "case": "matrix-nested-same",
+      "label": "08-matrix-nested-same",
+      "golden": "stock-matrix.png",
+      "clicks": [
+        {
+          "point": [40,168],
+          "expected": {"kind":"Click","target":"master","over":null,"location":null,"locationXYZ":null,"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"2:9,2:24"}}
+        },
+        {
+          "point": [60,168],
+          "expected": {"kind":"Click","target":"floor","over":null,"location":"floor","locationXYZ":[2,2,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"29","icon-y":"24","left":"1","button":"left","screen-loc":"2:29,2:24"}}
+        },
+        {
+          "point": [104,104],
+          "expected": {"kind":"Click","target":"red","over":null,"location":"floor","locationXYZ":[4,4,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"4:9,4:24"}}
+        }
+      ]
+    },
+    {
+      "case": "matrix-group",
+      "label": "09-matrix-group",
+      "golden": "stock-matrix-group.png",
+      "clicks": [
+        {
+          "point": [40,168],
+          "expected": {"kind":"Click","target":"floor","over":null,"location":"floor","locationXYZ":[2,2,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"2:9,2:24"}}
+        },
+        {
+          "point": [60,168],
+          "expected": {"kind":"Click","target":"floor","over":null,"location":"floor","locationXYZ":[2,2,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"29","icon-y":"24","left":"1","button":"left","screen-loc":"2:29,2:24"}}
+        },
+        {
+          "point": [104,104],
+          "expected": {"kind":"Click","target":"red","over":null,"location":"floor","locationXYZ":[4,4,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"4:9,4:24"}}
+        }
+      ]
+    },
+    {
+      "case": "matrix-group-apart",
+      "label": "10-matrix-group-apart",
+      "golden": "stock-matrix.png",
+      "clicks": [
+        {
+          "point": [40,168],
+          "expected": {"kind":"Click","target":"master","over":null,"location":null,"locationXYZ":null,"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"2:9,2:24"}}
+        },
+        {
+          "point": [60,168],
+          "expected": {"kind":"Click","target":"floor","over":null,"location":"floor","locationXYZ":[2,2,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"29","icon-y":"24","left":"1","button":"left","screen-loc":"2:29,2:24"}}
+        },
+        {
+          "point": [104,104],
+          "expected": {"kind":"Click","target":"red","over":null,"location":"floor","locationXYZ":[4,4,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"4:9,4:24"}}
+        }
+      ]
+    },
+    {
+      "case": "matrix-resetcolor",
+      "label": "11-matrix-resetcolor",
+      "golden": "stock-matrix-resetcolor.png",
+      "clicks": [
+        {
+          "point": [40,168],
+          "expected": {"kind":"Click","target":"master","over":null,"location":null,"locationXYZ":null,"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"2:9,2:24"}}
+        },
+        {
+          "point": [60,168],
+          "expected": {"kind":"Click","target":"floor","over":null,"location":"floor","locationXYZ":[2,2,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"29","icon-y":"24","left":"1","button":"left","screen-loc":"2:29,2:24"}}
+        },
+        {
+          "point": [104,104],
+          "expected": {"kind":"Click","target":"red","over":null,"location":"floor","locationXYZ":[4,4,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"4:9,4:24"}}
+        }
+      ]
+    },
+    {
+      "case": "matrix-resetalpha",
+      "label": "12-matrix-resetalpha",
+      "golden": "stock-matrix-resetalpha.png",
+      "clicks": [
+        {
+          "point": [40,168],
+          "expected": {"kind":"Click","target":"master","over":null,"location":null,"locationXYZ":null,"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"2:9,2:24"}}
+        },
+        {
+          "point": [60,168],
+          "expected": {"kind":"Click","target":"floor","over":null,"location":"floor","locationXYZ":[2,2,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"29","icon-y":"24","left":"1","button":"left","screen-loc":"2:29,2:24"}}
+        },
+        {
+          "point": [104,104],
+          "expected": {"kind":"Click","target":"red","over":null,"location":"floor","locationXYZ":[4,4,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"4:9,4:24"}}
+        }
+      ]
+    },
+    {
+      "case": "matrix-add",
+      "label": "13-matrix-add",
+      "golden": "stock-matrix-add.png",
+      "clicks": [
+        {
+          "point": [40,168],
+          "expected": {"kind":"Click","target":"master","over":null,"location":null,"locationXYZ":null,"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"2:9,2:24"}}
+        },
+        {
+          "point": [60,168],
+          "expected": {"kind":"Click","target":"floor","over":null,"location":"floor","locationXYZ":[2,2,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"29","icon-y":"24","left":"1","button":"left","screen-loc":"2:29,2:24"}}
+        },
+        {
+          "point": [104,104],
+          "expected": {"kind":"Click","target":"red","over":null,"location":"floor","locationXYZ":[4,4,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"4:9,4:24"}}
+        }
+      ]
+    },
+    {
+      "case": "matrix-multiply",
+      "label": "14-matrix-multiply",
+      "golden": "stock-matrix-multiply.png",
+      "clicks": [
+        {
+          "point": [40,168],
+          "expected": {"kind":"Click","target":"floor","over":null,"location":"floor","locationXYZ":[2,2,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"2:9,2:24"}}
+        },
+        {
+          "point": [60,168],
+          "expected": {"kind":"Click","target":"floor","over":null,"location":"floor","locationXYZ":[2,2,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"29","icon-y":"24","left":"1","button":"left","screen-loc":"2:29,2:24"}}
+        },
+        {
+          "point": [104,104],
+          "expected": {"kind":"Click","target":"red","over":null,"location":"floor","locationXYZ":[4,4,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"4:9,4:24"}}
+        }
+      ]
+    },
+    {
+      "case": "matrix-subtract",
+      "label": "15-matrix-subtract",
+      "golden": "stock-matrix-subtract.png",
+      "clicks": [
+        {
+          "point": [40,168],
+          "expected": {"kind":"Click","target":"master","over":null,"location":null,"locationXYZ":null,"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"2:9,2:24"}}
+        },
+        {
+          "point": [60,168],
+          "expected": {"kind":"Click","target":"floor","over":null,"location":"floor","locationXYZ":[2,2,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"29","icon-y":"24","left":"1","button":"left","screen-loc":"2:29,2:24"}}
+        },
+        {
+          "point": [104,104],
+          "expected": {"kind":"Click","target":"red","over":null,"location":"floor","locationXYZ":[4,4,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"4:9,4:24"}}
+        }
+      ]
+    },
+    {
+      "case": "matrix-childadd",
+      "label": "16-matrix-childadd",
+      "golden": "stock-matrix-add.png",
+      "clicks": [
+        {
+          "point": [40,168],
+          "expected": {"kind":"Click","target":"master","over":null,"location":null,"locationXYZ":null,"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"2:9,2:24"}}
+        },
+        {
+          "point": [60,168],
+          "expected": {"kind":"Click","target":"floor","over":null,"location":"floor","locationXYZ":[2,2,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"29","icon-y":"24","left":"1","button":"left","screen-loc":"2:29,2:24"}}
+        },
+        {
+          "point": [104,104],
+          "expected": {"kind":"Click","target":"red","over":null,"location":"floor","locationXYZ":[4,4,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"4:9,4:24"}}
+        }
+      ]
+    },
+    {
+      "case": "parallax",
+      "label": "17-parallax",
+      "golden": "stock-parallax.png",
+      "clicks": [
+        {
+          "point": [40,168],
+          "expected": {"kind":"Click","target":"master","over":null,"location":null,"locationXYZ":null,"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"2:9,2:24"}}
+        },
+        {
+          "point": [60,168],
+          "expected": {"kind":"Click","target":"floor","over":null,"location":"floor","locationXYZ":[2,2,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"29","icon-y":"24","left":"1","button":"left","screen-loc":"2:29,2:24"}}
+        },
+        {
+          "point": [104,104],
+          "expected": {"kind":"Click","target":"red","over":null,"location":"floor","locationXYZ":[4,4,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"4:9,4:24"}}
+        }
+      ]
+    },
+    {
+      "case": "matrix-offset-resetcolor",
+      "label": "18-matrix-offset-resetcolor",
+      "golden": "stock-matrix-offset-resetcolor.png",
+      "clicks": [
+        {
+          "point": [40,168],
+          "expected": {"kind":"Click","target":"master","over":null,"location":null,"locationXYZ":null,"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"2:9,2:24"}}
+        },
+        {
+          "point": [60,168],
+          "expected": {"kind":"Click","target":"floor","over":null,"location":"floor","locationXYZ":[2,2,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"29","icon-y":"24","left":"1","button":"left","screen-loc":"2:29,2:24"}}
+        },
+        {
+          "point": [104,104],
+          "expected": {"kind":"Click","target":"red","over":null,"location":"floor","locationXYZ":[4,4,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"4:9,4:24"}}
+        }
+      ]
+    },
+    {
+      "case": "matrix-offset-resetalpha",
+      "label": "19-matrix-offset-resetalpha",
+      "golden": "stock-matrix-offset-resetalpha.png",
+      "clicks": [
+        {
+          "point": [40,168],
+          "expected": {"kind":"Click","target":"master","over":null,"location":null,"locationXYZ":null,"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"2:9,2:24"}}
+        },
+        {
+          "point": [60,168],
+          "expected": {"kind":"Click","target":"floor","over":null,"location":"floor","locationXYZ":[2,2,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"29","icon-y":"24","left":"1","button":"left","screen-loc":"2:29,2:24"}}
+        },
+        {
+          "point": [104,104],
+          "expected": {"kind":"Click","target":"red","over":null,"location":"floor","locationXYZ":[4,4,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"4:9,4:24"}}
+        }
+      ]
+    },
+    {
+      "case": "matrix-offset-childmatrix-leafplane",
+      "label": "20-matrix-offset-childmatrix-leafplane",
+      "golden": "stock-matrix-offset-childmatrix-leafplane.png",
+      "clicks": [
+        {
+          "point": [40,168],
+          "expected": {"kind":"Click","target":"master","over":null,"location":null,"locationXYZ":null,"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"41","icon-y":"56","left":"1","button":"left","screen-loc":"2:9,2:24"}}
+        },
+        {
+          "point": [60,168],
+          "expected": {"kind":"Click","target":"floor","over":null,"location":"floor","locationXYZ":[2,2,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"29","icon-y":"24","left":"1","button":"left","screen-loc":"2:29,2:24"}}
+        },
+        {
+          "point": [104,104],
+          "expected": {"kind":"Click","target":"red","over":null,"location":"floor","locationXYZ":[4,4,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"4:9,4:24"}}
+        }
+      ]
+    },
+    {
+      "case": "matrix-under",
+      "label": "21-matrix-under",
+      "golden": "stock-matrix.png",
+      "clicks": [
+        {
+          "point": [40,168],
+          "expected": {"kind":"Click","target":"master","over":null,"location":null,"locationXYZ":null,"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"2:9,2:24"}}
+        },
+        {
+          "point": [60,168],
+          "expected": {"kind":"Click","target":"floor","over":null,"location":"floor","locationXYZ":[2,2,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"29","icon-y":"24","left":"1","button":"left","screen-loc":"2:29,2:24"}}
+        },
+        {
+          "point": [104,104],
+          "expected": {"kind":"Click","target":"red","over":null,"location":"floor","locationXYZ":[4,4,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"4:9,4:24"}}
+        }
+      ]
+    },
+    {
+      "case": "matrix-partial",
+      "label": "22-matrix-partial",
+      "golden": "stock-matrix-partial.png",
+      "clicks": [
+        {
+          "point": [40,168],
+          "expected": {"kind":"Click","target":"master","over":null,"location":null,"locationXYZ":null,"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"2:9,2:24"}}
+        },
+        {
+          "point": [60,168],
+          "expected": {"kind":"Click","target":"floor","over":null,"location":"floor","locationXYZ":[2,2,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"29","icon-y":"24","left":"1","button":"left","screen-loc":"2:29,2:24"}}
+        },
+        {
+          "point": [104,104],
+          "expected": {"kind":"Click","target":"red","over":null,"location":"floor","locationXYZ":[4,4,1],"overLocation":null,"control":"main.map","overControl":null,"params":{"icon-x":"9","icon-y":"24","left":"1","button":"left","screen-loc":"4:9,4:24"}}
+        }
+      ]
+    }
+  ]
+}

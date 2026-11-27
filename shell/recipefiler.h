@@ -1,29 +1,36 @@
-// BrowseRecipeFiler: a runtime /icon sent by browse_rsc reaches the client as a DDMI recipe (render/ddmi.h), not pixels.
-// A page that references it by name gets the PNG the recipe evaluates to, filed in the BrowseRscStore under the
-// recipe's resource id once its operand icons have arrived. Session thread only.
+// Session-worker adapter: DMI sheets and DDMI browse_rsc resources become first-cell PNGs.
+// No model access or decoding on the GUI/HTTP thread; only complete PNGs are published.
 #pragma once
-#include <cstdint>
-#include <map>
-#include <string>
-#include <utility>
-#include <vector>
 #include "net/bytes.h"
-#include "render/scene.h"
 #include "shell/browsestore.h"
+#include "shell/iconcache.h"
+#include <optional>
 
 namespace fugue::shell {
-
 class BrowseRecipeFiler {
 public:
-    // A resource landed and is already in `res`. A recipe is queued; then every queued recipe is tried again, since the
-    // landing resource may be an operand. `ordinals` is the ResourceList. A recipe that cannot be
-    // drawn is dropped. Returns true when `data` is a recipe (the caller must not file its raw bytes).
-    bool onResource(uint32_t id, const std::string& name, ByteSpan data, render::ResStore& res,
-                    const std::vector<std::pair<uint32_t, uint8_t>>& ordinals, BrowseRscStore& store);
+    static constexpr size_t maxPending = 256;
+    static constexpr size_t maxAttempts = 32;
+    static constexpr size_t maxOrdinalScan = 4096;
+    static constexpr uint64_t maxExportPixels = 8 * 1024 * 1024;
+    // Returns true for queued PNGs and all DDMI, including refused jobs: publish only after
+    // export. A PNG that cannot be queued returns false so the caller files it unchanged.
+    // Non-DMI PNGs retain their original bytes; other images/media bypass decoding.
+    // The verified resource must also be available through pump's reader.
+    bool onResource(uint32_t id, const std::string& name, ByteSpan data);
+    // Called each UI tick, even without new resources, to resume cooperative jobs.
+    void pump(const IconCache::Resources& resources, const IconCache::Read& read, BrowseRscStore& store);
     size_t pending() const { return pending_.size(); }
 
 private:
-    std::map<uint32_t, std::string> pending_;  // recipe resource id -> the offer's name
+    struct Pending {
+        std::string name;
+        std::optional<uint32_t> ordinal;
+        bool png = false;
+    };
+    IconCache cache_;
+    std::map<uint32_t, Pending> pending_;
+    size_t scan_ = 0;
+    uint32_t next_ = 0;
 };
-
 }  // namespace fugue::shell

@@ -1,0 +1,276 @@
+{
+ "schema": 1,
+ "stock": "DreamSeeker/DreamDaemon 516.1688",
+ "date": "2026-11-14",
+ "method": "native 1:1 grabs of stock and Fugue on one server; facts read from probe pixels around each case tile by compare.py; fugueDiff* compare the 96 px crops after the change",
+ "sets": {
+  "a": [
+   {
+    "case": "turn-overlay",
+    "redColumnsLeft": 0,
+    "redRowsAbove": 0,
+    "shadowBelow": false,
+    "shadowRight": false,
+    "green": false,
+    "drawn": true,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "kt-turn",
+    "redColumnsLeft": 0,
+    "redRowsAbove": 0,
+    "shadowBelow": false,
+    "shadowRight": false,
+    "green": false,
+    "drawn": true,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "kt-scale",
+    "redColumnsLeft": 0,
+    "redRowsAbove": 0,
+    "shadowBelow": false,
+    "shadowRight": false,
+    "green": false,
+    "drawn": true,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "outline-scale",
+    "redColumnsLeft": 2,
+    "redRowsAbove": 1,
+    "shadowBelow": false,
+    "shadowRight": false,
+    "green": false,
+    "drawn": true,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "shadow-turn",
+    "redColumnsLeft": 0,
+    "redRowsAbove": 0,
+    "shadowBelow": true,
+    "shadowRight": false,
+    "green": false,
+    "drawn": true,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "blur-scale",
+    "redColumnsLeft": 0,
+    "redRowsAbove": 0,
+    "shadowBelow": false,
+    "shadowRight": false,
+    "green": false,
+    "drawn": true,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 1
+   },
+   {
+    "case": "kt-outline-turn",
+    "redColumnsLeft": 1,
+    "redRowsAbove": 1,
+    "shadowBelow": false,
+    "shadowRight": false,
+    "green": false,
+    "drawn": true,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "outline-turn-overlay",
+    "redColumnsLeft": 1,
+    "redRowsAbove": 1,
+    "shadowBelow": false,
+    "shadowRight": false,
+    "green": false,
+    "drawn": true,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "kt-alpha-turn",
+    "redColumnsLeft": 0,
+    "redRowsAbove": 0,
+    "shadowBelow": false,
+    "shadowRight": false,
+    "green": false,
+    "drawn": true,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "outline-scale-x",
+    "redColumnsLeft": 1,
+    "redRowsAbove": 0,
+    "shadowBelow": false,
+    "shadowRight": false,
+    "green": false,
+    "drawn": true,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "shadow-scale",
+    "redColumnsLeft": 0,
+    "redRowsAbove": 0,
+    "shadowBelow": false,
+    "shadowRight": false,
+    "green": false,
+    "drawn": true,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "plain-turn",
+    "redColumnsLeft": 0,
+    "redRowsAbove": 0,
+    "shadowBelow": false,
+    "shadowRight": false,
+    "green": false,
+    "drawn": true,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   }
+  ],
+  "b": [
+   {
+    "case": "overlay-own-turn",
+    "redColumnsLeft": 0,
+    "redRowsAbove": 0,
+    "shadowBelow": false,
+    "shadowRight": false,
+    "green": true,
+    "drawn": true,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "ka-in-kt-turn",
+    "redColumnsLeft": 0,
+    "redRowsAbove": 0,
+    "shadowBelow": false,
+    "shadowRight": false,
+    "green": false,
+    "drawn": true,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "ka-turn",
+    "redColumnsLeft": 0,
+    "redRowsAbove": 0,
+    "shadowBelow": false,
+    "shadowRight": false,
+    "green": false,
+    "drawn": true,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "kt-child-turn",
+    "redColumnsLeft": 0,
+    "redRowsAbove": 0,
+    "shadowBelow": false,
+    "shadowRight": false,
+    "green": false,
+    "drawn": true,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "kt-overlay-own-matrix",
+    "redColumnsLeft": 0,
+    "redRowsAbove": 0,
+    "shadowBelow": false,
+    "shadowRight": false,
+    "green": false,
+    "drawn": true,
+    "fugueDiffOver8": 8,
+    "fugueMaxDiff": 10
+   },
+   {
+    "case": "kt-outline-45",
+    "redColumnsLeft": 1,
+    "redRowsAbove": 1,
+    "shadowBelow": false,
+    "shadowRight": false,
+    "green": false,
+    "drawn": true,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 1
+   },
+   {
+    "case": "outline-45",
+    "redColumnsLeft": 1,
+    "redRowsAbove": 1,
+    "shadowBelow": false,
+    "shadowRight": false,
+    "green": false,
+    "drawn": true,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 1
+   },
+   {
+    "case": "kt-45",
+    "redColumnsLeft": 0,
+    "redRowsAbove": 0,
+    "shadowBelow": false,
+    "shadowRight": false,
+    "green": false,
+    "drawn": true,
+    "fugueDiffOver8": 34,
+    "fugueMaxDiff": 86
+   },
+   {
+    "case": "turn-45-overlay",
+    "redColumnsLeft": 0,
+    "redRowsAbove": 0,
+    "shadowBelow": false,
+    "shadowRight": false,
+    "green": false,
+    "drawn": true,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 1
+   },
+   {
+    "case": "overlay-own-scale",
+    "redColumnsLeft": 0,
+    "redRowsAbove": 0,
+    "shadowBelow": false,
+    "shadowRight": false,
+    "green": true,
+    "drawn": true,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "kt-underlay-turn",
+    "redColumnsLeft": 0,
+    "redRowsAbove": 0,
+    "shadowBelow": false,
+    "shadowRight": false,
+    "green": false,
+    "drawn": true,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "kt-pixel-turn",
+    "redColumnsLeft": 0,
+    "redRowsAbove": 0,
+    "shadowBelow": false,
+    "shadowRight": false,
+    "green": false,
+    "drawn": true,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   }
+  ]
+ }
+}

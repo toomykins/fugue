@@ -1,0 +1,15 @@
+window "main"
+    elem "main"
+        type = MAIN
+        size = 640x480
+        is-default = true
+    elem "alpha"
+        type = LABEL
+        pos = 10,20
+        size = 100x40
+        text = "A & B; C=+%"
+    elem "beta"
+        type = LABEL
+        pos = 120,20
+        size = 80x30
+        text = "second"

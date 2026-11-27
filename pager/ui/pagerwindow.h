@@ -89,10 +89,6 @@ public:
         const QString& objectName) const;  // "about", "openloc", "logout", "prefs", "resources", "ontop", "exit"
     void showPreferences();
     QDialog* preferencesDialog() const;  // null until first shown
-    // Preferences > "Use GPU rendering (experimental)" reads and writes the client's own renderer setting in this display.ini
-    // (launch.h displaySettingsPath). Empty (the default, and a build without GPU support) hides it, as the client's Renderer
-    // menu is absent there.
-    void setRendererSettings(const QString& displayIni);
     // The Clear cache confirmation: by default a QMessageBox; a hook can replace it (returns whether the player said yes).
     void setConfirmHook(std::function<bool(const QString& title, const QString& text)> hook);
     // Preferences > Clear cache: confirm (listing exactly what goes, with sizes), then emit clearCacheRequested.
@@ -210,8 +206,6 @@ private:
     QDialog* prefs_ = nullptr;
     QCheckBox* prefsDetails_ = nullptr;
     QCheckBox* prefsAuto_ = nullptr;
-    QCheckBox* prefsGpu_ = nullptr;
-    QString displayIni_;
     QLabel* prefsAccount_ = nullptr;
     QLabel* prefsCache_ = nullptr;
     QPushButton* prefsClear_ = nullptr;

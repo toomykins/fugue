@@ -1,0 +1,12 @@
+{
+ "schema": 1,
+ "stock": "DreamSeeker/DreamDaemon 516.1688",
+ "date": "2026-11-14",
+ "method": "native 1:1 grabs of the whole MAP per set; mapDiffOver8 counts pixels differing from the plain-sight stock grab; fugueDiffOver8 compares Fugue with stock after the change",
+ "sets": {
+  "plain": {"sight": 0, "mapDiffOver8": 0, "fugueDiffOver8": 0},
+  "blind": {"sight": 1, "allBlack": true, "fugueDiffOver8": 0},
+  "infra": {"sight": 64, "mapDiffOver8": 0, "fugueDiffOver8": 0, "note": "the infra_luminosity 3 obj in the unlit area stays unseen with see_in_dark 0"},
+  "pixels": {"sight": 256, "mapDiffOver8": 0, "fugueDiffOver8": 0}
+ }
+}

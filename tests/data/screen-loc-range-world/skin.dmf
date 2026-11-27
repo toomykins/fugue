@@ -1,0 +1,12 @@
+window "main"
+    elem "main"
+        type = MAIN
+        size = 512x448
+        is-default = true
+        statusbar = false
+    elem "map"
+        type = MAP
+        pos = 16,16
+        size = 480x400
+        is-default = true
+        zoom-mode = normal

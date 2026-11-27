@@ -10,6 +10,11 @@ message(STATUS "macdeployqt: ${output}${errors}")
 if(NOT result EQUAL 0 OR "${output}${errors}" MATCHES "ERROR:")
   message(FATAL_ERROR "Could not deploy Fugue.app")
 endif()
+# The NMEA position plugin reads GPS receivers over a serial port and needs QtSerialPort, which Fugue doesn't ship.
+file(GLOB nmea "${bundle}/Contents/PlugIns/position/libqtposition_nmea*.dylib")
+if(nmea)
+  file(REMOVE ${nmea})
+endif()
 # Some split Qt distributions leave the helper's direct imports pointing into the build-machine Qt prefix.
 # It only exists after the first deployment, so explicitly deploy it in a second pass.
 file(GLOB_RECURSE helpers "${bundle}/Contents/QtWebEngineProcess")

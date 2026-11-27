@@ -1,0 +1,26 @@
+{
+  "version": "DreamSeeker/DreamDaemon 516.1688",
+  "dpi": 144,
+  "client_physical": [
+    672,
+    480
+  ],
+  "source": [
+    224,
+    160
+  ],
+  "rows": [
+    {"phase":"top-small","bounds":[76,13,121,34],"clicks":[{"point":[79,16],"name":"button","icon":[4,18],"vis":false},{"point":[85,22],"name":"floor","icon":[22,10],"vis":false}]},
+    {"phase":"top-large","bounds":[76,13,151,66],"clicks":[{"point":[79,16],"name":"button","icon":[4,50],"vis":false},{"point":[85,22],"name":"floor","icon":[22,10],"vis":false}]},
+    {"phase":"right-large","bounds":[136,43,211,96],"clicks":[{"point":[139,46],"name":"button","icon":[4,50],"vis":false},{"point":[145,52],"name":"floor","icon":[18,12],"vis":false}]},
+    {"phase":"corner-large","bounds":[136,13,211,66],"clicks":[{"point":[139,16],"name":"button","icon":[4,50],"vis":false},{"point":[145,22],"name":"floor","icon":[18,10],"vis":false}]},
+    {"phase":"top-overlay","bounds":[66,0,141,34],"clicks":[{"point":[69,3],"name":"button","icon":[-6,31],"vis":false},{"point":[75,9],"name":"button","icon":[0,25],"vis":false}]},
+    {"phase":"relay","bounds":[76,13,121,34],"clicks":[{"point":[79,16],"name":"button","icon":[4,18],"vis":false},{"point":[85,22],"name":"floor","icon":[22,10],"vis":false}]},
+    {"phase":"chain","bounds":[76,13,121,34],"clicks":[{"point":[79,16],"name":"button","icon":[4,18],"vis":false},{"point":[85,22],"name":"floor","icon":[22,10],"vis":false}]},
+    {"phase":"relay-nopass","bounds":[76,13,121,34],"clicks":[{"point":[79,16],"name":"first-relay","icon":[80,144],"vis":false},{"point":[85,22],"name":"floor","icon":[22,10],"vis":false}]},
+    {"phase":"chain-mouse0","bounds":[76,13,121,34],"clicks":[{"point":[79,16],"name":"floor","icon":[16,16],"vis":false},{"point":[85,22],"name":"floor","icon":[22,10],"vis":false}]},
+    {"phase":"chain-mouse2","bounds":[76,13,121,34],"clicks":[{"point":[79,16],"name":"button","icon":[4,18],"vis":false},{"point":[85,22],"name":"button","icon":[10,12],"vis":false}]},
+    {"phase":"chain-master0","bounds":[76,13,121,34],"clicks":[{"point":[79,16],"name":"button","icon":[4,18],"vis":false},{"point":[85,22],"name":"floor","icon":[22,10],"vis":false}]},
+    {"phase":"chain-relay0","bounds":[76,13,121,34],"clicks":[{"point":[79,16],"name":"floor","icon":[16,16],"vis":false},{"point":[85,22],"name":"floor","icon":[22,10],"vis":false}]}
+  ]
+}

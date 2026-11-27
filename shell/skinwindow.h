@@ -1,9 +1,8 @@
 // SkinWindow: the DreamSeeker-shaped main window, a plain QWidget tree painted from a LiveSkin (skin/liveskin.h):
 // the parsed .dmf, the winset overlay and the layout they imply.
-//   MAP -> MapWidget      OUTPUT -> QTextBrowser (chat)   INFO -> StatPanelWidget (tabs and rows)
+//   MAP -> QRhi tile grid   OUTPUT -> QTextBrowser (chat)   INFO -> StatPanelWidget (tabs and rows)
 //   INPUT -> QLineEdit    BROWSER -> BrowserPane          BUTTON and LABEL -> plain widgets (text from the overlay)
 //   everything else (TAB, GRID, BAR, GAUGE...) -> an empty placeholder frame; CHILD and MAIN -> nothing.
-//   The default MAP is map(); every other MAP is a secondary map (setAuxMapFrame).
 //   The skin's `menu` -> a QMenuBar. A command is emitted as menuCommand and routed like a macro. Its top-left
 //   corner holds the system-menu entries (Options & Messages, Client) behind a button showing the window icon, as
 //   stock puts them under the caption icon (shell/macrodialog.h).
@@ -14,29 +13,29 @@
 // brings the widgets to it. A widget is created the first time its control is visible and placed, since a
 // BrowserPane is a whole Chromium view. After that it is only hidden.
 // Fonts: a BUTTON, LABEL, INPUT or INFO takes its font-family, font-size and font-style (file or winset) as stock does,
-// at a pixel size (shell/skinfont.h), so it never depends on the platform's default font or dpi; a BUTTON's and a
-// LABEL's text is laid out at stock's advance widths. The menu bar and status bar use shell/skinfont.h's menu font.
+// at a pixel size (shell/skinfont.h). The menu bar and status bar use shell/skinfont.h's menu font.
 // Splitters: each CHILD divider the layout places (skin::Tree::splitters) gets a SplitterHandle. A drag goes into the
 // LiveSkin (setSplitter) and the tree re-lays out, so the layout stays the only source of truth.
 // Floating windows: a skin window that is neither the main window nor a pane is a top-level window of its own, hidden
 // until a winset of its is-visible shows it (tg's tgui_say). Closing one hides it.
-// Runtime controls (winset `parent=`): a MAP inside a browse() popup and a BROWSER inside a skin window are built
-// (syncRuntimeMaps, syncRuntimeBrowsers); other types and parents are known to the live skin only.
-// Not implemented: TAB controls (tab panes), runtime-created maps outside a browse() popup,
+// Not implemented: TAB controls (tab panes),
 // an OUTPUT's font, a LABEL's text-wrap, pos and size of the main window itself, a CHILD's `lock`, and saved-params persistence of a
 // dragged splitter.
 #pragma once
 #include <functional>
 #include <QHash>
+#include <QImage>
 #include <QPointer>
 #include <QStringList>
 #include <QWidget>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <vector>
 #include "shell/browsehost.h"
-#include "shell/mapwidget.h"
+#include "shell/mapmetrics.h"
+#include "shell/mapmailbox.h"
 #include "shell/statpanelwidget.h"
 #include "skin/layout.h"
 #include "skin/liveskin.h"
@@ -52,7 +51,6 @@ class QLabel;
 namespace fugue::shell {
 
 class BrowserPane;
-class DisplaySettings;
 
 class SkinWindow : public QWidget {
     Q_OBJECT
@@ -62,7 +60,9 @@ public:
     // Parses (into the live skin) and builds. Returns "" or the parse error (the previous skin stays).
     QString loadSkin(const std::string& dmf);
     bool hasSkin() const { return live_->loaded(); }
-    // The window size that gives the skin its designed client area (menu bar included).
+    // The window size that gives the skin its designed client area (menu bar and status strip included), or the client
+    // area a winset of the main window's size has asked for since the skin was built: stock opens the skin at the size
+    // a world sets in Login() (516.1689).
     QSize designSize() const;
 
     // The live skin this window paints. Share it with the session thread (SkinFeed) so a wire winset reaches it.
@@ -90,57 +90,55 @@ public:
     using SpaceCompleter = std::function<bool(const QString& line, QString& out)>;
     void setSpaceCompleter(SpaceCompleter c) { spaceCompleter_ = std::move(c); }
 
-    void setMapFrame(const QImage& img, HitPtr hit = {});
-    void setMapExternalFrame(QSize size, HitPtr hit, std::function<QImage()> snapshot);
-    QPixmap grabWithMaps();  // QWidget::grab plus native map presenters, which QWidget cannot capture itself
-    // The render thread skipped an unchanged list: the frame on screen stands and only the hit scene is replaced.
-    // A map widget built since the last frame gets that frame, so it never waits for the picture to change.
-    void setMapHit(HitPtr hit);
-    // A SECONDARY map control's picture (app/renderthread.h auxFrame): a map a winset created at runtime inside a browse()
-    // popup - vg's security camera console, tgui's ByondUi (`winset id parent=<popup>;type=map;pos=x,y;size=WxH`). The
-    // widget lives in the popup at the control's pos/size (skin/liveskin.h runtime_) and auto-fits the picture
-    // like the default map (render/scene.h assembleSecondaryMap). `parent=` (ByondUi's unmount) destroys it.
-    // The .dmf's other MAP controls are secondary maps too, under their elem name. `hit` is the scene the picture was
-    // drawn from (render/scene.h assembleSecondaryMap withHit): the widget takes clicks, drags, the wheel and hover on it.
-    void setAuxMapFrame(const QString& id, const QImage& img, HitPtr hit = {});
-    void setAuxMapHit(const QString& id, HitPtr hit);  // the render thread skipped an unchanged list
-    MapWidget* auxMap(const QString& id) const;        // nullptr when no such control is built
-    // A BROWSER a winset created at runtime inside a skin window (`winset id parent=<window>;type=browser;pos;size;...`):
-    // vg's tooltips, a 1x1 hidden browser in mapwindow that its page later sizes, places and shows. The pane is a child
-    // of the window it names, built when the control is created (visible or not, since its page runs either way), placed
-    // at its pos/size/anchors in that window's box and stacked above the window's .dmf controls. A browse() into its
-    // name lands in it; `parent=none` destroys it with its page. nullptr when no such control is built.
-    BrowserPane* runtimeBrowser(const QString& name) const;
-    QList<MapWidget*> mapWidgets() const;  // the default map and every secondary map built
     void appendChat(const QStringList& html);
     void setStat(const QString& html);    // HTML stat text; the INFO control uses setStatView()
     void setStatView(const StatView& v);  // the model's tab strip + rows (shell/statpanelwidget.h)
     // browse() traffic from the session thread, as queued signals. Routing (skin control or popup, READY gating, the
     // chat page) is done by the BrowseHost (shell/browsehost.h).
-    void showBrowse(const QString& name, const QString& params, const QString& html);
+    void showBrowse(const QString& name, const QString& params, const QString& html,
+                    quint64 skinRevision = ~quint64(0));
     void closeBrowse(const QString& name);
     void showOutputFile(const QString& control, const QString& html);
     void pageCall(const QString& window, const QString& fn, const QStringList& args);  // output(v, "win.ctl:fn")
+    // Local .output currently supports browser function calls, not OUTPUT text/replacement forms.
     BrowseHost* browseHost() const { return host_; }
     std::shared_ptr<BrowseRscStore> rscStore() const { return host_->store(); }
     bool declaresBrowser(const QString& name) const;  // does the skin file declare a BROWSER control by this name?
     bool declaresHiddenBrowser(const QString& name) const;  // ... and declare it `is-visible = false`?
-    bool hiddenWindowBrowser(const QString& name) const;    // a hidden skin window (not a control) with a BROWSER?
+    // `.output control[:function] value`: a page call into that browser. False when it names no page function.
+    bool clientOutput(const QString& control, const QString& encodedValue);
+    // The pane of a BROWSER a winset created at runtime inside a skin window (vg's tooltips); nullptr when none is built.
+    BrowserPane* runtimeBrowser(const QString& name) const;
+    bool hiddenWindowBrowser(const QString& name) const;  // a hidden skin window (not a control) with a BROWSER?
 
-    DisplaySettings* displaySettings() const { return display_; }
-    MapWidget* map() const { return map_; }
-    // The map control's rectangle inside this widget (for screenshot cropping).
-    QRect mapControlRect() const { return map_ ? map_->geometry() : QRect(); }
+    void setMapViewSize(int columns, int rows);
+    // What the pointer is over on the default map: the status bar shows it.
+    void setHoverName(const QString& name);
+    void mapFrameAvailable();
+    void showMapMenu(const MapMenu& menu);
+    std::shared_ptr<MapMetrics> mapMetrics() const { return mapMetrics_; }
+    std::shared_ptr<MapMailbox> mapMailbox() const { return mapMailbox_; }
+    std::shared_ptr<MapRoutes> mapRoutes() const { return mapRoutes_; }
+    void setMapMetricsVisible(bool visible);
+    bool mapMetricsVisible() const { return mapMetricsVisible_; }
+    QWidget* map() const { return map_; }  // default MAP grid
     skin::MacroTable macros() const { return snap_.macros; }
     QString activeMacro() const { return QString::fromStdString(snap_.macro); }
     const skin::Tree& tree() const { return snap_.tree; }
     int controlCount() const { return int(widgets_.size()); }
     QString describe() const;  // one line per control: type name rect
     QWidget* controlWidget(const QString& windowDotName) const;
+    // Keyboard macro MAP substitutions, sampled on the GUI thread in control-local logical pixels.
+    // Bare pairs become two numeric arguments; quoted pairs become comma-separated text.
+    // Other properties/unresolved controls remain untouched (not general skin-expression support).
+    std::string expandMapCommandParams(const std::string& command) const;
     // The drag handle of a CHILD's divider by its "window.elem" path (nullptr when the layout places none).
     QWidget* splitterHandle(const QString& windowDotName) const;
     int menuBarHeight() const;
     QMenuBar* menuBar() const { return bar_; }
+    // One client-owned popup, shared with the optional menu-bar corner and retained across skin replacement.
+    QMenu* clientMenu() const { return clientMenu_; }
+    void toggleClientMenu();
     // The system-menu button in the menu bar's top-left corner (nullptr until the skin has a menu bar).
     QToolButton* systemMenuButton() const { return sysBtn_; }
     // The main window's status strip along the bottom edge, below every control (0 when the skin's `statusbar` is
@@ -149,30 +147,29 @@ public:
     QLabel* statusBar() const { return status_; }
 
 signals:
+    void mapPointer(const fugue::shell::MapPointer& pointer);
+    void mapMenuPicked(quint64 token, int index);
     void commandEntered(const QString& text);    // INPUT Enter: the app routes it (shell/inputrouter.h) to the session
     void buttonCommand(const QString& command);  // a skin BUTTON's `command`: routed exactly like a macro's
     void menuCommand(const QString& command);    // a menu item's `command`: ditto
-    void macroChanged(const QString& name);  // the active macro set, or a set's bindings, differs from the last sync's
-    void mapReady(fugue::shell::MapWidget*
-                      map);  // a map widget (default or secondary) was (re)created: connect its pointer signals
+    void macroChanged(const QString& name);   // the active macro set, or a set's bindings, differs from the last sync's
     void clientResized(const QSize& client);  // the skin's client area changed size (the app fires the skin's on-size)
     void byondLink(const QUrl& url);
     void worldLink(const QString& url);  // a page link to another world
     void worldCommand(
         const QString& command);       // a command the world registered, such as a popup's on-close (routeWorldCommand)
     void statTabRequested(int index);  // INFO: a tab was clicked; the session sends StatTab
-    void statRowClicked(int row, const QString& control, const QString& button, int mods, bool dbl, bool icon,
-                        int iconX, int iconY);  // INFO: the session clicks that atom
-    void statVerbClicked(const QString& verb);  // INFO: a verb-category entry; the session runs it
-    // A secondary map's widget was (re)built: the render thread must draw that map's next list even when it is
-    // unchanged (app/renderthread.h forgetAux), so a remounted widget always gets a frame.
-    void auxMapBuilt(const QString& id);
-    void auxMapRemoved(const QString& id);
-
+    void statRowClicked(int row, const QString& control, const QString& button, int mods, bool dbl, quint64 generation,
+                        bool icon, int iconX, int iconY);  // INFO: the session clicks that atom
+    void statVerbClicked(const QString& verb);             // INFO: a verb-category entry; the session runs it
+    // INFO: the pointer over the rows (row -1: the panel's empty space) and leaving them (StatPanelWidget::rowHovered).
+    void statRowHovered(int row, const QString& control, int mods, quint64 generation, bool icon, int iconX, int iconY);
+    void statHoverLeft();
 protected:
     void resizeEvent(QResizeEvent*) override;
     void moveEvent(QMoveEvent*) override;
     void showEvent(QShowEvent*) override;
+    void changeEvent(QEvent*) override;
     // Closing the main window quits the client. The popups are transient for it, so the browse host is told first,
     // and the popups that close with it run no on-close.
     void closeEvent(QCloseEvent* e) override;
@@ -181,13 +178,13 @@ protected:
 
 private:
     std::vector<std::pair<QRect, QColor>> fills_;
-    DisplaySettings* display_ = nullptr;
     SpaceCompleter spaceCompleter_;
     QString worldName_, skinTitle_;
     bool skinIcon_ = false;
     uint64_t builtinFileId_ = ~0ull;
     void updateTitle();
     void clearWidgets();
+    void publishMapSizes();
     void rebuild(const skin::SkinSnapshot& s);
     void apply(const skin::SkinSnapshot& s);
     QWidget* makeWidget(const skin::Control& c);
@@ -199,18 +196,9 @@ private:
     int chromeHeight() const { return menuBarHeight() + statusBarHeight(); }
     // The environment half of winget(client, null, ...) (skin/liveskin.cpp kGlobalParams): dpi, screen position, screen size.
     void publishClientEnv();
-    void markMapShown();
     void publishFocus(QWidget* now);  // liveskin.h setGuiFocus
+    void markMapShown();
     void markInfoShown();
-    void syncRuntimeMaps(const skin::SkinSnapshot& s);
-    void syncRuntimeBrowsers(const skin::SkinSnapshot& s);
-    void dropRuntimeBrowser(const std::string& key);
-    void publishViewSize(MapWidget* mw);  // liveskin.h setViewSize, when the picture's size in the control changed
-    struct RuntimeBrowser {
-        QPointer<BrowserPane> pane;
-        std::string name, parent;  // as the winset spelled them
-    };
-    std::map<std::string, RuntimeBrowser> rtBrowsers_;  // runtime BROWSER controls by lower-case name
     // Floating skin windows (skin/layout.h Tree::floats): one top-level widget each, made on first use.
     QWidget* floatWindow(const std::string& window, const skin::SkinSnapshot& s);
     void syncFloats(const skin::SkinSnapshot& s);
@@ -220,26 +208,37 @@ private:
     std::shared_ptr<skin::LiveSkin> live_;
     skin::SkinSnapshot snap_;
     uint64_t builtFileId_ = 0, lastGen_ = ~0ull, lastFocusSeq_ = 0;
+    uint64_t lastWindowSizeSeq_ = 0;  // the last main-window size winset given to this window (SkinSnapshot)
+    uint64_t lastWindowPosSeq_ = 0, lastMaximizeSeq_ = 0;  // the same for its pos and is-maximized winsets
+    QSize requestedClient_;  // the client area the last size winset asked for since the skin was built (designSize)
+    QSize normalClient_;     // the client area while neither maximized nor full-screen (the restore size)
+    QSize restoreClient_;    // a size winset that arrived while maximized: given to the window when it is restored
+    std::optional<QPoint> restorePos_;  // likewise a pos winset
+    bool zoomed_ = false;               // maximized or full-screen, as last published (LiveSkin::setWindowState)
+    void publishWindowState();
+    void publishFrame();
     std::string lastMacro_;
     uint64_t lastMacroGen_ = 0;
     std::map<std::string, QWidget*> widgets_;  // "window.name" -> widget (created lazily)
     std::map<std::string, std::string> types_;
     std::map<std::string, QWidget*> handles_;  // CHILD "window.elem" -> its SplitterHandle
-    MapWidget* map_ = nullptr;
-    MapWidget* lastMapSignalled_ = nullptr;
-    std::map<std::string, QPointer<MapWidget>> auxMaps_;  // runtime MAP controls by lower-case id (syncRuntimeMaps)
-    std::map<std::string, QImage> auxImg_;                // their latest pictures, for a widget built after its frame
-    std::map<std::string, HitPtr> auxHit_;                // ... and the scenes they were drawn from
-    std::set<std::string> dmfAux_;                  // the auxMaps_ keys that are .dmf controls (built by makeWidget)
-    std::vector<QPointer<MapWidget>> pendingMaps_;  // .dmf secondary maps built in this sync: mapReady after it
+    QWidget* map_ = nullptr;
+    QSize mapViewSize_{0, 0};
+    std::shared_ptr<MapMetrics> mapMetrics_ = std::make_shared<MapMetrics>();
+    std::shared_ptr<MapMailbox> mapMailbox_ = std::make_shared<MapMailbox>(mapMetrics_);
+    std::shared_ptr<MapRoutes> mapRoutes_ = std::make_shared<MapRoutes>();
+    bool mapMetricsVisible_ = false;
+    QPointer<QMenu> mapMenu_;
     bool mapPaneShown_ = false, infoPaneShown_ = false;  // LiveSkin::setPaneShown sent (per skin load)
-    QImage mapImg_;  // the last CPU frame handed to the map (implicitly shared with the widget's copy)
     bool hasMapFrame_ = false;
     QSize lastClient_;
     QMenuBar* bar_ = nullptr;
     QToolButton* sysBtn_ = nullptr;
+    QMenu* clientMenu_ = nullptr;
     QLabel* status_ = nullptr;
+    QString hoverName_;  // status_'s text, kept while the skin hides the bar
     QString menuSig_;
+    bool menuSigValid_ = false;
     // Actions of can-check items, which may share a name, and the is-checked state last shown for each. syncMenuChecks
     // pushes only a change, so a click's own write never re-checks a same-named sibling.
     std::multimap<std::string, QAction*> menuActs_;

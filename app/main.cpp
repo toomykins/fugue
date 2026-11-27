@@ -1,52 +1,40 @@
-// fugue-qt client --connect host:port [--state-dir d] [--screenshot out.png --after S] [--size WxH]
+// fugue-qt client --connect host:port [--state-dir d] [--size WxH]
 // dreamseeker "byond://host:port" [-pager] [-trusted] ...   (DreamSeeker's own command line: pager/dsargv.h)
 // dreamseeker                                              (no argument: DreamSeeker's Open Location box)
 //
 // Thread model:
-//   GUI thread     widgets and direct GPU map presentation; CPU frames are blitted by MapWidget.
-//   SessionWorker  owns net::Session + model::Session + ResStore (single writer AND single reader); assembles
-//                  the DrawList at the map cadence and emits value-type signals.
-//   RenderThread   executes CPU lists/fallbacks, or hands lists to per-viewport direct GPU presenters.
+//   GUI thread     widgets.
+//   SessionWorker  owns net::Session + model::Session and emits value-type signals.
 #include <QApplication>
 #include <QIcon>
-#include <QPixmap>
 #include <QPalette>
 #include <QStyleFactory>
-#include <QAction>
-#include <QMenu>
-#include <QMouseEvent>
+#include <QSurfaceFormat>
 #include <QMetaType>
 #include <QCommandLineParser>
 #include <QTimer>
-#include <QSettings>
 #include <QUrl>
-#include <QDateTime>
 #include <QDesktopServices>
-#include <QDir>
-#include <QFileDialog>
 #include <QInputDialog>
 #include <QLineEdit>
+#include <QFileDialog>
+#include <QDir>
 #include <QCursor>
+#include <QMouseEvent>
 #include <functional>
 #include <cstdio>
-#include "app/renderthread.h"
-#include "app/rendermonitor.h"
-#include "shell/displaysettings.h"
-#ifdef FUGUE_GPU
-#include "app/gpumapwindow.h"
-#endif
 #include "fugue_version.h"
 #include "app/sessionworker.h"
+#include "shell/gpubackend.h"
 #include "shell/browserpane.h"
 #include "shell/focusfilter.h"
 #include "shell/fugueicon.h"
 #include "shell/urlopener.h"
 #include "pager/launch.h"
-#include <QProcess>
 #include "shell/inputrouter.h"
-#include "shell/macrodialog.h"
 #include "shell/mapwidget.h"
 #include "shell/screenshot.h"
+#include "shell/macrodialog.h"
 #include "model/browsing.h"
 #include "net/guest.h"
 #include "net/input.h"
@@ -112,6 +100,14 @@ int clientMain(int argc, char** argv) {  // called by app/launcher.cpp's main() 
         preQtPtrs.push_back(argv[i]);
     }
     QApplication app(argc, argv);
+    // Vulkan on Wayland presents without vsync: KWin releases a vsync (FIFO) present only every 50 ms while the screen is
+    // captured or streamed, holding the window near 15 frames a second. Wayland compositors do not tear unless asked
+    // to, and the map paces itself (it redraws only when a newer frame is published). Before any window exists.
+    if (fugue::shell::gpuApi() == "vulkan" && QGuiApplication::platformName().startsWith(QLatin1String("wayland"))) {
+        QSurfaceFormat format = QSurfaceFormat::defaultFormat();
+        format.setSwapInterval(0);
+        QSurfaceFormat::setDefaultFormat(format);
+    }
     fugue::shell::installTrueTypeMetrics();  // MeasureText's TrueType faces (render/dsmaptext.h)
     fugue::shell::installMaptextGlyphs();    // map text glyphs (render/maptextpaint.h)
     // DreamSeeker is light whatever the desktop theme: its controls use fixed system colours. Fusion with this palette
@@ -140,14 +136,9 @@ int clientMain(int argc, char** argv) {  // called by app/launcher.cpp's main() 
             p.setColor(QPalette::Disabled, r, QColor(0x6d, 0x6d, 0x6d));
         app.setPalette(p);
     }
-    qRegisterMetaType<fugue::shell::HitPtr>();
-    qRegisterMetaType<fugue::shell::MapPointer>();
-    qRegisterMetaType<VerbMenuItem>();
-    qRegisterMetaType<QList<VerbMenuItem>>();
-    qRegisterMetaType<MenuAtom>();
-    qRegisterMetaType<QList<MenuAtom>>();
     qRegisterMetaType<fugue::shell::PromptRequest>();
     qRegisterMetaType<fugue::shell::StatView>();
+    qRegisterMetaType<fugue::shell::MapMenu>();
     app.setApplicationName("fugue-qt");
     app.setApplicationVersion(fugue::kVersion);
     // Fugue's icon for windows without the world's own. The desktop file name is the app id that desktops use for the
@@ -166,8 +157,6 @@ int clientMain(int argc, char** argv) {  // called by app/launcher.cpp's main() 
         "dir");
     QCommandLineOption oRsc(
         "rsc-dir", "resource cache dir (content-addressed by resource id; default: the SHARED ~/.fugue/rsc)", "dir");
-    QCommandLineOption oShot("screenshot", "write a PNG of the window and exit", "out.png");
-    QCommandLineOption oAfter("after", "seconds to wait before --screenshot (default 8)", "S", "8");
     QCommandLineOption oSize("size", "initial window size WxH (default: the skin's)", "WxH");
     QCommandLineOption oPace("no-pacing", "no human-pacing delays during login");
     // Account join: the pager passes the key and the path of the 0600 identity file. The client reads that file and
@@ -184,10 +173,7 @@ int clientMain(int argc, char** argv) {  // called by app/launcher.cpp's main() 
         "sound output: auto (system output, the default), none, wav:<path> (record the mix), "
         "cmd:a,b,c (Linux/macOS: pipe s16le stereo 44.1 kHz to your own player). Empty = $FUGUE_AUDIO, then auto",
         "spec");
-    QCommandLineOption oRenderer("renderer",
-                                 "override saved map renderer: cpu or gpu (experimental; unsupported scenes use CPU)",
-                                 "cpu|gpu", "cpu");
-    cp.addOptions({oConnect, oState, oRsc, oShot, oAfter, oSize, oPace, oAccount, oIdent, oHub, oAudio, oRenderer});
+    cp.addOptions({oConnect, oState, oRsc, oSize, oPace, oAccount, oIdent, oHub, oAudio});
     // DreamSeeker's own command line is accepted too (pager/dsargv.h), so `dreamseeker "byond://host:port" -pager` works
     // as a launch command. QApplication has already removed Qt's own arguments. When invoked as DreamSeeker, an unknown
     // --word is dropped, as DreamSeeker drops it.
@@ -198,8 +184,7 @@ int clientMain(int argc, char** argv) {  // called by app/launcher.cpp's main() 
     {
         fugue::pager::FugueOptions mine;
         mine.flag = {"help", "help-all"};  // cp.addHelpOption()
-        for (const QCommandLineOption& o :
-             {oConnect, oState, oRsc, oShot, oAfter, oSize, oPace, oAccount, oIdent, oHub, oAudio, oRenderer})
+        for (const QCommandLineOption& o : {oConnect, oState, oRsc, oSize, oPace, oAccount, oIdent, oHub, oAudio})
             for (const QString& n : o.names())
                 (o.valueName().isEmpty() ? mine.flag : mine.value).insert(n.toStdString());
         if (mine.flag != fopts.flag || mine.value != fopts.value) {
@@ -216,24 +201,6 @@ int clientMain(int argc, char** argv) {  // called by app/launcher.cpp's main() 
         for (const std::string& a : ds.fugue) own << QString::fromStdString(a);
         cp.process(own);
     }
-#ifdef FUGUE_GPU
-    QSettings displayPrefs(QString::fromStdString(fugue::pager::displaySettingsPath(cp.value(oState).toStdString())),
-                           QSettings::IniFormat);
-    QString renderer = cp.isSet(oRenderer) ? cp.value(oRenderer) : displayPrefs.value("renderer", "cpu").toString();
-    if (!cp.isSet(oRenderer) && renderer != "cpu" && renderer != "gpu") renderer = "cpu";
-#else
-    const QString renderer = cp.value(oRenderer);
-#endif
-    if (renderer != "cpu" && renderer != "gpu") {
-        std::fprintf(stderr, "fugue-qt: --renderer must be cpu or gpu\n");
-        return 2;
-    }
-#ifndef FUGUE_GPU
-    if (renderer == "gpu") {
-        std::fprintf(stderr, "fugue-qt: GPU rendering was not built; configure with -DFUGUE_BUILD_GPU=ON\n");
-        return 2;
-    }
-#endif
     for (const std::string& a : ds.dropped)
         std::fprintf(stderr, "[app] DreamSeeker argument ignored, as DreamSeeker ignores it: %s\n", a.c_str());
     // Accepted with nothing to change in Fugue:
@@ -294,7 +261,7 @@ int clientMain(int argc, char** argv) {  // called by app/launcher.cpp's main() 
     cfg.rscDir = cp.value(oRsc).toStdString();
     if (cp.isSet(oPace)) cfg.humanPacing = false;
     // Account rule: pager/clientaccount.h. Only a DreamSeeker-style launch uses the pager's signed-in account;
-    // --connect, --state-dir and --screenshot are guests unless --account names one.
+    // --connect and --state-dir are guests unless --account names one.
     if (cp.isSet(oIdent)) qputenv("FUGUE_IDENTITY", cp.value(oIdent).toUtf8());  // a path, not a secret
 #ifdef FUGUE_RELEASE
     const bool testHook = false;  // test hooks are compiled out of a release build
@@ -334,37 +301,15 @@ int clientMain(int argc, char** argv) {  // called by app/launcher.cpp's main() 
         std::fprintf(stderr, "[app] %s\n", ad.reason.c_str());
     }
 
-    RenderThread rt(renderer == "gpu");
-    SessionWorker worker(cfg, &rt);
+    SessionWorker worker(cfg);
     fugue::shell::BrowseHost::setStorageDir(
         QString::fromStdString((cfg.stateDir.empty() ? fugue::net::defaultStateDir() : cfg.stateDir) + "/web"));
     fugue::shell::SkinWindow win;
-#ifdef FUGUE_GPU
-    auto* display = win.displaySettings();
-    display->setGpuAvailable(true);
-    display->setUseGpu(renderer == "gpu");
-    display->setPerformanceOverlay(displayPrefs.value("performanceOverlay", false).toBool());
-    display->setPerformanceDetails(displayPrefs.value("performanceDetails", false).toBool());
-    GpuMapController gpuPresenter(rt, win);
-    // Loading preferences / a CLI override does not write them; only an explicit menu change does.
-    auto saveDisplayPreference = [&](const char* key, const QVariant& value) {
-        displayPrefs.setValue(key, value);
-        displayPrefs.sync();
-        if (displayPrefs.status() != QSettings::NoError)
-            std::fprintf(stderr, "[app] could not save display preferences: %s\n",
-                         displayPrefs.fileName().toUtf8().constData());
-    };
-    QObject::connect(display, &fugue::shell::DisplaySettings::rendererChanged, &win, [&](bool gpu) {
-        rt.setUseGpu(gpu);
-        saveDisplayPreference("renderer", gpu ? "gpu" : "cpu");
-    });
-    QObject::connect(display, &fugue::shell::DisplaySettings::performanceOverlayChanged, &win,
-                     [&](bool enabled) { saveDisplayPreference("performanceOverlay", enabled); });
-    QObject::connect(display, &fugue::shell::DisplaySettings::performanceDetailsChanged, &win,
-                     [&](bool enabled) { saveDisplayPreference("performanceDetails", enabled); });
-    RenderMonitor renderMonitor(rt, win);
-#endif
+    worker.setMapMetrics(win.mapMetrics());
+    worker.setMapMailbox(win.mapMailbox());
+    worker.setMapRoutes(win.mapRoutes());
     fugue::shell::FocusFilter filt;
+    filt.setClientWindow(&win);
     app.installEventFilter(&filt);
 
     worker.setLiveSkin(win.live());  // wire skin / winset / winget traffic drives the SAME live skin the window paints
@@ -387,19 +332,6 @@ int clientMain(int argc, char** argv) {  // called by app/launcher.cpp's main() 
     win.resize(win.designSize());
     bool skinSized = false;
     if (cp.isSet(oSize)) fugue::shell::applyUserSize(win, cp.value(oSize), skinSized);
-
-#ifndef FUGUE_GPU  // GPU builds route both CPU and GPU results through the controller to reject stale frames.
-    QObject::connect(&rt, &RenderThread::frame, &win, &fugue::shell::SkinWindow::setMapFrame, Qt::QueuedConnection);
-    QObject::connect(&rt, &RenderThread::sceneOnly, &win, &fugue::shell::SkinWindow::setMapHit, Qt::QueuedConnection);
-    QObject::connect(&rt, &RenderThread::auxFrame, &win, &fugue::shell::SkinWindow::setAuxMapFrame,
-                     Qt::QueuedConnection);
-    QObject::connect(&rt, &RenderThread::auxSceneOnly, &win, &fugue::shell::SkinWindow::setAuxMapHit,
-                     Qt::QueuedConnection);
-#endif
-    QObject::connect(&win, &fugue::shell::SkinWindow::auxMapBuilt, &win,
-                     [&rt](const QString& id) { rt.forgetAux(id.toStdString()); });
-    QObject::connect(&win, &fugue::shell::SkinWindow::auxMapRemoved, &win,
-                     [&rt](const QString& id) { rt.removeAux(id.toStdString()); });
 
     // ---- input: the GUI thread posts each action to the session thread; it never writes to the socket.
     auto selectMacroSet = [&](const std::string& name) {
@@ -425,15 +357,18 @@ int clientMain(int argc, char** argv) {  // called by app/launcher.cpp's main() 
         for (const std::string& c : r.commands)
             if (routeAndRunRef) routeAndRunRef(c, "", false);
     };
-    // `.screenshot` saves through a dialog; `.screenshot auto` saves to <state dir>/screenshots without one
-    // (naming and location as in shell/screenshot.h).
-    QString worldTitle;  // world.name, for the auto file name
+    QString worldTitle;  // world.name, not the skin/window title
     const QString shotDir =
         QString::fromStdString((cfg.stateDir.empty() ? fugue::net::defaultStateDir() : cfg.stateDir) + "/screenshots");
     auto takeScreenshot = [&](bool autoSave) {
-        QImage shot = win.map() ? win.map()->frame() : QImage();  // the frame on screen now, before any dialog
+        QString error;
+        auto* map = dynamic_cast<fugue::shell::MapWidget*>(win.map());
+        // Read the composed native texture before opening a dialog. A queued
+        // command keeps the synchronous QRhi readback outside frame recording.
+        const QImage shot = map ? map->screenshot(&error) : QImage();
         if (shot.isNull()) {
-            std::fprintf(stderr, "[app] .screenshot: no map frame yet\n");
+            if (error.isEmpty()) error = "no map control to capture";
+            win.appendChat({"<font color=\"red\">Could not capture screenshot: " + error.toHtmlEscaped() + "</font>"});
             return;
         }
         QString path;
@@ -443,21 +378,18 @@ int clientMain(int argc, char** argv) {  // called by app/launcher.cpp's main() 
             QDir().mkpath(shotDir);
             path = fugue::shell::withPngSuffix(QFileDialog::getSaveFileName(
                 &win, "Save Screenshot As", QDir(shotDir).filePath("scrnshot1.png"), "PNG Files (*.png)"));
-            if (path.isEmpty()) return;  // cancelled
+            if (path.isEmpty()) return;
         }
-        QString err;
-        bool ok = fugue::shell::saveScreenshot(shot, path, &err);
+        const bool ok = fugue::shell::saveScreenshot(shot, path, &error);
         if (auto* rec = worker.recorder())
             rec->marker("screenshot", "\"file\":" + fugue::model::Recorder::quote(path.toStdString()) + ",\"w\":" +
                                           std::to_string(shot.width()) + ",\"h\":" + std::to_string(shot.height()) +
                                           ",\"ok\":" + (ok ? "true" : "false"));
-        std::fprintf(stderr, "[app] .screenshot%s -> %s %dx%d%s\n", autoSave ? " auto" : "", path.toUtf8().constData(),
-                     shot.width(), shot.height(), ok ? "" : (" FAILED: " + err.toStdString()).c_str());
         if (!ok)
-            win.appendChat(QStringList{"<font color=\"red\">Could not save screenshot to " + path.toHtmlEscaped() +
-                                       ": " + err.toHtmlEscaped() + "</font>"});
+            win.appendChat({"<font color=\"red\">Could not save screenshot to " + path.toHtmlEscaped() + ": " +
+                            error.toHtmlEscaped() + "</font>"});
         else if (autoSave)
-            win.appendChat(QStringList{"<font color=\"red\">Saved screenshot to " + path.toHtmlEscaped() + "</font>"});
+            win.appendChat({"<font color=\"red\">Saved screenshot to " + path.toHtmlEscaped() + "</font>"});
     };
     // The player's own macros (skin/usermacros.h), kept under the state dir: one list per server address, and a global one.
     const std::string macroDir = cfg.stateDir.empty() ? fugue::net::defaultStateDir() : cfg.stateDir;
@@ -497,7 +429,7 @@ int clientMain(int argc, char** argv) {  // called by app/launcher.cpp's main() 
     };
     auto openOptions = [&] {
         if (!optionsWin) {
-            optionsWin = new fugue::shell::OptionsWindow(&win, win.displaySettings());
+            optionsWin = new fugue::shell::OptionsWindow(&win);
             QObject::connect(optionsWin, &fugue::shell::OptionsWindow::command, &win,
                              [&](const QString& c) { routeAndRunRef(c.toStdString(), "", false); });
         }
@@ -541,16 +473,13 @@ int clientMain(int argc, char** argv) {  // called by app/launcher.cpp's main() 
             case R::Winset: clientWinset(r.winsetBody.empty() ? r.text : r.winsetBody); break;
             case R::Quit: QTimer::singleShot(0, &app, [&] { app.quit(); }); break;
             case R::Reconnect: worker.requestReconnect(); break;
-            // Queued: the save dialog is modal and must not nest inside an event handler.
-            case R::Screenshot: QTimer::singleShot(0, &win, [&, a = r.text == "auto"] { takeScreenshot(a); }); break;
+            case R::Screenshot:
+                QTimer::singleShot(0, &win, [&, autoSave = r.text == "auto"] { takeScreenshot(autoSave); });
+                break;
             case R::Macros: openMacros(); break;
             case R::Options: openOptions(); break;
             case R::Output: {
-                fugue::model::PageCall pc;
-                if (fugue::model::parsePageCall(r.text, r.arg, pc)) {
-                    QStringList args;
-                    for (const std::string& a : pc.args) args << QString::fromStdString(a);
-                    win.pageCall(QString::fromStdString(pc.target), QString::fromStdString(pc.fn), args);
+                if (win.clientOutput(QString::fromStdString(r.text), QString::fromStdString(r.arg))) {
                 } else if (win.live() && win.live()->printsOutput(r.text)) {
                     win.appendChat({QString::fromStdString(r.arg).toHtmlEscaped()});
                 } else {
@@ -570,88 +499,6 @@ int clientMain(int argc, char** argv) {  // called by app/launcher.cpp's main() 
         std::fprintf(stderr, "[app] world winset command => %s\n", c.left(160).toUtf8().constData());
         for (const std::string& line : fugue::shell::macroCommandLines(c.toStdString())) routeAndRun(line, "", false);
     });
-    // Right-click verb menu: the session thread returns the eligible rows (verbMenuReady / verbStackReady).
-    QMenu* verbMenu = nullptr;
-#ifdef FUGUE_RELEASE
-    const QString autoPick;  // test hook, compiled out of release builds
-#else
-    QString autoPick = qEnvironmentVariable("FUGUE_AUTO_PICK");
-#endif
-    QObject::connect(&worker, &SessionWorker::verbMenuReady, &win,
-                     [&](const QPoint& g, const QString& atom, const QList<VerbMenuItem>& items) {
-                         QStringList names;
-                         for (const VerbMenuItem& it : items) names << it.name + (it.viaArgument ? "*" : "");
-                         std::printf("VERBMENU atom=\"%s\" n=%d: %s\n", atom.toUtf8().constData(), int(items.size()),
-                                     names.join(" | ").toUtf8().constData());
-                         std::fflush(stdout);
-                         if (items.isEmpty()) return;  // no popup for an atom with nothing to offer
-                         delete verbMenu;
-                         verbMenu = new QMenu(&win);
-                         QAction* pick = nullptr;
-                         for (const VerbMenuItem& it : items) {
-                             QAction* a = verbMenu->addAction(it.name);
-                             QObject::connect(a, &QAction::triggered, &win, [&worker, it] {
-                                 worker.postAtomVerb(it.id, it.kind, it.ref, it.viaArgument, it.atom);
-                             });
-                             if (!autoPick.isEmpty() && it.name == autoPick) pick = a;
-                         }
-                         if (pick) {
-                             std::fprintf(stderr, "[app] AUTO-PICK %s\n", autoPick.toUtf8().constData());
-                             QTimer::singleShot(0, pick, &QAction::trigger);
-                             return;
-                         }
-                         verbMenu->popup(g);
-                     });
-    // Two-level map menu: a row per atom on the tile that has a verb (icon and name) with its verbs in a submenu.
-    QObject::connect(&worker, &SessionWorker::verbStackReady, &win, [&](const QPoint& g, const QList<MenuAtom>& atoms) {
-        QStringList rows;
-        for (const MenuAtom& a : atoms) {
-            QStringList v;
-            for (const VerbMenuItem& it : a.verbs) v << it.name + (it.viaArgument ? "*" : "");
-            rows << a.name + "[" + v.join(",") + "]";
-        }
-        std::printf("VERBSTACK n=%d: %s\n", int(atoms.size()), rows.join(" | ").toUtf8().constData());
-        std::fflush(stdout);
-        delete verbMenu;
-        verbMenu = new QMenu(&win);
-        fugue::shell::MapWidget::watchPopup(verbMenu);
-        // The popup swallows the pointer's motion: when it closes, the map reports what is under the pointer.
-        QObject::connect(verbMenu, &QMenu::aboutToHide, &win, [&win] {
-            for (fugue::shell::MapWidget* mw : win.mapWidgets()) mw->popupClosed();
-        });
-        QAction* pick = nullptr;
-        for (const MenuAtom& a : atoms) {
-            QIcon icon = a.icon.isNull() ? QIcon() : QIcon(QPixmap::fromImage(a.icon));
-            QMenu* sm = verbMenu->addMenu(icon, a.name);
-            for (const VerbMenuItem& it : a.verbs) {
-                QAction* act = sm->addAction(it.name);
-                QObject::connect(act, &QAction::triggered, &win, [&worker, it] {
-                    worker.postAtomVerb(it.id, it.kind, it.ref, it.viaArgument, it.atom);
-                });
-                if (!pick && !autoPick.isEmpty() && it.name == autoPick) pick = act;
-            }
-        }
-        if (pick) {
-            std::fprintf(stderr, "[app] AUTO-PICK %s\n", autoPick.toUtf8().constData());
-            QTimer::singleShot(0, pick, &QAction::trigger);
-            return;
-        }
-        verbMenu->popup(g);
-    });
-    bool popupMenus = true;  // client.show_popup_menus
-    QObject::connect(&worker, &SessionWorker::popupMenus, &win, [&](bool shown) {
-        popupMenus = shown;
-        for (fugue::shell::MapWidget* mw : win.mapWidgets()) mw->setPopupMenus(shown);
-    });
-    std::function<void(fugue::shell::MapWidget*)> wireMapWidget = [&](fugue::shell::MapWidget* mw) {
-        mw->setPopupMenus(popupMenus);
-        QObject::connect(mw, &fugue::shell::MapWidget::pointer, &win,
-                         [&, mw](const fugue::shell::MapPointer& p) { worker.postMouse(p, mw->rightClickToWire()); });
-        QObject::connect(mw, &fugue::shell::MapWidget::localMenuPointer, &win,
-                         [&](const QPoint& g, const fugue::shell::MapPointer& p) { worker.postMenuQuery(p, g); });
-    };
-    QObject::connect(&win, &fugue::shell::SkinWindow::mapReady, &win, wireMapWidget);
-    for (fugue::shell::MapWidget* mw : win.mapWidgets()) wireMapWidget(mw);
     QObject::connect(&win, &fugue::shell::SkinWindow::macroChanged, &win, [&](const QString& name) {
         std::fprintf(stderr, "[app] active macro set -> %s\n", name.toUtf8().constData());
         applyMacros();
@@ -685,12 +532,49 @@ int clientMain(int argc, char** argv) {  // called by app/launcher.cpp's main() 
     QObject::connect(&worker, &SessionWorker::chatLines, &win, &fugue::shell::SkinWindow::appendChat);
     // INFO control: tab, row and verb clicks are posted to the session thread.
     QObject::connect(&worker, &SessionWorker::statView, &win, &fugue::shell::SkinWindow::setStatView);
+    QObject::connect(&worker, &SessionWorker::mapViewSize, &win, &fugue::shell::SkinWindow::setMapViewSize);
+    QObject::connect(&worker, &SessionWorker::hoverName, &win, &fugue::shell::SkinWindow::setHoverName);
+    QObject::connect(&worker, &SessionWorker::mapFrameAvailable, &win, &fugue::shell::SkinWindow::mapFrameAvailable);
+    QObject::connect(&win, &fugue::shell::SkinWindow::mapPointer, &win,
+                     [&](const fugue::shell::MapPointer& p) { worker.postMapPointer(p); });
+    QObject::connect(&win, &fugue::shell::SkinWindow::mapMenuPicked, &win,
+                     [&](quint64 token, int index) { worker.postMapMenuPick(token, index); });
+    QObject::connect(&worker, &SessionWorker::mapMenuReady, &win, &fugue::shell::SkinWindow::showMapMenu);
+#ifdef FUGUE_RELEASE
+    const QString autoPick;  // test hook, compiled out of release builds
+#else
+    QString autoPick = qEnvironmentVariable("FUGUE_AUTO_PICK");
+#endif
+    QObject::connect(&worker, &SessionWorker::mapMenuReady, &win, [&](const fugue::shell::MapMenu& menu) {
+        if (!menu.token) return;  // not a right click: the old world's popup being closed
+        QStringList names;
+        for (const auto& it : menu.items) names << it.label;
+        std::printf("VERBMENU atom=\"%s\" n=%d: %s\n",
+                    menu.items.isEmpty() ? "" : menu.items.front().atom.toUtf8().constData(), int(menu.items.size()),
+                    names.join(" | ").toUtf8().constData());
+        std::fflush(stdout);
+        for (int i = 0; !autoPick.isEmpty() && i < menu.items.size(); ++i) {
+            if (menu.items[i].label != autoPick) continue;
+            std::fprintf(stderr, "[app] AUTO-PICK %s\n", autoPick.toUtf8().constData());
+            QTimer::singleShot(0, &win, [&, token = menu.token, i] {
+                worker.postMapMenuPick(token, i);
+                win.showMapMenu({});  // closes the popup the pick stands for
+            });
+            break;
+        }
+    });
     QObject::connect(&win, &fugue::shell::SkinWindow::statTabRequested, &win, [&](int i) { worker.postStatTab(i); });
-    QObject::connect(
-        &win, &fugue::shell::SkinWindow::statRowClicked, &win,
-        [&](int r, const QString& control, const QString& button, int mods, bool dbl, bool icon, int ix, int iy) {
-            worker.postStatRow(r, control.toStdString(), button.toStdString(), mods, dbl, icon, ix, iy);
-        });
+    QObject::connect(&win, &fugue::shell::SkinWindow::statRowClicked, &win,
+                     [&](int r, const QString& control, const QString& button, int mods, bool dbl, quint64 generation,
+                         bool icon, int iconX, int iconY) {
+                         worker.postStatRow(r, control.toStdString(), button.toStdString(), mods, dbl, generation, icon,
+                                            iconX, iconY);
+                     });
+    QObject::connect(&win, &fugue::shell::SkinWindow::statRowHovered, &win,
+                     [&](int r, const QString& control, int mods, quint64 generation, bool icon, int iconX, int iconY) {
+                         worker.postStatHover(r, control.toStdString(), mods, generation, icon, iconX, iconY);
+                     });
+    QObject::connect(&win, &fugue::shell::SkinWindow::statHoverLeft, &win, [&] { worker.postStatHoverLeft(); });
     // A stat-panel verb runs by its command name (`Set-Default-Language`), its nullable arguments prompted.
     QObject::connect(&win, &fugue::shell::SkinWindow::statVerbClicked, &win, [&](const QString& v) {
         worker.postCommand(QString::fromStdString(fugue::net::verbCommandName(v.toStdString())), true);
@@ -712,9 +596,9 @@ int clientMain(int argc, char** argv) {  // called by app/launcher.cpp's main() 
     QObject::connect(&worker, &SessionWorker::browseClosed, &win, &fugue::shell::SkinWindow::closeBrowse);
     QObject::connect(&worker, &SessionWorker::outputFile, &win, &fugue::shell::SkinWindow::showOutputFile);
     QObject::connect(&worker, &SessionWorker::pageCall, &win, &fugue::shell::SkinWindow::pageCall);
-    QObject::connect(&worker, &SessionWorker::worldName, &win, [&](const QString& n) {
-        worldTitle = n;
-        win.setWorldName(n);
+    QObject::connect(&worker, &SessionWorker::worldName, &win, [&](const QString& name) {
+        worldTitle = name;
+        win.setWorldName(name);
     });
     // Window icon: the world's, else Fugue's (skin/winicon.h).
     QObject::connect(&worker, &SessionWorker::windowIcon, &win, &fugue::shell::SkinWindow::setSkinIcon);
@@ -787,7 +671,7 @@ int clientMain(int argc, char** argv) {  // called by app/launcher.cpp's main() 
                          std::fprintf(stderr, "[app] MACRO %s%s => %s\n", k.toUtf8().constData(), up ? "+UP" : "",
                                       c.toUtf8().constData());
                          for (const std::string& line : fugue::shell::macroCommandLines(c.toStdString()))
-                             routeAndRun(line, k.toStdString(), up);
+                             routeAndRun(win.expandMapCommandParams(line), k.toStdString(), up);
                      });
     QObject::connect(&worker, &SessionWorker::frameTiming, &filt, &fugue::shell::FocusFilter::setFrameTiming);
     // Refusals are printed in red, as stock DreamSeeker does. The font tag also makes the pane parse the line as rich
@@ -797,7 +681,6 @@ int clientMain(int argc, char** argv) {  // called by app/launcher.cpp's main() 
     });
 
     win.show();
-    rt.start();
     worker.start();
 
 #ifndef FUGUE_RELEASE
@@ -809,47 +692,35 @@ int clientMain(int argc, char** argv) {  // called by app/launcher.cpp's main() 
             double delay = p.size() > 2 ? p[2].toDouble() : 8.0;
             int ix = p[0].toInt(), iy = p[1].toInt();
             QTimer::singleShot(int(delay * 1000), &win, [&win, ix, iy] {
-                fugue::shell::MapWidget* mw = win.map();
-                if (!mw || !mw->hitScene()) {
+                fugue::shell::MapWidget* mw = nullptr;  // the first map on screen with a scene: the default one
+                for (QWidget* child : win.findChildren<QWidget*>())
+                    if (auto* map = dynamic_cast<fugue::shell::MapWidget*>(child);
+                        map && !mw && map->isVisible() && !map->presentedViewSize().isEmpty())
+                        mw = map;
+                if (!mw) {
                     std::fprintf(stderr, "[app] AUTO-RIGHTCLICK: no map scene yet\n");
                     return;
                 }
-                QRect ir = mw->imageRect();
-                const auto& sc = *mw->hitScene();
-                QPoint local(ir.x() + int((ix + 0.5) * ir.width() / sc.pixW()),
-                             ir.y() + int((iy + 0.5) * ir.height() / sc.pixH()));
+                const QPoint local = mw->sceneToWidget(QPointF(ix + 0.5, iy + 0.5)).toPoint();
                 std::fprintf(stderr, "[app] AUTO-RIGHTCLICK image (%d,%d) -> widget (%d,%d)\n", ix, iy, local.x(),
                              local.y());
+                QMouseEvent move(QEvent::MouseMove, local, mw->mapToGlobal(local), Qt::NoButton, Qt::NoButton,
+                                 Qt::NoModifier);
+                QCoreApplication::sendEvent(mw, &move);
                 QMouseEvent press(QEvent::MouseButtonPress, local, mw->mapToGlobal(local), Qt::RightButton,
                                   Qt::RightButton, Qt::NoModifier);
                 QCoreApplication::sendEvent(mw, &press);
-                QMouseEvent rel(QEvent::MouseButtonRelease, local, mw->mapToGlobal(local), Qt::RightButton,
-                                Qt::NoButton, Qt::NoModifier);
-                QCoreApplication::sendEvent(mw, &rel);
+                // The release goes out on a later turn of the event loop: the worker pairs it with the press it has seen.
+                QTimer::singleShot(100, mw, [mw, local] {
+                    QMouseEvent rel(QEvent::MouseButtonRelease, local, mw->mapToGlobal(local), Qt::RightButton,
+                                    Qt::NoButton, Qt::NoModifier);
+                    QCoreApplication::sendEvent(mw, &rel);
+                });
             });
         }
     }
-
 #endif  // !FUGUE_RELEASE
 
-    if (cp.isSet(oShot)) {
-        QString out = cp.value(oShot);
-        QTimer::singleShot(int(cp.value(oAfter).toDouble() * 1000), &app, [&, out] {
-            QPixmap pm = win.grabWithMaps();
-            bool ok = pm.save(out, "PNG");
-            QRect mr = win.mapControlRect();
-            QRect ir = win.map() ? win.map()->imageRect() : QRect();
-            std::printf(
-                "SHOT %s ok=%d window=%dx%d\nMAPRECT %d %d %d %d\nIMAGERECT %d %d %d %d scale=%d frames_shown=%llu "
-                "render_executed=%llu dropped=%llu ingested=%llu\n",
-                out.toUtf8().constData(), ok, win.width(), win.height(), mr.x(), mr.y(), mr.width(), mr.height(),
-                ir.x(), ir.y(), ir.width(), ir.height(), win.map() ? win.map()->scale() : 0,
-                win.map() ? (unsigned long long)win.map()->framesShown() : 0ULL, (unsigned long long)rt.executed(),
-                (unsigned long long)rt.dropped(), (unsigned long long)worker.framesIngested.load());
-            std::fflush(stdout);
-            app.quit();
-        });
-    }
     // Quit through the event loop on SIGINT/SIGTERM so the socket closes cleanly.
 #ifdef _WIN32
     ::signal(SIGINT, [](int) { gInt = 1; });
@@ -868,12 +739,10 @@ int clientMain(int argc, char** argv) {  // called by app/launcher.cpp's main() 
     intPoll.start(100);
     int rc = app.exec();
     worker.requestStop();
-    rt.requestStop();
     if (!worker.wait(4000)) {
         std::fprintf(stderr, "[app] session thread did not stop; terminating\n");
         worker.terminate();
         worker.wait(1000);
     }
-    rt.wait(2000);
     return rc;
 }

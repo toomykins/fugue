@@ -19,33 +19,33 @@ using std::string_view;
 struct GdiStrike {
     int pt, h, ascent, il, first, defaultChar;
     uint8_t adv[224];  // firstChar (32) .. 255, cp1252
+    int dpi = 96;      // the resolution its file was digitised for
 };
 #include "render/gdifont_tables.inc"
-
-// The Windows profile's Small Fonts 5pt and 6pt strikes (the Wine profile has only 7pt). Their advance widths are
-// estimated from the 7pt widths scaled by the ascent ratio.
-GdiStrike scaledSmallFonts(int pt, int h, int ascent) {
-    GdiStrike s = kFaceSmallFonts_7;
-    s.pt = pt;
-    s.h = h;
-    s.ascent = ascent;
-    s.il = h - ascent;
-    for (int i = 0; i < 224; i++)
-        s.adv[i] = uint8_t(std::max(1, int(std::floor(kFaceSmallFonts_7.adv[i] * ascent / 9.0 + 0.5))));
-    return s;
-}
-const GdiStrike kWinSmallFonts5 = scaledSmallFonts(5, 8, 7);
-const GdiStrike kWinSmallFonts6 = scaledSmallFonts(6, 10, 8);
+#include "render/gdifont_windows.inc"
 
 enum class Bitmap { None, SmallFonts, MsSansSerif, Courier };
 
 std::vector<const GdiStrike*> strikesOf(Bitmap b, GdiProfile p) {
     switch (b) {
         case Bitmap::SmallFonts:
-            if (p == GdiProfile::Windows) return {&kWinSmallFonts5, &kWinSmallFonts6, &kFaceSmallFonts_7};
+            // Windows' files have more strikes than Wine's (stock 516.1689 on Windows 11 draws 18pt from the 18pt strike),
+            // and it registers a second set of files, made for 120 dpi, whose strikes stock draws too (16pt from that
+            // set's 12pt strike). The largest comes last. The strikes both have differ in
+            // bytes 0x7f to 0x9f, where Windows' mostly have no glyph.
+            if (p == GdiProfile::Windows)
+                return {&kWinSmallFonts_2, &kWinSmallFonts_3, &kWinSmallFonts_4, &kWinSmallFonts_5, &kWinSmallFonts_6,
+                        &kWinSmallFonts_7, &kWin120SmallFonts_6, &kWin120SmallFonts_7};
             return {&kFaceSmallFonts_7};
-        case Bitmap::MsSansSerif: return {&kFaceMsSansSerif_8, &kFaceMsSansSerif_10, &kFaceMsSansSerif_12};
-        case Bitmap::Courier: return {&kFaceCourier_10};
+        case Bitmap::MsSansSerif:
+            if (p == GdiProfile::Windows)
+                return {&kWinMsSansSerif_8, &kWinMsSansSerif_10, &kWinMsSansSerif_12, &kWinMsSansSerif_14,
+                        &kWin120MsSansSerif_12, &kWin120MsSansSerif_14, &kWinMsSansSerif_18, &kWin120MsSansSerif_18,
+                        &kWinMsSansSerif_24, &kWin120MsSansSerif_24};
+            return {&kFaceMsSansSerif_8, &kFaceMsSansSerif_10, &kFaceMsSansSerif_12};
+        case Bitmap::Courier:
+            if (p == GdiProfile::Windows) return {&kFaceCourier_10, &kWinCourier_12, &kWinCourier_15, &kWin120Courier_15};
+            return {&kFaceCourier_10};
         default: return {};
     }
 }
@@ -222,7 +222,17 @@ struct Style {
     int valign = 2;                // valign / vertical-align: 0 top, 1 middle, 2 bottom
     bool outline = false;
     uint32_t outlineColor = 0x000000ffu;
+    int outlineWidth = 1;
+    int outlineFlags = 0;
+    bool underline = false;
+    bool shadow = false;
+    int shadowX = 0, shadowY = 0, shadowBlur = 0;
+    uint32_t shadowColor = 0x000000ffu;
+    // The element that set text-align: its text stands on lines of its own, also beside one with the same alignment
+    // (stock 516.1689).
+    int block = 0;
 };
+int g_blockSeq = 0;  // under the layout lock
 using Decls = std::vector<std::pair<string, string>>;
 struct Rule {
     string sel;
@@ -247,6 +257,9 @@ std::optional<int> parseSize(string_view v0, int cur) {
         f = std::stod(v.substr(0, i));
     } catch (...) { return std::nullopt; }
     string unit(trim(string_view(v).substr(i)));
+    // A size stock cannot make a font of is ignored: 5000px draws at the size in effect, 4500px draws nothing because
+    // its line does not fit (stock 516.1689; where between them was not probed).
+    if ((unit == "px" || unit == "pt") && f > 4750) return std::nullopt;
     if (unit == "px" || unit == "pt") return roundHalfUp(f);  // px and pt are the same, rounded half up (8.5 -> 9)
     // em and %: 0.9 * cur * f.
     if (unit == "em") return roundHalfUp(cur * f * 0.9);
@@ -415,17 +428,58 @@ void applyProps(Style& st, const Decls& props) {
                 st.align = 2;
             else if (t == "left")
                 st.align = 0;
-        } else if (k == "vertical-align") {
-            st.valign = parseValign(v, st.valign);
-        } else if (k == "-dm-text-outline" || k == "-dm-text-outline-color") {
-            // "<width> <color> [style]" (or a bare colour): a 1 px halo, black unless a colour is named.
-            st.outline = true;
-            st.outlineColor = 0x000000ffu;
+            if (t == "center" || t == "right" || t == "left") st.block = ++g_blockSeq;
+        } else if (k == "text-decoration") {
+            string t = lower(trim(v));
+            if (t.find("underline") != string::npos)
+                st.underline = true;
+            else if (t == "none")
+                st.underline = false;
+        } else if (k == "text-shadow") {
+            // "<x> <y> [blur] <colour>".
+            st.shadow = false;
+            int lengths[3] = {0, 0, 0}, n = 0;
+            st.shadowColor = 0x000000ffu;
             string_view rest = v;
             while (!rest.empty()) {
                 size_t sp = rest.find_first_of(" \t");
                 string_view f = rest.substr(0, sp);
-                if (auto c = parseCssColor(f)) st.outlineColor = *c;
+                if (!f.empty() && (f[0] == '-' || f[0] == '+' || f[0] == '.' || (f[0] >= '0' && f[0] <= '9'))) {
+                    if (n < 3) lengths[n++] = std::atoi(string(f).c_str());
+                } else if (n < 2) {  // a colour before the offsets is not a shadow (stock 516.1689)
+                    n = 0;
+                    break;
+                } else if (auto col = parseCssColor(f))
+                    st.shadowColor = *col;
+                if (sp == string_view::npos) break;
+                rest = rest.substr(sp + 1);
+            }
+            if (n >= 2) {
+                st.shadow = true;
+                st.shadowX = std::clamp(lengths[0], -64, 64);
+                st.shadowY = std::clamp(lengths[1], -64, 64);
+                st.shadowBlur = std::clamp(lengths[2], 0, 64);  // stock blurs by 20px too
+            }
+        } else if (k == "vertical-align") {
+            st.valign = parseValign(v, st.valign);
+        } else if (k == "-dm-text-outline" || k == "-dm-text-outline-color") {
+            // "<width> <color> [sharp] [square]" (or a bare colour): stock's outline filter on the text, 1 px and black
+            // unless a width or a colour is named (stock 516.1689); 0px is no outline.
+            st.outline = true;
+            st.outlineColor = 0x000000ffu;
+            if (k == "-dm-text-outline") st.outlineWidth = 1, st.outlineFlags = 0;
+            string_view rest = v;
+            bool widthSet = k != "-dm-text-outline";
+            while (!rest.empty()) {
+                size_t sp = rest.find_first_of(" \t");
+                string_view f = rest.substr(0, sp);
+                if (!widthSet && !f.empty() && f[0] >= '0' && f[0] <= '9') {
+                    st.outlineWidth = std::clamp(std::atoi(string(f).c_str()), 0, 64);  // 12px is 12px (stock 516.1689)
+                    widthSet = true;
+                } else if (k == "-dm-text-outline" && (lower(f) == "sharp" || lower(f) == "square"))
+                    st.outlineFlags |= lower(f) == "sharp" ? 1 : 2;  // the outline filter's flags
+                else if (auto c = parseCssColor(f))
+                    st.outlineColor = *c;
                 if (sp == string_view::npos) break;
                 rest = rest.substr(sp + 1);
             }
@@ -528,11 +582,16 @@ std::map<string, string> parseAttrs(string_view rest) {
 
 bool isAlpha(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'); }
 
-std::vector<Token> tokenize(string_view markup, const std::vector<Rule>& rules) {
+std::vector<Token> tokenize(string_view markup, const std::vector<Rule>& sheet) {
+    // Stock 516.1689: a <style> element adds its rules and shows nothing, a rule may
+    // select a tag or tag.class as well as .class, a closing tag that matches no open one is ignored, <a> is blue
+    // and <center> centres.
+    std::vector<Rule> rules = sheet;
     Style base;
     for (const Rule& r : rules)
         if (r.sel == "body") applyProps(base, r.decls);
     std::vector<Style> stack{base};
+    std::vector<string> open;  // the tag of each style above the base
     std::vector<Token> toks;
     auto text = [&](string_view s) { toks.push_back({TokKind::Text, decodeEntities(s), stack.back()}); };
     size_t i = 0;
@@ -569,12 +628,34 @@ std::vector<Token> tokenize(string_view markup, const std::vector<Rule>& rules) 
         if (name == "p") toks.push_back({TokKind::Para, {}, stack.back()});  // <p> breaks the line; <div> does not
         if (name == "img" || name == "beep") continue;                       // <IMG> measures 0
         if (closing) {
-            if (stack.size() > 1) stack.pop_back();
+            for (size_t k = open.size(); k-- > 0;)
+                if (open[k] == name) {
+                    open.resize(k);
+                    stack.resize(k + 1);
+                    break;
+                }
+            continue;
+        }
+        if (name == "style") {
+            size_t end = i;
+            for (;; end++) {
+                end = markup.find('<', end);
+                if (end == string_view::npos || lower(markup.substr(end, 8)) == "</style>") break;
+            }
+            parseSheet(markup.substr(i, end == string_view::npos ? string_view::npos : end - i), rules);
+            i = end == string_view::npos ? markup.size() : end + 8;
             continue;
         }
         auto attrs = parseAttrs(tag.substr(n));
         Style st = stack.back();
         if (auto a = attrs.find("valign"); a != attrs.end()) st.valign = parseValign(a->second, st.valign);
+        for (const Rule& r : rules)
+            if (r.sel == name) applyProps(st, r.decls);
+        if (name == "a")
+            st.color = 0x0000ffffu;
+        else if (name == "center")
+            st.align = 1;
+        if (name == "u") st.underline = true;
         if (name == "b" || name == "strong")
             st.bold = true;
         else if (name == "i" || name == "em")
@@ -613,7 +694,10 @@ std::vector<Token> tokenize(string_view markup, const std::vector<Rule>& rules) 
                 while (p < cs.size() && isWs(cs[p])) p++;
                 size_t e = p;
                 while (e < cs.size() && !isWs(cs[e])) e++;
-                if (e > p) cls.push_back("." + lower(cs.substr(p, e - p)));
+                if (e > p) {
+                    cls.push_back("." + lower(cs.substr(p, e - p)));
+                    cls.push_back(name + cls.back());
+                }
                 p = e;
             }
             // CSS cascade: stylesheet order decides, not the order of the class attribute.
@@ -622,6 +706,7 @@ std::vector<Token> tokenize(string_view markup, const std::vector<Rule>& rules) 
         }
         if (auto s = attrs.find("style"); s != attrs.end()) applyProps(st, parseDecls(s->second));
         stack.push_back(st);
+        open.push_back(name);
     }
     return toks;
 }
@@ -660,10 +745,25 @@ struct Face {
     }
 };
 
-// GDI font mapping: the largest strike whose character height fits the request, else the smallest; then integer scaling.
+// GDI font mapping. Windows: stock asks for its faces with raster scaling off (what PROOF_QUALITY does), so a size
+// is drawn from one strike as it is, the one GDI's mapper charges least: 150 for each pixel its character height is
+// short of the request, 600 and 150 a pixel when it is taller, 30 for a strike of the 120-dpi files. Past 10000, that
+// is 67 px short of the largest strike, GDI hands out Arial: nullptr. (The same choice as GDI's for every size up to
+// 400 px in all three families on Windows 11; stock 516.1689: 16pt is the 25 px strike,
+// 22pt the 29 px one and not the 36 px one a pixel taller, 29pt the 46 px one a pixel taller, 60px still that.)
+// Wine: the largest strike whose character height fits the request, else the smallest; then integer scaling.
 const GdiStrike* mapStrike(Bitmap b, int em, GdiProfile prof) {
     auto ss = strikesOf(b, prof);
     const GdiStrike* best = ss.front();
+    if (prof == GdiProfile::Windows) {
+        int least = -1;
+        for (const GdiStrike* s : ss) {
+            const int height = s->h - s->il;
+            const int penalty = (height > em ? 600 + 150 * (height - em) : 150 * (em - height)) + (s->dpi == 96 ? 0 : 30);
+            if (least < 0 || penalty < least) least = penalty, best = s;
+        }
+        return least > 10000 ? nullptr : best;
+    }
     for (const GdiStrike* s : ss)
         if (s->h - s->il <= em) best = s;
     return best;
@@ -671,9 +771,10 @@ const GdiStrike* mapStrike(Bitmap b, int em, GdiProfile prof) {
 
 Face bitmapFace(Bitmap b, int em, bool bold, GdiProfile prof) {
     const GdiStrike* best = mapStrike(b, em, prof);
+    if (!best) best = strikesOf(b, prof).back();  // only without a TrueType stack to draw Arial with
     Face f;
     f.bm = best;
-    f.k = std::max(1, (em + 2 * best->il) / best->h);
+    f.k = prof == GdiProfile::Windows ? 1 : std::max(1, (em + 2 * best->il) / best->h);
     f.bold = bold;
     f.ascent = best->ascent * f.k;
     f.height = best->h * f.k;
@@ -688,15 +789,20 @@ Face bitmapFace(Bitmap b, int em, bool bold, GdiProfile prof) {
 
 Face resolveFace(const Style& st, GdiProfile prof, bool draw) {
     int em = emOfPt(st.pt, draw);
-    const string& fam = st.family;
+    string fam = st.family;
     auto bitmap = [&](Bitmap b) {
         Face f = bitmapFace(b, em, st.bold, prof);
         f.desc.italic = st.italic;
         return f;
     };
-    if (fam.empty() || fam == "ms sans serif" || fam == "sans-serif") return bitmap(Bitmap::MsSansSerif);
-    if (fam == "small fonts") return bitmap(Bitmap::SmallFonts);
-    if (fam == "monospace" || fam == "courier") return bitmap(Bitmap::Courier);
+    const Bitmap named = fam.empty() || fam == "ms sans serif" || fam == "sans-serif" ? Bitmap::MsSansSerif
+                         : fam == "small fonts"                                       ? Bitmap::SmallFonts
+                         : fam == "monospace" || fam == "courier"                     ? Bitmap::Courier
+                                                                                      : Bitmap::None;
+    if (named != Bitmap::None) {
+        if (mapStrike(named, em, prof)) return bitmap(named);
+        fam = "arial";  // a size no strike is near
+    }
     // A TrueType face. An unknown family (and `serif`) measures as Arial.
     if (g_resolver) {
         for (const string& want : {fam == "serif" ? string("arial") : fam, string("arial")}) {
@@ -727,6 +833,7 @@ constexpr char32_t kTabAtStart = 0x110000;  // a tab opening a line advances by 
 struct Cell {
     char32_t cp = 0;
     int face = 0;
+    int linked = -1;  // the face this character is drawn and advanced in when its own, a bitmap one, has no glyph for it
     double lh = 1.2;
     bool marker = false;  // carries the style in effect where a line starts (an empty line still has a height)
     int paint = 0;        // index into Built::paints (colour, outline, align): paint only, never a measurement
@@ -737,7 +844,7 @@ bool isBreakSpace(char32_t c) { return c == ' ' || c == '\t' || c == 0xa0 || c =
 
 int advOf(const Cell& c, const std::vector<Face>& faces) {
     if (c.marker) return 0;
-    const Face& f = faces[size_t(c.face)];
+    const Face& f = faces[size_t(c.linked >= 0 ? c.linked : c.face)];
     if (c.cp == kTabAtStart) return f.defaultAdv();
     if (c.cp == '\t') return f.adv(' ') + f.defaultAdv();  // a tab is a space plus the default char
     return f.adv(c.cp);
@@ -881,12 +988,16 @@ Built buildLocked(string_view text, string_view mapStyle, string_view style, int
         faces.push_back(resolveFace(st, prof, draw));
         return faceIdx[key] = int(faces.size()) - 1;
     };
-    std::map<std::tuple<uint32_t, bool, uint32_t, int, int>, int> paintIdx;
+    using PaintKey = std::tuple<uint32_t, bool, uint32_t, int, int, int, bool, std::tuple<bool, int, int, int, uint32_t>, int>;
+    std::map<PaintKey, int> paintIdx;
     auto paintOf = [&](const Style& st) {
-        auto key = std::make_tuple(st.color, st.outline, st.outlineColor, st.align, st.valign);
+        const bool outline = st.outline && st.outlineWidth > 0;
+        PaintKey key{st.color, outline, st.outlineColor, st.align, st.valign, st.outlineWidth, st.underline,
+                     {st.shadow, st.shadowX, st.shadowY, st.shadowBlur, st.shadowColor}, st.outlineFlags};
         auto it = paintIdx.find(key);
         if (it != paintIdx.end()) return it->second;
-        b.paints.push_back(DsPaint{st.color, st.outline, st.outlineColor});
+        b.paints.push_back(DsPaint{st.color, outline, st.outlineColor, st.outlineWidth, st.underline, st.shadow,
+                                   st.shadowX, st.shadowY, st.shadowBlur, st.shadowColor, st.outlineFlags});
         b.paintAlign.push_back(st.align);
         b.paintValign.push_back(st.valign);
         return paintIdx[key] = int(b.paints.size()) - 1;
@@ -908,7 +1019,16 @@ Built buildLocked(string_view text, string_view mapStyle, string_view style, int
             if (!c.marker) return false;
         return true;
     };
+    int block = toks.empty() ? 0 : toks.front().style.block;
     for (const Token& t : toks) {
+        if (t.kind == TokKind::Text && t.style.block != block) {  // into or out of an element that set text-align
+            block = t.style.block;
+            if (!emptyLine(lines.back())) {
+                lines.push_back(Line{marker(t.style)});
+                ends.push_back(1);
+            } else
+                lines.back() = Line{marker(t.style)};
+        }
         if (t.kind != TokKind::Text) {
             if (t.kind == TokKind::Para && emptyLine(lines.back())) continue;  // <p></p><p>: one break, not two
             lines.push_back(Line{marker(t.style)});
@@ -930,6 +1050,16 @@ Built buildLocked(string_view text, string_view mapStyle, string_view style, int
             Cell cell;
             cell.cp = c;
             cell.face = faceOf(t.style);
+            // A character outside a bitmap face's code page is not that face's default box in stock: GDI links it from
+            // Microsoft Sans Serif at the size asked, on the bitmap face's line (stock 516.1689:
+            // 8pt, 16pt and a TrueType face give the same pixels). At some sizes stock's linked glyphs are smaller than
+            // asked, and a few symbols come from yet another face; for those this is an approximation.
+            if (faces[size_t(cell.face)].bm && c > 0xff && c <= 0xffff && cp1252(c) < 0) {
+                Style link = t.style;
+                link.family = "microsoft sans serif";
+                const int linked = faceOf(link);
+                if (faces[size_t(linked)].tt) cell.linked = linked;
+            }
             cell.lh = t.style.lh;
             cell.paint = paintOf(t.style);
             lines.back().push_back(cell);
@@ -1023,7 +1153,9 @@ DsLayout layoutLocked(string_view text, string_view mapStyle, int width, GdiProf
         ln.width = o.w;
         bool alignSet = false;
         int x = 0;
+        bool run = false;  // the cell before was a linked glyph too
         for (const Cell& c : o.cells) {
+            const int advance = advOf(c, b.faces);
             if (c.marker) continue;
             // The line takes the alignment of its first run, and the block the vertical alignment of its first glyph.
             if (!alignSet) {
@@ -1034,8 +1166,11 @@ DsLayout layoutLocked(string_view text, string_view mapStyle, int width, GdiProf
                 L.valign = b.paintValign[size_t(c.paint)];
                 valignSet = true;
             }
-            if (!isBreakSpace(c.cp) && c.cp != '\t') ln.glyphs.push_back(DsGlyph{c.cp, x, c.face, c.paint});
-            x += advOf(c, b.faces);
+            if (!isBreakSpace(c.cp) && c.cp != '\t')
+                ln.glyphs.push_back(DsGlyph{c.cp, x, c.linked >= 0 ? c.linked : c.face, c.paint, run && c.linked >= 0});
+            run = c.linked >= 0;
+            if (b.paints[size_t(c.paint)].underline) ln.underlines.push_back(DsUnderline{x, advance, c.face, c.paint});
+            x += advance;
         }
         if (!alignSet && !o.cells.empty()) ln.align = b.paintAlign[size_t(o.cells.front().paint)];
         for (auto it = o.cells.rbegin(); it != o.cells.rend(); ++it) {
@@ -1045,7 +1180,9 @@ DsLayout layoutLocked(string_view text, string_view mapStyle, int width, GdiProf
         }
         L.lines.push_back(std::move(ln));
         if (i + 1 == b.out.size())
-            top += (width > 0 && o.w > width) ? 0 : asc + desc;
+            // Drawn, the last line is as tall as its pitch when that is more: with line-height 2 the block ends
+            // floor(2 * ascent) below the last line's top (stock 516.1689).
+            top += (width > 0 && o.w > width) ? 0 : std::max(asc + desc, pitch);
         else
             top += pitch;
     }
@@ -1065,7 +1202,7 @@ int dsBitmapAdvance(const DsFace& face, int b, GdiProfile profile) {
     const Bitmap bm = face.family == "small fonts" ? Bitmap::SmallFonts
                       : face.family == "courier"   ? Bitmap::Courier
                                                    : Bitmap::MsSansSerif;
-    const GdiStrike* s = mapStrike(bm, face.em, profile);
+    const GdiStrike* s = bitmapFace(bm, face.em, false, profile).bm;
     if (b < 0) b = s->defaultChar;
     return b < s->first || b > 255 ? -1 : s->adv[b - s->first];
 }

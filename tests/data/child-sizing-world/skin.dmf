@@ -1,0 +1,126 @@
+window "main"
+    elem "main"
+        type = MAIN
+        size = 640x480
+        is-default = true
+        title = "CHILD sizing fixture"
+        statusbar = false
+    elem "leftonly"
+        type = CHILD
+        pos = 0,0
+        size = 300x150
+        left = "first"
+        splitter = 25
+        is-vert = true
+    elem "rightonly"
+        type = CHILD
+        pos = 320,0
+        size = 300x150
+        right = "second"
+        splitter = 75
+        is-vert = false
+    elem "nested"
+        type = CHILD
+        pos = 0,160
+        size = 300x150
+        left = "wrapper"
+    elem "fraction"
+        type = CHILD
+        pos = 320,160
+        size = 300x160
+        left = "upper"
+        right = "lower"
+        splitter = 97.5
+        show-splitter = false
+window "wrapper"
+    elem "wrapper"
+        type = MAIN
+        size = 300x150
+        is-pane = true
+    elem "only"
+        type = CHILD
+        pos = 0,0
+        size = 300x150
+        anchor1 = 0,0
+        anchor2 = 100,100
+        left = "chat"
+        splitter = 80
+        is-vert = false
+        show-splitter = false
+window "first"
+    elem "first"
+        type = MAIN
+        size = 300x150
+        is-pane = true
+    elem "content"
+        type = LABEL
+        pos = 0,0
+        size = 300x150
+        anchor1 = 0,0
+        anchor2 = 100,100
+window "second"
+    elem "second"
+        type = MAIN
+        size = 300x150
+        is-pane = true
+    elem "content"
+        type = LABEL
+        pos = 0,0
+        size = 300x150
+        anchor1 = 0,0
+        anchor2 = 100,100
+window "extra_left"
+    elem "extra_left"
+        type = MAIN
+        size = 300x150
+        is-pane = true
+    elem "content"
+        type = LABEL
+        pos = 0,0
+        size = 300x150
+        anchor1 = 0,0
+        anchor2 = 100,100
+window "extra_right"
+    elem "extra_right"
+        type = MAIN
+        size = 300x150
+        is-pane = true
+    elem "content"
+        type = LABEL
+        pos = 0,0
+        size = 300x150
+        anchor1 = 0,0
+        anchor2 = 100,100
+window "chat"
+    elem "chat"
+        type = MAIN
+        size = 300x150
+        is-pane = true
+    elem "browser"
+        type = BROWSER
+        pos = 0,0
+        size = 300x150
+        anchor1 = 0,0
+        anchor2 = 100,100
+window "upper"
+    elem "upper"
+        type = MAIN
+        size = 300x150
+        is-pane = true
+    elem "content"
+        type = LABEL
+        pos = 0,0
+        size = 300x150
+        anchor1 = 0,0
+        anchor2 = 100,100
+window "lower"
+    elem "lower"
+        type = MAIN
+        size = 300x150
+        is-pane = true
+    elem "content"
+        type = LABEL
+        pos = 0,0
+        size = 300x150
+        anchor1 = 0,0
+        anchor2 = 100,100

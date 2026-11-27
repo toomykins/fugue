@@ -1,0 +1,9 @@
+window "main"
+    elem "main"
+        type = MAIN
+        size = 400x300
+        is-default = true
+    elem "label"
+        type = LABEL
+        size = 300x40
+        text = "Popup visibility fixture"

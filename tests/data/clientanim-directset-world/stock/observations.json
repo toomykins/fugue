@@ -1,0 +1,58 @@
+{
+  "stock_version": "516.1689",
+  "replay": {
+    "origin_ns": 1000000000000000000,
+    "tick_ns": 100000000,
+    "viewport": [
+      352,
+      352
+    ],
+    "clock_pixels_per_tick": 10,
+    "player_origin": [
+      160,
+      160
+    ],
+    "frames": 101
+  },
+  "measurement": {
+    "crop": [
+      0,
+      0,
+      352,
+      352
+    ],
+    "clock": "clock_left - player_left + 160",
+    "clock_quantization_ns": 10000000,
+    "sample": "midpoint of the 10 ms clock-pixel interval",
+    "tolerance": "One source pixel while moving accounts for clock quantization and raster rounding; the settled endpoint is exact"
+  },
+  "checkpoints": [
+    {
+      "name": "before-assignment",
+      "image": "stock/000017.png",
+      "sha256": "5b156f5daf9b81c00fb09db11b7da64a3d213a6a72c6511ccc96d7daf1500b8a",
+      "phase": "running",
+      "clock_pixels": 44,
+      "offset_x": 7,
+      "tolerance_px": 1
+    },
+    {
+      "name": "after-assignment",
+      "image": "stock/000021.png",
+      "sha256": "a5b204df9ad38f30ab03db9f1ed3d328f6249260d5c20127226878b4bd59f903",
+      "phase": "assigned",
+      "clock_pixels": 50,
+      "offset_x": -18,
+      "tolerance_px": 1
+    },
+    {
+      "name": "settled",
+      "image": "stock/000081.png",
+      "sha256": "0e9577f7330bb2edc374bcff3df76b8845496e8c255dc07e9dd0d48564e54ea5",
+      "phase": "settled",
+      "clock_pixels": 206,
+      "offset_x": 6,
+      "tolerance_px": 0
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "byond_version": "516.1688",
+  "source": "Foreground-verified stock screenshots; darkness-obstruction-runtime and darkness-offset-runtime, 2026-10-22",
+  "cases": [
+    {"phase":"dark-through","config":"ambient=0&see=0&sight=through","mask":"000000000/000000000/000000000/000000000/000000000/000000000/000000000/000000000/000000000","visible_markers":[]},
+    {"phase":"dark-self","config":"ambient=0&see=0&sight=self","mask":"000000000/000000000/000000000/000000000/000000000/000000000/000000000/000000000/000000000","visible_markers":["observer"]},
+    {"phase":"lamp-wall","config":"ambient=0&see=0&sight=normal&lamp=6&wall=1&wallx=4","mask":"000000000/000000000/000000000/000000000/000000000/000000000/000000000/000000000/000000000","visible_markers":[]},
+    {"phase":"lamp-door","config":"ambient=0&see=0&sight=normal&lamp=6&wall=1&wallx=4&door=open","mask":"000W11110/100W11110/110W11110/111W11110/111111110/111W11110/110W11110/100W11110/000W11110","visible_markers":["target","lamp","observer"]},
+    {"phase":"lamp-right","config":"ambient=0&see=0&sight=normal&lamp=4&lampx=7&wall=1","mask":"000000000/000000000/000000000/000000000/000000000/000000000/000000000/000000000/000000000","visible_markers":[]},
+    {"phase":"lamp-right-door","config":"ambient=0&see=0&sight=normal&lamp=4&lampx=7&wall=1&door=open","mask":"000000000/000000001/00011W011/00011W111/000111111/00011W111/00011W011/000000001/000000000","visible_markers":["target","lamp","observer"]},
+    {"phase":"lamp-wall-through","config":"ambient=0&see=0&sight=through&lamp=6&wall=1&wallx=4","mask":"111W11110/111W11110/111W11110/111W11110/111W11110/111W11110/111W11110/111W11110/111W11110","visible_markers":["target","lamp","observer"]},
+    {"phase":"see2-wall","config":"ambient=0&see=2&sight=normal&wall=1&wallx=4","mask":"000000000/000000000/000000000/000W11000/000W11000/000W11000/000000000/000000000/000000000","visible_markers":["observer"]},
+    {"phase":"see3-wall","config":"ambient=0&see=3&sight=normal&wall=1&wallx=4","mask":"000000000/000000000/000W11100/000W11100/000W11100/000W11100/000W11100/000000000/000000000","visible_markers":["observer"]},
+    {"phase":"offset-dark","config":"ambient=0&see=2&sight=normal&offset=-96","mask":"000000000/000000000/000000000/000111000/000111000/000111000/000000000/000000000/000000000","visible_markers":["observer"]},
+    {"phase":"offset-blackness","config":"ambient=0&see=2&sight=blackness&offset=-96","mask":"000000000/000000000/000000000/000111000/000111000/000111000/000000000/000000000/000000000","visible_markers":["observer"]},
+    {"phase":"offset-out","config":"ambient=0&see=4&sight=normal&offset=32","mask":"000000000/011111110/011111110/011111110/011111110/011111110/011111110/011111110/000000000","visible_markers":["target","lamp","observer"]}
+  ]
+}

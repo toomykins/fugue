@@ -42,9 +42,9 @@ std::string statText(const World& w, const World::StatLine& l) {
 }
 
 namespace {
-std::vector<uint16_t> verbIdsOf(const World& w, uint32_t appid) {
+std::vector<uint32_t> verbIdsOf(const World& w, uint32_t appid) {
     auto it = w.appearances.find(appid);
-    return it == w.appearances.end() ? std::vector<uint16_t>{} : it->second.fields.verbs;
+    return it == w.appearances.end() ? std::vector<uint32_t>{} : it->second.fields.verbs;
 }
 
 bool inPanel(const VerbDef& e) {
@@ -58,7 +58,7 @@ std::string categoryLabel(const VerbDef& e) {
 }
 }  // namespace
 
-bool verbScope(const World& w, std::vector<uint16_t>& ids) {
+bool verbScope(const World& w, std::vector<uint32_t>& ids) {
     ids.clear();
     if (!w.haveClientAppid || !w.appearances.count(w.clientAppid)) return false;
     if (!w.haveSelf) return false;
@@ -74,22 +74,22 @@ bool verbScope(const World& w, std::vector<uint16_t>& ids) {
         known = true;
     }
     if (!known || !w.appearances.count(mobApp)) return false;
-    std::set<uint16_t> s;
-    for (uint16_t id : verbIdsOf(w, w.clientAppid)) s.insert(id);
-    for (uint16_t id : verbIdsOf(w, mobApp)) s.insert(id);
-    for (uint16_t id : srcAdmittedVerbIds(w)) s.insert(id);
+    std::set<uint32_t> s;
+    for (uint32_t id : verbIdsOf(w, w.clientAppid)) s.insert(id);
+    for (uint32_t id : verbIdsOf(w, mobApp)) s.insert(id);
+    for (uint32_t id : srcAdmittedVerbIds(w)) s.insert(id);
     if (s.empty()) return false;  // no verbs is indistinguishable from a server that sends no verb sections
     ids.assign(s.begin(), s.end());
     return true;
 }
 
 VerbPanel verbPanel(const World& w) {
-    std::vector<uint16_t> scope;
+    std::vector<uint32_t> scope;
     bool scoped = verbScope(w, scope);
-    std::set<uint16_t> in(scope.begin(), scope.end());
+    std::set<uint32_t> in(scope.begin(), scope.end());
     VerbPanel p;
     for (const auto& [id, verb] : w.verbById) {
-        if (scoped && !in.count(uint16_t(id))) continue;
+        if (scoped && !in.count(id)) continue;
         VerbDef e = verbDefOf(verb);
         std::string l = categoryLabel(e);
         if (!l.empty()) p.byCategory[l].push_back(std::move(e));

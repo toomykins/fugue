@@ -19,11 +19,13 @@ struct Reader {
     uint32_t u32(size_t o) { return u16(o) | uint32_t(u16(o + 2)) << 16; }
 };
 
-// One FNT resource at `f` (`len` bytes); false for a vector font, a non-96-dpi strike or a malformed one.
+// One FNT resource at `f` (`len` bytes); false for a vector font, a strike for another resolution than 96 or 120 dpi
+// (Windows has a file of each for its bitmap faces) or a malformed one.
 bool parseStrike(Reader& r, size_t f, size_t len, FonStrike& s) {
     const unsigned ver = r.u16(f);
     if ((ver != 0x200 && ver != 0x300) || (r.u16(f + 0x42) & 1)) return false;
-    if (r.u16(f + 0x46) != 96 || r.u16(f + 0x48) != 96) return false;
+    const unsigned dpi = r.u16(f + 0x46);
+    if ((dpi != 96 && dpi != 120) || r.u16(f + 0x48) != dpi) return false;
     s.pt = int(r.u16(f + 0x44));
     s.ascent = int(r.u16(f + 0x4a));
     s.il = int(r.u16(f + 0x4c));
@@ -81,40 +83,50 @@ std::vector<FonStrike> parseFon(std::string_view file) {
 
 bool fonGlyph(const std::vector<FonStrike>& strikes, const DsFace& face, char32_t cp, GlyphMask& out) {
     if (strikes.empty()) return false;
-    // GDI font mapping: the largest strike whose character height fits the request, else the smallest; then integer scaling.
-    const FonStrike* s = &strikes.front();
-    for (const FonStrike& c : strikes)
-        if (c.h - c.il <= face.em) s = &c;
-    const int k = std::max(1, (face.em + 2 * s->il) / s->h);
-    if (s->h * k != face.height || s->ascent * k != face.ascent) return false;
     // A byte the strike lacks is its default char. Every advance must be the one the layout placed the glyph with, or
-    // glyphs would overlap or leave gaps.
+    // glyphs would overlap or leave gaps. Bytes 0x7f to 0x9f are left out: Windows' own files have no glyphs for most
+    // of them and Wine's have, so a host's file may differ from the tables there; such a byte is checked by itself.
+    const FonStrike* use = nullptr;
     auto glyphOf = [&](int c) {
-        if (c < std::max(s->first, 32) || c > s->last) c = s->defaultChar;
-        return c >= s->first && c <= s->last ? &s->glyphs[size_t(c - s->first)] : nullptr;
+        if (c < std::max(use->first, 32) || c > use->last) c = use->defaultChar;
+        return c >= use->first && c <= use->last ? &use->glyphs[size_t(c - use->first)] : nullptr;
     };
     auto adv = [&](int c) {
         const FonStrike::Glyph* g = glyphOf(c);
         return g ? g->w : -1;
     };
-    if (adv(-1) != dsBitmapAdvance(face, -1)) return false;
-    for (int c = 32; c <= 255; c++)
-        if (adv(c) != dsBitmapAdvance(face, c)) return false;
-    const FonStrike::Glyph* gp = glyphOf(cp1252Byte(cp));
+    // The strike the layout measured, by its cell and its character height. Several can be of one height: Windows'
+    // smalle.fon has two 7pt strikes, and the 18pt one of sserife.fon is as tall as the 14pt one of sseriff.fon.
+    const int charHeight = dsBitmapCharHeight(face.family, face.em);
+    for (const FonStrike& c : strikes) {
+        if (use || c.h != face.height || c.ascent != face.ascent || c.h - c.il != charHeight) continue;
+        use = &c;
+        bool same = (use->defaultChar >= 0x7f && use->defaultChar <= 0x9f) || adv(-1) == dsBitmapAdvance(face, -1);
+        for (int b = 32; b <= 255 && same; b++)
+            if ((b < 0x7f || b > 0x9f) && adv(b) != dsBitmapAdvance(face, b)) same = false;
+        if (!same) use = nullptr;
+    }
+    if (!use) return false;
+    const FonStrike* s = use;
+    const int byte = cp1252Byte(cp);
+    if ((byte < 32 || (byte >= 0x7f && byte <= 0x9f)) && adv(byte) != dsBitmapAdvance(face, byte)) return false;
+    const FonStrike::Glyph* gp = glyphOf(byte);
     if (!gp || gp->w <= 0) return false;
     const FonStrike::Glyph& g = *gp;
-    // The strike is drawn unscaled at the line top even when scaled metrics place it; bold overstrikes 1 px to the
-    // right, italic draws 1 px to the left.
+    // Bold overstrikes 1 px to the right. Italic is GDI's slant of the bitmap: the cell's top two rows move right by
+    // half its height less one, every two rows below them by a pixel less, the rows under the baseline too (GDI's own
+    // picture of every strike; stock 516.1689 on Windows 11).
     const int bold = face.bold ? 1 : 0;
-    out.w = g.w + bold;
+    const auto slant = [&](int y) { return face.italic ? (s->h - 1) / 2 - y / 2 : 0; };
+    out.w = g.w + bold + slant(0);
     out.h = s->h;
-    out.left = face.italic ? -1 : 0;
+    out.left = 0;
     out.top = 0;
     out.a.assign(size_t(out.w) * size_t(out.h), 0);
     for (int y = 0; y < s->h; y++)
         for (int x = 0; x < g.w; x++) {
             if (!g.bits[size_t(y) * size_t(g.w) + size_t(x)]) continue;
-            for (int b = 0; b <= bold; b++) out.a[size_t(y) * size_t(out.w) + size_t(x + b)] = 255;
+            for (int b = 0; b <= bold; b++) out.a[size_t(y) * size_t(out.w) + size_t(x + b + slant(y))] = 255;
         }
     return true;
 }

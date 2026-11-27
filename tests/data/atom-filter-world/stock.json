@@ -1,0 +1,272 @@
+{
+ "schema": 1,
+ "stock": "DreamSeeker/DreamDaemon 516.1688",
+ "date": "2026-11-14",
+ "method": "native 1:1 grabs of stock and Fugue on one server; facts read from probe pixels around each case tile by compare.py; fugueDiff* compare the 96 px crops after the change",
+ "sets": {
+  "a": [
+   {
+    "case": "outline1",
+    "ringAroundBox": true,
+    "ringBelowOverlay": false,
+    "ownRingBelowOverlay": false,
+    "ringBesideUnderlay": false,
+    "ringUnderMaptext": false,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "outline2",
+    "ringAroundBox": true,
+    "ringBelowOverlay": false,
+    "ownRingBelowOverlay": false,
+    "ringBesideUnderlay": false,
+    "ringUnderMaptext": false,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "outline-sharp",
+    "ringAroundBox": true,
+    "ringBelowOverlay": false,
+    "ownRingBelowOverlay": false,
+    "ringBesideUnderlay": false,
+    "ringUnderMaptext": false,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "outline-square",
+    "ringAroundBox": true,
+    "ringBelowOverlay": false,
+    "ownRingBelowOverlay": false,
+    "ringBesideUnderlay": false,
+    "ringUnderMaptext": false,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "outline-alpha",
+    "ringAroundBox": false,
+    "ringBelowOverlay": false,
+    "ownRingBelowOverlay": false,
+    "ringBesideUnderlay": false,
+    "ringUnderMaptext": false,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "shadow-default",
+    "ringAroundBox": false,
+    "ringBelowOverlay": false,
+    "ownRingBelowOverlay": false,
+    "ringBesideUnderlay": false,
+    "ringUnderMaptext": false,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "shadow-offset",
+    "ringAroundBox": false,
+    "ringBelowOverlay": false,
+    "ownRingBelowOverlay": false,
+    "ringBesideUnderlay": false,
+    "ringUnderMaptext": false,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "shadow-barsign",
+    "ringAroundBox": false,
+    "ringBelowOverlay": false,
+    "ownRingBelowOverlay": false,
+    "ringBesideUnderlay": false,
+    "ringUnderMaptext": false,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 1
+   },
+   {
+    "case": "blur1",
+    "ringAroundBox": false,
+    "ringBelowOverlay": false,
+    "ownRingBelowOverlay": false,
+    "ringBesideUnderlay": false,
+    "ringUnderMaptext": false,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "overlay",
+    "ringAroundBox": true,
+    "ringBelowOverlay": false,
+    "ownRingBelowOverlay": false,
+    "ringBesideUnderlay": false,
+    "ringUnderMaptext": false,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "chain",
+    "ringAroundBox": true,
+    "ringBelowOverlay": false,
+    "ownRingBelowOverlay": false,
+    "ringBesideUnderlay": false,
+    "ringUnderMaptext": false,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "pixel-x",
+    "ringAroundBox": true,
+    "ringBelowOverlay": false,
+    "ownRingBelowOverlay": false,
+    "ringBesideUnderlay": false,
+    "ringUnderMaptext": false,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "vis-shadow",
+    "ringAroundBox": false,
+    "ringBelowOverlay": false,
+    "ownRingBelowOverlay": false,
+    "ringBesideUnderlay": false,
+    "ringUnderMaptext": false,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "plain",
+    "ringAroundBox": false,
+    "ringBelowOverlay": false,
+    "ownRingBelowOverlay": false,
+    "ringBesideUnderlay": false,
+    "ringUnderMaptext": false,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   }
+  ],
+  "b": [
+   {
+    "case": "underlay",
+    "ringAroundBox": true,
+    "ringBelowOverlay": false,
+    "ownRingBelowOverlay": false,
+    "ringBesideUnderlay": false,
+    "ringUnderMaptext": false,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "kt-overlay",
+    "ringAroundBox": true,
+    "ringBelowOverlay": true,
+    "ownRingBelowOverlay": false,
+    "ringBesideUnderlay": false,
+    "ringUnderMaptext": false,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "overlay-own",
+    "ringAroundBox": false,
+    "ringBelowOverlay": false,
+    "ownRingBelowOverlay": true,
+    "ringBesideUnderlay": false,
+    "ringUnderMaptext": false,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "image",
+    "ringAroundBox": true,
+    "ringBelowOverlay": false,
+    "ownRingBelowOverlay": false,
+    "ringBesideUnderlay": false,
+    "ringUnderMaptext": false,
+    "fugueDiffOver8": 88,
+    "fugueMaxDiff": 239
+   },
+   {
+    "case": "maptext",
+    "ringAroundBox": true,
+    "ringBelowOverlay": false,
+    "ownRingBelowOverlay": false,
+    "ringBesideUnderlay": false,
+    "ringUnderMaptext": true,
+    "fugueDiffOver8": 193,
+    "fugueMaxDiff": 239
+   },
+   {
+    "case": "color",
+    "ringAroundBox": false,
+    "ringBelowOverlay": false,
+    "ownRingBelowOverlay": false,
+    "ringBesideUnderlay": false,
+    "ringUnderMaptext": false,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "alpha",
+    "ringAroundBox": false,
+    "ringBelowOverlay": false,
+    "ownRingBelowOverlay": false,
+    "ringBesideUnderlay": false,
+    "ringUnderMaptext": false,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "wave-shadow",
+    "ringAroundBox": false,
+    "ringBelowOverlay": false,
+    "ownRingBelowOverlay": false,
+    "ringBesideUnderlay": false,
+    "ringUnderMaptext": false,
+    "fugueDiffOver8": 138,
+    "fugueMaxDiff": 239
+   },
+   {
+    "case": "outline-blur",
+    "ringAroundBox": false,
+    "ringBelowOverlay": false,
+    "ownRingBelowOverlay": false,
+    "ringBesideUnderlay": false,
+    "ringUnderMaptext": false,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "turn",
+    "ringAroundBox": true,
+    "ringBelowOverlay": true,
+    "ownRingBelowOverlay": false,
+    "ringBesideUnderlay": false,
+    "ringUnderMaptext": false,
+    "fugueDiffOver8": 165,
+    "fugueMaxDiff": 239
+   },
+   {
+    "case": "kt-underlay",
+    "ringAroundBox": true,
+    "ringBelowOverlay": false,
+    "ownRingBelowOverlay": false,
+    "ringBesideUnderlay": true,
+    "ringUnderMaptext": true,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "image-target",
+    "ringAroundBox": true,
+    "ringBelowOverlay": false,
+    "ownRingBelowOverlay": false,
+    "ringBesideUnderlay": false,
+    "ringUnderMaptext": false,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   }
+  ]
+ }
+}

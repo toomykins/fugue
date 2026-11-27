@@ -1,0 +1,4810 @@
+{
+  "version": "516.1688",
+  "desktop_dpi": 144,
+  "base_server": "build/probes/20261025T082402Z-5a73a8a0",
+  "base_client": "build/probes/20261025T082402Z-0d8cd498",
+  "tall_server": "build/probes/20261025T082750Z-69c372ca",
+  "tall_client": "build/probes/20261025T082750Z-1a65f4a7",
+  "base": [
+    {
+      "phase": "file",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "2",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x9",
+        "inner-size": "317x9",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x6",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x6",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x6",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x428",
+        "inner-size": "317x428",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x428",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-false-0",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "0",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x0",
+        "inner-size": "317x0",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "317x437",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-false-1",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "1",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x4",
+        "inner-size": "317x4",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x1",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x1",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x1",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x433",
+        "inner-size": "317x433",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x433",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-false-2",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "2",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x9",
+        "inner-size": "317x9",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x6",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x6",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x6",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x428",
+        "inner-size": "317x428",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x428",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-false-3",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "3",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x13",
+        "inner-size": "317x13",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x10",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x10",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x10",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x424",
+        "inner-size": "317x424",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x424",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-false-5",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "5",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x22",
+        "inner-size": "317x22",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x19",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x19",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x19",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x415",
+        "inner-size": "317x415",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x415",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-false-10",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "10",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x44",
+        "inner-size": "317x44",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x41",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x41",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x41",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x393",
+        "inner-size": "317x393",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x393",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-false-50",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x219",
+        "inner-size": "317x219",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x216",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x216",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x216",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x218",
+        "inner-size": "317x218",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x218",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-false-98",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "98",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x428",
+        "inner-size": "317x428",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x425",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x425",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x425",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x9",
+        "inner-size": "317x9",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x9",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-false-100",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "100",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "317x437",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x434",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x434",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x434",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x0",
+        "inner-size": "317x0",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-true-0",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "0",
+        "show-splitter": "true"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x0",
+        "inner-size": "317x0",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x432",
+        "inner-size": "317x432",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x432",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-true-1",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "1",
+        "show-splitter": "true"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x4",
+        "inner-size": "317x4",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x1",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x1",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x1",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x428",
+        "inner-size": "317x428",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x428",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-true-2",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "2",
+        "show-splitter": "true"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x9",
+        "inner-size": "317x9",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x6",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x6",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x6",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x423",
+        "inner-size": "317x423",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x423",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-true-3",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "3",
+        "show-splitter": "true"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x13",
+        "inner-size": "317x13",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x10",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x10",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x10",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x419",
+        "inner-size": "317x419",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x419",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-true-5",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "5",
+        "show-splitter": "true"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x22",
+        "inner-size": "317x22",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x19",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x19",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x19",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x410",
+        "inner-size": "317x410",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x410",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-true-10",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "10",
+        "show-splitter": "true"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x43",
+        "inner-size": "317x43",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x40",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x40",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x40",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x389",
+        "inner-size": "317x389",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x389",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-true-50",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x216",
+        "inner-size": "317x216",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x213",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x213",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x213",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x216",
+        "inner-size": "317x216",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x216",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-true-98",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "98",
+        "show-splitter": "true"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x423",
+        "inner-size": "317x423",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x420",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x420",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x420",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x9",
+        "inner-size": "317x9",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x9",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-true-100",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "100",
+        "show-splitter": "true"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x432",
+        "inner-size": "317x432",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x429",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x429",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x429",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x0",
+        "inner-size": "317x0",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "resize-640x240",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x240",
+        "inner-size": "640x240",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x240",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x240",
+        "inner-size": "317x240",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x237",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "2",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x5",
+        "inner-size": "317x5",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x2",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x2",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x2",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x232",
+        "inner-size": "317x232",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x232",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "resize-640x880",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x880",
+        "inner-size": "640x880",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x880",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x880",
+        "inner-size": "317x880",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x877",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "2",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x18",
+        "inner-size": "317x18",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x15",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x15",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x15",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x859",
+        "inner-size": "317x859",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x859",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "resize-1000x440",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "1000x440",
+        "inner-size": "1000x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "1000x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "497x440",
+        "inner-size": "497x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "497x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "2",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "497x9",
+        "inner-size": "497x9",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "61x6",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "65,5",
+        "size": "63x6",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "133,5",
+        "size": "63x6",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "497x428",
+        "inner-size": "497x428",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "497x428",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "minimum-0x0",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "2",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x9",
+        "inner-size": "317x9",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x6",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x6",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x6",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x428",
+        "inner-size": "317x428",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x428",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "minimum-0x20",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "2",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x9",
+        "inner-size": "317x9",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x6",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x6",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x6",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x428",
+        "inner-size": "317x428",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x428",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "minimum-0x60",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "2",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x9",
+        "inner-size": "317x9",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x6",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x6",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x6",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x428",
+        "inner-size": "317x428",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x428",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    }
+  ],
+  "tall_can_resize_false": [
+    {
+      "phase": "file",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "2",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x9",
+        "inner-size": "317x9",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x428",
+        "inner-size": "317x428",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x428",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-false-0",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "0",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x0",
+        "inner-size": "317x0",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "317x437",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-false-1",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "1",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x4",
+        "inner-size": "317x4",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x433",
+        "inner-size": "317x433",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x433",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-false-2",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "2",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x9",
+        "inner-size": "317x9",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x428",
+        "inner-size": "317x428",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x428",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-false-3",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "3",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x13",
+        "inner-size": "317x13",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x424",
+        "inner-size": "317x424",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x424",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-false-5",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "5",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x22",
+        "inner-size": "317x22",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x415",
+        "inner-size": "317x415",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x415",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-false-10",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "10",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x44",
+        "inner-size": "317x44",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x11",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x11",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x11",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x393",
+        "inner-size": "317x393",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x393",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-false-50",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x219",
+        "inner-size": "317x219",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x186",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x186",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x186",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x218",
+        "inner-size": "317x218",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x218",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-false-98",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "98",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x428",
+        "inner-size": "317x428",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x395",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x395",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x395",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x9",
+        "inner-size": "317x9",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x9",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-false-100",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "100",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "317x437",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x404",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x404",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x404",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x0",
+        "inner-size": "317x0",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-true-0",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "0",
+        "show-splitter": "true"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x0",
+        "inner-size": "317x0",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x432",
+        "inner-size": "317x432",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x432",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-true-1",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "1",
+        "show-splitter": "true"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x4",
+        "inner-size": "317x4",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x428",
+        "inner-size": "317x428",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x428",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-true-2",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "2",
+        "show-splitter": "true"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x9",
+        "inner-size": "317x9",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x423",
+        "inner-size": "317x423",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x423",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-true-3",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "3",
+        "show-splitter": "true"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x13",
+        "inner-size": "317x13",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x419",
+        "inner-size": "317x419",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x419",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-true-5",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "5",
+        "show-splitter": "true"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x22",
+        "inner-size": "317x22",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x410",
+        "inner-size": "317x410",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x410",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-true-10",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "10",
+        "show-splitter": "true"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x43",
+        "inner-size": "317x43",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x10",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x10",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x10",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x389",
+        "inner-size": "317x389",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x389",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-true-50",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x216",
+        "inner-size": "317x216",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x183",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x183",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x183",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x216",
+        "inner-size": "317x216",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x216",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-true-98",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "98",
+        "show-splitter": "true"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x423",
+        "inner-size": "317x423",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x390",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x390",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x390",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x9",
+        "inner-size": "317x9",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x9",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "split-true-100",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "100",
+        "show-splitter": "true"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x432",
+        "inner-size": "317x432",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x399",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x399",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x399",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x0",
+        "inner-size": "317x0",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "resize-640x240",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x240",
+        "inner-size": "640x240",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x240",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x240",
+        "inner-size": "317x240",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x237",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "2",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x5",
+        "inner-size": "317x5",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x232",
+        "inner-size": "317x232",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x232",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "resize-640x880",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x880",
+        "inner-size": "640x880",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x880",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x880",
+        "inner-size": "317x880",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x877",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "2",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x18",
+        "inner-size": "317x18",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x859",
+        "inner-size": "317x859",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x859",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "resize-1000x440",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "1000x440",
+        "inner-size": "1000x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "1000x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "497x440",
+        "inner-size": "497x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "497x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "2",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "497x9",
+        "inner-size": "497x9",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "61x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "65,5",
+        "size": "63x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "133,5",
+        "size": "63x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "497x428",
+        "inner-size": "497x428",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "497x428",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "minimum-0x0",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "2",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x9",
+        "inner-size": "317x9",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x428",
+        "inner-size": "317x428",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x428",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "minimum-0x20",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "2",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x9",
+        "inner-size": "317x9",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x428",
+        "inner-size": "317x428",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x428",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    },
+    {
+      "phase": "minimum-0x60",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "2",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x9",
+        "inner-size": "317x9",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x428",
+        "inner-size": "317x428",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x428",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    }
+  ],
+  "tall_can_resize_true_file": {
+    "server": "build/probes/20261025T084022Z-63297044",
+    "client": "build/probes/20261025T084022Z-32e289cb",
+    "measurement": {
+      "phase": "file",
+      "dpi": "1.500000",
+      "main": {
+        "pos": "960,544",
+        "size": "640x440",
+        "inner-size": "640x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "main.outer": {
+        "pos": "0,0",
+        "size": "640x440",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "50",
+        "show-splitter": "true"
+      },
+      "nested": {
+        "pos": "0,0",
+        "size": "317x440",
+        "inner-size": "317x440",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "nested.split": {
+        "pos": "0,0",
+        "size": "317x437",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "2",
+        "show-splitter": "false"
+      },
+      "row": {
+        "pos": "0,0",
+        "size": "317x9",
+        "inner-size": "317x9",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.menu": {
+        "pos": "0,5",
+        "size": "34x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.hotkeys": {
+        "pos": "38,5",
+        "size": "37x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "row.emotes": {
+        "pos": "80,5",
+        "size": "39x0",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info": {
+        "pos": "0,0",
+        "size": "317x428",
+        "inner-size": "317x428",
+        "min-size": "",
+        "can-resize": "true",
+        "splitter": "",
+        "show-splitter": ""
+      },
+      "info.label": {
+        "pos": "0,0",
+        "size": "317x428",
+        "inner-size": "",
+        "min-size": "",
+        "can-resize": "",
+        "splitter": "",
+        "show-splitter": ""
+      }
+    }
+  }
+}

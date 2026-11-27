@@ -6,8 +6,7 @@ namespace fugue::pager {
 
 FugueOptions clientOptions(bool asDreamSeeker) {
     FugueOptions o;
-    o.value = {"connect", "state-dir", "rsc-dir",       "screenshot", "after",
-               "size",    "account",   "identity-file", "audio",      "renderer"};
+    o.value = {"connect", "state-dir", "rsc-dir", "size", "account", "identity-file", "audio"};
     o.flag = {"no-pacing", "hub", "help", "help-all"};  // help / help-all: QCommandLineParser::addHelpOption
     o.keepUnknown = !asDreamSeeker;
     return o;
@@ -15,7 +14,7 @@ FugueOptions clientOptions(bool asDreamSeeker) {
 
 AccountRequest accountRequestFor(bool asDreamSeeker, const DsArgv& ds, const FugueOptions& opts, bool testHook) {
     AccountRequest r;
-    bool connect = false, stateDir = false, screenshot = false;
+    bool connect = false, stateDir = false;
     for (size_t i = 0; i < ds.fugue.size(); i++) {
         const std::string& a = ds.fugue[i];
         if (a.size() <= 2 || a[0] != '-' || a[1] != '-')
@@ -34,8 +33,6 @@ AccountRequest accountRequestFor(bool asDreamSeeker, const DsArgv& ds, const Fug
             connect = true;
         else if (name == "state-dir")
             stateDir = true;
-        else if (name == "screenshot")
-            screenshot = true;
     }
     const bool dsTarget = !ds.target.empty() && !connect;
     // Fugue's own --connect is always a guest, even under the dreamseeker name: no real DreamSeeker launch carries it.
@@ -45,8 +42,6 @@ AccountRequest accountRequestFor(bool asDreamSeeker, const DsArgv& ds, const Fug
         r.why = "no DreamSeeker target";
     else if (stateDir)
         r.why = "--state-dir";
-    else if (screenshot)
-        r.why = "--screenshot";
     else if (testHook)
         r.why = "a test hook";
     else {

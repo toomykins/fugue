@@ -3,6 +3,7 @@
 // contrast world, docs/protocol/GAME-CLIENT-SERVER-516.md). vg's voting panel is the case that matters: a winclone'd
 // window whose page arrives as output(page, "browser_<ref>.browser"), with the panel's dark stylesheets in its head.
 #include <QtTest>
+#include "tests/testmain.h"
 #include <string>
 #include <vector>
 
@@ -90,5 +91,5 @@ private slots:
     }
 };
 
-QTEST_GUILESS_MAIN(OutputTargetTest)
+FUGUE_TEST_GUILESS_MAIN(OutputTargetTest)
 #include "outputtarget_test.moc"

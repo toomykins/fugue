@@ -15,12 +15,13 @@
 //                          is outstanding. At most kMaxHeld requests are held at once, but an announced name is never
 //                          refused for the cap (it evicts an unknown-name hold, or is held over the cap).
 //                          Chromium opens 6 connections per host, and __bridge needs one.
+//   GET  [0xc0000NN]?state=..  an icon by resource reference (tgui's DmIcon): that state's picture as a PNG, cut by
+//                          the session thread (BrowseRscStore::wantIcon); 404 when there is no such picture.
 //   POST __bridge?pane=N   a page's `cef_to_byond(url)`: the body is the byond:// URL, the reply is JavaScript for the
 //                          page to evaluate (a winget answer is `try{(cb)({...})}catch(e){}`), empty for nothing.
 //
 // GUI-thread object (QTcpServer lives where it was created).
 #pragma once
-#include "render/dmi.h"
 #include <QHash>
 #include <QObject>
 #include <QString>
@@ -62,10 +63,6 @@ public:
     static constexpr int kMaxHeld = 4;
     static constexpr int kMaxHeldUnnamed = 2;
     static QString mimeFor(const QString& name);
-    // A browse_rsc'd icon as a page sees it: its first cell as a plain PNG (see localorigin.cpp).
-    static QByteArray browserImage(const QByteArray& bytes);
-    // The icon's first cell (first state, dir, frame) as a PNG; empty when it has none.
-    static QByteArray cellPng(const render::Icon& icon);
     // waited: requests held open. heldRefused: 404ed at once because kMaxHeld or kMaxHeldUnnamed was reached, or
     // evicted for an announced name. heldPeak: most held at once.
     struct Stats {
@@ -83,6 +80,7 @@ private:
     void process(const ConnP& c);
     void respond(const ConnP& c, int status, const QByteArray& type, const QByteArray& body, bool head = false);
     void serveFile(const ConnP& c, const QString& file, bool head);
+    void serveIcon(const ConnP& c, const QString& key, bool head);
     bool admit(const ConnP& c, BrowseRscStore::Wait w);
     void release(const ConnP& c);
 
