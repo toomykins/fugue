@@ -21,10 +21,11 @@
 #include <QTabWidget>
 #include <QTemporaryDir>
 #include <QtTest>
+#include "tests/testmain.h"
 #include <algorithm>
 #include <functional>
 #include <future>
-#ifndef _WIN32
+#ifndef WIN32
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
@@ -47,10 +48,10 @@ private slots:
             qunsetenv(v);
         QDir().mkpath(home_.path() + "/bin");
         QFile f(home_.path() + "/bin/fugue");
-        f.open(QIODevice::WriteOnly);
-        f.write("x");
+        QVERIFY2(f.open(QIODevice::WriteOnly), qPrintable(f.errorString()));
+        QCOMPARE(f.write("x"), qint64(1));
         f.close();
-        ::chmod((home_.path() + "/bin/fugue").toUtf8().constData(), 0755);
+        QCOMPARE(platform::chmod((home_.path() + "/bin/fugue").toUtf8().constData(), 0755), 0);
         qputenv("FUGUE_CLIENT", (home_.path() + "/bin/fugue").toUtf8());
     }
     void signedOutOpensOnSignInAndGuestIsOneClick() {
@@ -237,32 +238,6 @@ private slots:
         QVERIFY(w.joinEnabled());
         QFile::remove(keyTxt);
         QFile::remove(QString::fromStdString(account::identityPath("Held One")));
-    }
-    // Preferences > "Use GPU rendering (experimental)" is the client's display.ini renderer key, hidden until the launcher
-    // hands it the path (GPU builds only), and re-read each time Preferences opens.
-    void gpuRenderingPreferenceIsTheClientsSetting() {
-        PagerWindow w;
-        account::Config cfg;
-        cfg.servers = account::defaultServers();
-        w.setGuestChosen(true);
-        w.setState(cfg, check(cfg));
-        w.showPreferences();
-        auto* gpu = w.preferencesDialog()->findChild<QCheckBox*>("prefsgpu");
-        QVERIFY(gpu && gpu->isHidden());
-        const QString ini = home_.path() + "/gpu-state/display.ini";
-        w.setRendererSettings(ini);
-        QVERIFY(!gpu->isHidden() && !gpu->isChecked());
-        QVERIFY(gpu->toolTip().contains("next join"));
-        gpu->setChecked(true);
-        QCOMPARE(QSettings(ini, QSettings::IniFormat).value("renderer").toString(), QString("gpu"));
-        QVERIFY(savedRendererGpu(ini.toStdString()));
-        gpu->setChecked(false);
-        QCOMPARE(QSettings(ini, QSettings::IniFormat).value("renderer").toString(), QString("cpu"));
-        w.preferencesDialog()->hide();
-        QVERIFY(setSavedRenderer(ini.toStdString(), true));  // as the game's Renderer menu writes it
-        w.showPreferences();
-        QVERIFY(gpu->isChecked());
-        w.preferencesDialog()->hide();
     }
     void unsupportedControlsAreHidden() {
         PagerWindow w;
@@ -738,11 +713,8 @@ private slots:
         QTRY_COMPARE(got, QStringList({"byond://127.0.0.1:53321", ""}));
         QVERIFY(!forwardToRunning(dir.path() + "/nobody", "", 500));
     }
-    // Declared on every platform: AUTOMOC does not see MSVC's predefined _WIN32, so a guarded slot breaks the moc file.
+#ifndef WIN32
     void aDeadPagersSocketIsReplaced() {
-#ifdef _WIN32
-        QSKIP("Unix-domain sockets only");
-#else
         QTemporaryDir dir;
         const QString name = dir.path() + "/pager";
         int fd = ::socket(AF_UNIX, SOCK_STREAM, 0);
@@ -760,8 +732,8 @@ private slots:
         while (f.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready) QCoreApplication::processEvents();
         QVERIFY(f.get());
         QTRY_COMPARE(got, QStringList({"byond://127.0.0.1:53322"}));
-#endif
     }
+#endif
     // last: a quit event leaves QCoreApplication's quit flag set for any later event loop
     void aQuitFromThePlatform() {
         for (bool tray : {true, false}) {
@@ -799,5 +771,5 @@ private slots:
         }
     }
 };
-QTEST_MAIN(PagerUi)
+FUGUE_TEST_MAIN(PagerUi)
 #include "pager_ui_test.moc"

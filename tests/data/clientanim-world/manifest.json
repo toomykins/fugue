@@ -1,5 +1,6 @@
 {
   "clock_unix_ns": 1760400000000000000,
+  "tick_ns": 100000000,
   "date": "2026-10-18",
   "eye": {
     "x": 11,
@@ -7,7 +8,7 @@
     "z": 1
   },
   "frames": 609,
-  "note": "frames.txt = every s2c frame except 0x009f; res/\u003cresID\u003e = verified resource bytes (net.ResID(bytes)==name); clock_unix_ns = the pinned render clock (renderab is static)",
+  "note": "frames.txt contains retained stock-DD s2c frames except 0x009f; res/<resID> contains the retained resource bytes. Replay uses clock_unix_ns as its fixed origin, not as a stock presentation timestamp. Each @N chat marker assigns arrival tick N to following frames; tick_ns follows this world's fps = 10. Resource arrival times and stock rendered outputs were not retained. Numeric output expectations remain in clientanim_test.cpp.",
   "resource_bytes": 320,
   "resource_names": {
     "163d55fd": "probe.dmi"

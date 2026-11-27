@@ -1,5 +1,6 @@
 #include <QApplication>
 #include <QtTest>
+#include "tests/testmain.h"
 #include <memory>
 #include "shell/urlopener.h"
 
@@ -29,5 +30,5 @@ private slots:
         QVERIFY(!called);
     }
 };
-QTEST_MAIN(UrlOpenerTest)
+FUGUE_TEST_MAIN(UrlOpenerTest)
 #include "urlopener_test.moc"

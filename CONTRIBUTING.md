@@ -10,13 +10,49 @@ Prerequisites, options and the test command are in [docs/BUILDING.md](docs/BUILD
 `-DFUGUE_RELEASE=ON`) keeps the test hooks. For work that does not touch the window, `-DFUGUE_HEADLESS_ONLY=ON` builds
 only the Qt-light modules and their tests.
 
-Each `tests/*_test.cpp` (and `*/tests/*_test.cpp`) is its own QtTest executable and CTest entry, picked up by a glob:
-add a file, re-run `ninja`, and it exists. Tests must not need the network, a BYOND installation, or files outside
-the repository. Tests that replay a recorded session use data under `tests/data/`; a recording should come from a
-small purpose-written world rather than a real game, so the expected values are understood and the data is ours to
-publish.
+QtTest suites share the `fugue_tests` executable, with CTest selecting a suite for each test process. Core, account and
+pager test sources are glob-discovered; shell tests are registered in `shell/CMakeLists.txt`. Use the matching
+`FUGUE_TEST_MAIN`, `FUGUE_TEST_GUILESS_MAIN` or `FUGUE_TEST_APPLESS_MAIN` entry from `tests/testmain.h`;
+custom startup functions use `FUGUE_TEST_ENTRY` in place of `main`. A scenario can have
+separate CTest entries for portable logic, GPU replay and native window integration, sharing its inputs and expectations.
+Add only the profiles the scenario needs; see
+[test profiles and commands](docs/BUILDING.md#test-profiles). Keep individual expectations and reproduction details
+with the test source or fixture README.
 
-Please run the whole suite before sending a change, and do not report a test as passing if it skipped.
+Automated tests must not need external network services or a BYOND installation. Portable tests keep their input files
+inside the repository; explicit capability profiles may require their declared display, device or installed font files.
+Tests that replay a recorded session use data under `tests/data/`; a recording should come from a small purpose-written
+world rather than a real game, so the expected values are understood and the data is ours to publish. Stock observations establish parity;
+explicit Fugue invariants establish requirements such as bounded work and correct lifetimes.
+
+Test an optimised build (`RelWithDebInfo`, the default of `tools/test.ps1` and of a single-config tree); `Debug` runs
+the same checks several times slower. `ctest -L fast -j 8` is the inner loop. Please run the portable suite and the
+affected capability profiles before sending a change. Report unavailable profiles and
+skipped cases separately; they do not establish verification.
+
+## Scenario lifecycle
+
+Every test should make its **setup, inputs and checkpoints → observations → explicit expectation** easy to find.
+Keep this in ordinary test code and the fixture's README; no scenario framework or common file format is required.
+A checkpoint can be a completed function call, a complete static phase, a recorded instant, or an observed submission.
+State which one the claim needs.
+
+1. **Observe.** Reproduce stock-parity behavior in a small world. Record the stock version, setup, actions, timing
+   or completion condition, and relevant display conditions. A server acknowledgement alone does not prove that the
+   client presented the new state. Mark unknown conditions as unknown; replay clocks are not capture timestamps.
+2. **Retain.** Keep the inputs and independent expectations consumed by the test, with their provenance. Expectations
+   may be values, receipts, pixels, or a documented transcription. Identify transcriptions and missing original
+   evidence explicitly. Never regenerate a stock expectation from Fugue's output to make a test pass.
+3. **Replay.** Start from known state, deliver inputs in order, and sample production code at the declared checkpoints.
+   Compare observations with the retained expectations. Validate required inputs so missing data cannot remove checks
+   silently. Distinguish stock parity, implementation equivalence, and engineering invariants in the test's claim.
+4. **Check native integration.** Add checks when the claim crosses a window, presentation, input, or device boundary.
+   Reuse the scenario's expectations, wait for the relevant observable completion, and register the required CTest
+   profile explicitly. A skipped native check is missing verification.
+
+Pure engineering invariants use the same test shape with an explicit requirement as their expectation; they need no
+stock capture. Add only the execution profiles the claim requires. Document what an existing fixture cannot prove
+before extending its claims, especially when arrival timing, stock output, or native evidence was not retained.
 
 ## Adding code
 

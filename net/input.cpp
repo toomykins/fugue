@@ -164,7 +164,8 @@ void InputModel::onFrame(uint16_t type, ByteSpan b) {
         return;
     }
     if (type != S2C::Verb) return;
-    // [id u16][name\0][desc\0][cat\0][head u8][src u8][flags u8]([flagsExt u32][extByte u8] iff flags&0x80)
+    // [id u16/u32, negotiated by handshake][name\0][desc\0][cat\0][head u8][src u8][flags u8]([flagsExt u32][extByte u8] iff
+    // flags&0x80)
     // [argc u8] argc x [typemask u32][filter u8][filterKind u8]
     size_t p = 0;
     auto cstr = [&](std::string& o) {
@@ -175,10 +176,12 @@ void InputModel::onFrame(uint16_t type, ByteSpan b) {
         p = q + 1;
         return true;
     };
-    if (b.size() < 2) return;
+    const size_t idBytes = wideVerbIds_ ? 4 : 2;
+    if (b.size() < idBytes) return;
     VerbEntry e;
-    e.id = le16(&b[0]);
-    p = 2;
+    e.id = wideVerbIds_ ? le32(&b[0]) : le16(&b[0]);
+    p = idBytes;
+    e.wideId = wideVerbIds_;
     if (!cstr(e.name) || !cstr(e.desc) || !cstr(e.category)) return;
     // Without text-macro markers, as stock shows and matches a typed name; the verb itself is sent by id.
     e.name = plainText(e.name);
@@ -203,6 +206,7 @@ void InputModel::onFrame(uint16_t type, ByteSpan b) {
         p += 6;
         e.args.push_back(a);
     }
+    if (p != b.size()) return;  // malformed/wrong-width advertisements must not install partial names
     verbs_[e.id] = std::move(e);
 }
 
@@ -636,6 +640,13 @@ static CommandResult continueVerb(const VerbEntry& e, const VerbSrc& vs, const s
                                   std::vector<VerbArg> args, size_t start, const std::string& rest,
                                   const InputModel::ArgResolver& atoms, bool promptNull = false) {
     CommandResult r;
+    // Stock's >65535 command IDs truncated in the targeted fixture and did not
+    // execute. Retain full dictionary/source identity, but do not reproduce that
+    // alias or claim an unverified high-ID dispatch extension.
+    if (e.id > UINT16_MAX) {
+        r.error = "Unsupported verb ID above 65535: " + e.name;
+        return r;
+    }
     ArgParse p;
     p.args = std::move(args);
     p.line = line;
@@ -652,7 +663,7 @@ static CommandResult continueVerb(const VerbEntry& e, const VerbSrc& vs, const s
     if (p.missing != SIZE_MAX)
         r.missing = MissingArg{e, p.missing, p.line, p.args, vs, p.promptNull, std::move(p.listed)};
     if (!r.error.empty()) return r;
-    r.frames.push_back({C2S::Command, proto::enc::encodeVerb(e.id, vs.kind, vs.ref, p.args)});
+    r.frames.push_back({C2S::Command, proto::enc::encodeVerb(uint16_t(e.id), vs.kind, vs.ref, p.args, e.wideId)});
     return r;
 }
 

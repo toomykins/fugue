@@ -12,10 +12,13 @@
 #include <vector>
 
 #include "model/particles.h"
+#include "model/viscontents.h"
 #include "net/bytes.h"
 #include "proto/registry.h"
 
 namespace fugue::model {
+
+constexpr uint32_t kRegistryA = 0x80000000u;
 
 // A glide in flight: the drawn offset from the destination tile at startNs, in tiles (+x east, +y north), shrinking
 // along its own direction to zero at startNs + durNs. A move that lands mid-glide re-arms from the offset still left
@@ -47,6 +50,7 @@ struct Atom {
     // for a held slot with a different Key is a different atom; the stock client tears the old record down first.
     uint16_t key = 0;
     bool haveKey = false;
+    uint64_t renderIdentity = 0;  // local lifetime token, NOT supplied by the wire
     uint32_t bindOther = 0xffff;  // A3 Bind.Other; 0xffff = none (the create default), cleared by an A1
     uint32_t backlink = 0xffff;   // a record whose Bind names this one, as of the last relink
     uint64_t touchTick = 0;       // ResyncEvents tick when a record array last named it
@@ -64,10 +68,14 @@ struct Atom {
         uint32_t flags = 0;
         int32_t loop = 1;
         int64_t startNs = 0;
+        uint32_t extBits = 0;  // the step's trailing f32 when flags has 0x8: an ANIMATION_SLICE start, in time units
     };
+    // tickNs is the length of one unit of the wire's step times and delays: a decisecond (kAnimUnitNanos) for every
+    // live chain. Tests may use another unit.
     struct Chain {
         int64_t startNs = 0, tickNs = 0;
         std::vector<AnimStep> steps;
+        bool rejected = false;  // malformed/over-budget input, not a settled or cancelled chain
     };
     Glide glide;             // valid iff gliding
     uint8_t glideDir = 0;    // the direction (DM dir bits) of the move that last armed a glide
@@ -88,12 +96,28 @@ struct IconStart {
 struct Appearance {
     proto::Appearance fields;
     uint64_t namedTick = 0;
+    // Root sight-blocking opacity: bit 0 of the packed flags (not icon alpha or density).
+    bool opaque() const { return (fields.appearanceFlags & 1u) != 0; }
+    // vars 0x02 carries luminosity 1..6 and a complete appearance without it has luminosity 0 (stock differential
+    // captures). -1: the payload is not one byte in that range.
+    int luminosity() const {
+        for (const proto::Appearance::Var& v : fields.vars)
+            if (v.bit == 2) return v.data.size() == 1 && v.data[0] <= 6 ? int(v.data[0]) : -1;
+        return 0;
+    }
 };
 
 // Bounds of the world (Bounds), raw and unclamped.
 struct Bounds {
     bool have = false;
     int maxX = 0, maxY = 0, view = 0, winW = 0, winH = 0, viewW = 0, viewH = 0;
+    // Bounds u16[4..5]: eye-centred source-admission extent, smaller than the
+    // buffered map window. Verified with offscreen lamps and two client views.
+    int lightW = 0, lightH = 0;
+    // What the map shows: the view, or the world where it is smaller. The HUD is laid out on that and the map fitted
+    // to it (stock 516.1689, a scratch probe: a 5x5 world under view 3 has "1,1" on its own corner).
+    int shownW() const { return maxX > 0 && maxX < viewW ? maxX : viewW; }
+    int shownH() const { return maxY > 0 && maxY < viewH ? maxY : viewH; }
 };
 
 struct SessionEnd {
@@ -127,8 +151,13 @@ struct World {
     bool eyeLongGlide = false;
     uint8_t seeInvisible = 0;
     bool haveSeeInvisible = false;
+    uint8_t seeInDark = 0;
+    bool haveSeeInDark = false;
     uint32_t sight = 0;
     bool haveSight = false;
+    // Last received values of each wire form; effective sight above follows ingest order.
+    bool haveNarrowSight = false, haveWideSight = false;
+    uint32_t narrowSight = 0, wideSight = 0;
     // Per-axis eye tracker (WorldState carries one axis at a time).
     uint16_t trkX = 0, trkY = 0;
     bool seenX = false, seenY = false;
@@ -138,10 +167,16 @@ struct World {
     uint8_t eyeGlideDir = 0;
     float eyeAutoPx = 0;
     int64_t eyeAutoDoneNs = 0;
+    // Where looping icon states count their frames from: the ingest clock at the session's first message. Stock
+    // 516.1689 shows a state's first frame for the first delay after connecting, whenever the world or the atom
+    // was made (stock-parity-world moving-atoms, icon-states anim4-*; measured to about half a second).
+    int64_t iconClockNs = 0;
     // world.movement_mode, from MouseSubs's second FormatFlags word (bits 2-3; 0 = LEGACY): it picks the glide re-arm
     // rule.
     uint8_t movementMode = 0;
 
+    // client.dir, from ClientDir: the world direction drawn at the top of the map (1 north).
+    uint8_t clientDir = 1;
     // client.pixel_x/y/w/z, from WorldState: the map view is offset by (x + w, y + z) world pixels; the HUD is not.
     int16_t viewPixelX = 0, viewPixelY = 0, viewPixelW = 0, viewPixelZ = 0;
     // animate(client, ...): S2C::Animate Kind 5. Its From/To are the client's own appearances, carrying the pixel
@@ -157,19 +192,24 @@ struct World {
     // Each tile's cell lists as the last relink left them (model/resync.cpp): its placed mobs and its placed objs, bare
     // ids, in the stock client's order. Key {x, y, z} as Atom carries them. A typed verb's tie-break reads them (srcRank).
     std::map<std::array<int, 3>, std::vector<uint32_t>> cellMobs, cellObjs;
-    // flick(): the live one-shot per obj, from FlickState, keyed by its AtomLoc.ref (the obj's atoms key). startNs =
-    // its ingest clock.
+    // Latest flick event of an atom, not necessarily still playing. Ordinal/state
+    // and record identity are pinned at ingest; visibility/resource arrival never restart it.
     struct Flick {
         std::string iconState;
         uint32_t iconResIndex = 0;
         bool haveRes = false;
         int64_t startNs = 0;
+        uint16_t key = 0;
+        bool haveKey = false;
     };
-    std::map<uint32_t, Flick> flicks;
+    std::map<uint32_t, Flick> flicks;                       // obj id, or mob id | kRegistryA
+    std::map<std::array<uint16_t, 3>, Flick> turfFlicks;  // per `tiles` cell
+    std::map<std::array<uint16_t, 3>, Atom::Chain> turfChains;  // animate() on a turf, per `tiles` cell
+    VisContents vis;  // ordered, typed, bounded local bindings; canonical snapshot retains legacy projections below
     std::map<uint32_t, std::vector<uint32_t>> visContents;
     // vis_contents items that are TURFS (item Type 1), per holder key: the turf's flat cell index (x + y*maxx +
     // z*maxx*maxy, all 0-based). The turfs' looks arrive in VisTurfs (into `tiles`); what stands on them, as ordinary
-    // InView objects. Drawn only on a secondary map (render/scene.h assembleSecondaryMap). Kept apart from visContents.
+    // InView objects. Kept apart from visContents.
     std::map<uint32_t, std::vector<uint32_t>> visTurfs;
     // An atom's particle set (its `particles`), per atom key, from the WorldState/InView particle array. Mutable: the
     // assembler steps each set it draws on the render clock (advanceParticles). Not in the snapshot.
@@ -193,21 +233,92 @@ struct World {
     bool layer2Indexed = false;
     std::map<std::array<uint16_t, 3>, uint32_t> tiles;           // cumulative map, key (x,y,z) 0-based wire
     std::map<std::array<uint16_t, 3>, IconStart> tileIconStart;  // per `tiles` cell
+    // Local capture input fences appearance replacement, including A -> B -> A.
+    // This is a cell publication revision, not an object/turf registry identity.
+    std::map<std::array<uint16_t, 3>, uint64_t> tileRevision;
+    uint64_t nextTileRevision = 0;
     // A turf's vis_contents (VisContents tag 1), per `tiles` cell: atom keys (obj id bare, mob id | kRegistryA). vg's
     // gas overlays are shared nullspace objs held here.
     std::map<std::array<uint16_t, 3>, std::vector<uint32_t>> turfVis;
     MapGrid grid;
+    uint16_t viewZ = 0;  // current zero-based map level, updated by every map refresh
 
     // Remaining sections. Decoder-owned records are kept as decoded.
-    std::map<uint32_t, proto::ImageOp> images;     // client.images, key = imageID
+    std::map<uint32_t, proto::ImageOp> images;  // client.images, key = imageID
+    struct ImageInstance {
+        uint32_t appid = 0, target = 0;  // registry-qualified atom key, never a bare mob ref
+        uint8_t locKind = 0;
+        bool hasVis = false;
+        uint64_t identity = 0, targetIdentity = 0;
+        bool targetHud = false;
+        std::array<uint16_t, 3> turfCell{};  // decoded once; never an atom registry key
+        uint16_t turfWidth = 0, turfHeight = 0;
+    };
+    bool imageTurfCurrent(uint32_t id, uint64_t identity, const std::array<uint16_t, 3>& cell) const {
+        const auto it = imageInstances.find(id);
+        return it != imageInstances.end() && it->second.locKind == 7 && it->second.identity == identity &&
+               it->second.turfCell == cell && it->second.turfWidth == bounds.maxX &&
+               it->second.turfHeight == bounds.maxY && it->second.turfWidth && it->second.turfHeight &&
+               tiles.count(cell);
+    }
+    // Bounded, typed worker metadata. Pending references bind once, to the first
+    // subsequent keyed record (not an appearance-only placeholder). Both this
+    // reverse index and ImageInstance::target use registry-qualified atom keys.
+    // The wire does NOT prove that future occupant's identity.
+    std::map<uint32_t, ImageInstance> imageInstances;
+    std::map<uint32_t, std::set<uint32_t>> pendingImageTargets;
+    uint64_t nextImageIdentity = 0, nextAtomIdentity = 0;
+    void bindPendingImages(uint32_t target, uint64_t identity, bool hudTarget = false) {
+        const auto pending = pendingImageTargets.find(target);
+        if (pending == pendingImageTargets.end()) return;
+        for (uint32_t id : pending->second) {
+            imageInstances.at(id).targetIdentity = identity;
+            imageInstances.at(id).targetHud = hudTarget;
+        }
+        pendingImageTargets.erase(pending);
+    }
+    bool imageTargetCurrent(uint32_t id, uint64_t identity, uint32_t target, uint64_t targetIdentity) const {
+        const auto image = imageInstances.find(id);
+        const auto atom = atoms.find(target);
+        return image != imageInstances.end() && image->second.locKind == ((target & kRegistryA) ? 2 : 1) &&
+               image->second.identity == identity && image->second.target == target && targetIdentity &&
+               image->second.targetIdentity == targetIdentity &&
+               (image->second.targetHud ? (hudIdentity.count(target) &&
+                                           hudObjectCurrent(target, hudIdentity.at(target).key, targetIdentity))
+                                        : (atom != atoms.end() && atom->second.renderIdentity == targetIdentity &&
+                                           !resync.freed.count(target)));
+    }
+    bool imageHudCurrent(uint32_t id) const {
+        const auto found = imageInstances.find(id);
+        if (found == imageInstances.end()) return false;
+        const auto& im = found->second;
+        if (!imageTargetCurrent(id, im.identity, im.target, im.targetIdentity)) return false;
+        const auto screen = hudIdentity.find(im.target);
+        return screen != hudIdentity.end() && hudObjectCurrent(im.target, screen->second.key) &&
+               (im.targetHud || (atoms.at(im.target).haveKey && atoms.at(im.target).key == screen->second.key));
+    }
     std::map<uint32_t, IconStart> imageIconStart;  // per `images` id
     std::set<uint32_t> imageAnims;                 // keys of the image animation chains (existence only)
+    std::set<uint32_t> earlyImageAnims;  // animated before their ImageCreate arrived
     // The image animation chains themselves (the snapshot prints only the keys above). Stamped at ingest like
-    // Atom::chain and sampled by render/scene.cpp, so a client.image fades and slides. Transient: not in the snapshot.
+    // Atom::chain. Transient: not in the snapshot.
     std::map<uint32_t, Atom::Chain> imageChains;
     std::map<uint32_t, proto::Hud::Record> hud;  // client.screen, key = ref
     std::map<uint32_t, uint32_t> hudAppid;       // hud's appid per ref, filled at ingest (Hud) for verbmenu
     std::vector<uint32_t> hudOrder;
+    struct HudIdentity {
+        uint8_t kind = 0;
+        uint16_t key = 0;
+        uint64_t membership = 0;
+    };
+    uint64_t nextHudMembership = 0;
+    // Retained across removal to distinguish re-entry from record-slot reuse.
+    std::map<uint32_t, HudIdentity> hudIdentity;
+    bool hudObjectCurrent(uint32_t ref, uint16_t key, uint64_t membership = 0) const {
+        const auto it = hudIdentity.find(ref);
+        return hud.count(ref) && it != hudIdentity.end() && it->second.kind == 2 && it->second.key == key &&
+               (!membership || it->second.membership == membership);
+    }
     std::map<uint32_t, IconStart> hudIconStart;  // per `hud` ref, kept while the ref is off the screen
     std::map<uint32_t, proto::Verb> verbById;
     std::vector<uint32_t> verbOrder;
@@ -217,6 +328,7 @@ struct World {
         std::string name;
         proto::StatValue value;
         IconStart icon;
+        uint64_t identity = 0;
     };
     struct Stat {
         std::vector<std::string> tabs;
@@ -226,6 +338,7 @@ struct World {
             false;  // the token above was chosen by this client (statpanel.h selectStatTab); the gate only bites then
         int frames = 0, errors = 0, stale = 0;
         std::vector<StatLine> lines;
+        uint64_t nextIdentity = 0;  // retained across clears/tab switches; not a row index
     } stat;
 
     struct Browser {
@@ -279,8 +392,10 @@ struct World {
 constexpr size_t kChatCap = 500;
 constexpr size_t kMaxStatLines = 4096;
 
-constexpr uint32_t kRegistryA = 0x80000000u;
 constexpr int64_t kDefaultTickNanos = 100'000'000;
+// animate() step times and delays travel in deciseconds and play at that rate whatever world.tick_lag is
+// (stock DreamSeeker 516.1688: a 10 s animate takes 10 s at fps 10 and fps 40).
+constexpr int64_t kAnimUnitNanos = 100'000'000;
 constexpr int kGlideThresholdTiles = 1;
 constexpr int kDefaultIconSize = 32;
 // The world's icon size: the eye's step_size, since a movable's default step_size is world.icon_size.
@@ -364,7 +479,8 @@ public:
     const World& world() const { return w_; }
     // The single writer's handle for client-side state changes (statpanel.h selectStatTab). Session thread only.
     World& worldMut() { return w_; }
-    int ingestErrors() const { return decodeErrors_; }  // frames a decoder rejected (informational)
+    void setWideVerbIds(bool wide) { st_.wideVerbIds = wide; }  // worker, before ingesting this session's frames
+    int ingestErrors() const { return decodeErrors_; }          // frames a decoder rejected (informational)
     // output() text addressed to a bare control name ("win.ctl", no ":function") is chat only when this answers true
     // for it; stock DreamSeeker prints nothing for a browser control or a control that does not exist. Unset: chat.
     void setTextTarget(std::function<bool(const std::string& control)> f) { textTarget_ = std::move(f); }

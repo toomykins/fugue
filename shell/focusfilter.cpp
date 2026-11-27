@@ -6,7 +6,8 @@
 #include <QLineEdit>
 #include <cstdio>
 #include "shell/browserpane.h"
-#include "shell/mapwidget.h"
+#include "shell/skinwindow.h"
+#include <QMenu>
 
 namespace fugue::shell {
 
@@ -61,10 +62,66 @@ std::string macroSpecFor(const QKeyEvent* e, bool modifierKeys) {
 }
 
 FocusFilter::FocusFilter(QObject* parent) : QObject(parent) {
+    setUserMacros({}, {});
     clock_.start();
     repTimer_.setTimerType(Qt::PreciseTimer);
     repTimer_.setInterval(100);
     connect(&repTimer_, &QTimer::timeout, this, [this] { repeatTick(nowMs()); });
+}
+
+void FocusFilter::setClientWindow(SkinWindow* window) { clientWindow_ = window; }
+
+void FocusFilter::setUserMacros(const skin::MacroSet& game, const skin::MacroSet& global) {
+    userGame_ = game;
+    userGlobal_ = global;
+    clientMenuKeys_.clear();
+    for (const auto* set : {&userGame_, &userGlobal_}) {
+        for (const auto& entry : set->entries) {
+            const auto& key = entry.key;
+            if (entry.command != ".clientmenu" || entry.rep || key.up || entry.disabled || key.key == "ANY" ||
+                key.key == "CTRL" || key.key == "SHIFT" || key.key == "ALT" || set->lookup(key, false) != &entry)
+                continue;
+            clientMenuKeys_.push_back(key);
+        }
+        if (!clientMenuKeys_.empty()) break;
+    }
+    if (clientMenuKeys_.empty()) {
+        skin::MacroKey key;
+        bool repeat = false;
+        skin::parseMacroName("CTRL+M", key, repeat);
+        clientMenuKeys_.push_back(key);
+    }
+}
+
+bool FocusFilter::clientMenuEvent(QObject* receiver, QKeyEvent* event) {
+    const int key = event->key();
+    // Consume the whole key lifetime, even if focus/modifiers/configuration changed while the popup was open.
+    if (clientMenuHeld_.contains(key)) {
+        if (event->type() == QEvent::KeyRelease && !event->isAutoRepeat()) clientMenuHeld_.remove(key);
+        event->accept();
+        return true;
+    }
+    if (!clientWindow_ || event->type() == QEvent::KeyRelease) return false;
+    auto* widget = qobject_cast<QWidget*>(receiver);
+    if (!widget || QApplication::activeModalWidget()) return false;
+    bool inClient = widget->window() == clientWindow_;
+    for (QObject* p = widget; p; p = p->parent())
+        if (p == clientWindow_->clientMenu()) {
+            inClient = true;
+            break;
+        }
+    if (!inClient || event->modifiers().testFlag(Qt::MetaModifier)) return false;
+    skin::MacroKey chord;
+    bool repeat = false;
+    if (!skin::parseMacroName(macroSpecFor(event), chord, repeat) ||
+        std::find(clientMenuKeys_.begin(), clientMenuKeys_.end(), chord) == clientMenuKeys_.end())
+        return false;
+    event->accept();
+    if (event->type() == QEvent::KeyPress && !event->isAutoRepeat()) {
+        clientMenuHeld_.insert(key);
+        clientWindow_->toggleClientMenu();
+    }
+    return true;
 }
 
 void FocusFilter::setFrameTiming(qint64 tickNs, qint64 frameNs) {
@@ -156,7 +213,7 @@ Zone FocusFilter::zoneOf(QObject* o) {
         if (p->property("fugueZone").toString() == "other") return Zone::Other;
     for (; o; o = o->parent()) {
         if (qobject_cast<BrowserPane*>(o)) return Zone::Browser;
-        if (qobject_cast<MapWidget*>(o)) return Zone::Map;
+        if (o->property("fugueZone").toString() == "map") return Zone::Map;
         if (qobject_cast<QLineEdit*>(o)) return Zone::Input;
         QVariant z = o->property("fugueZone");
         if (z.isValid()) return z.toString() == "output" ? Zone::Output : Zone::Info;
@@ -177,12 +234,17 @@ static std::string releaseSpecFor(const QKeyEvent* k, Qt::KeyboardModifiers pres
 
 bool FocusFilter::eventFilter(QObject* o, QEvent* ev) {
     if (ev->type() == QEvent::ApplicationDeactivate) {
+        clientMenuHeld_.clear();
         releaseHeld("application deactivated");
         return false;
     }
-    if (ev->type() != QEvent::KeyPress && ev->type() != QEvent::KeyRelease) return false;
+    if (ev->type() != QEvent::KeyPress && ev->type() != QEvent::KeyRelease && ev->type() != QEvent::ShortcutOverride)
+        return false;
     if (inDispatch_) return false;  // reroute guard: keys during our own dispatch
     auto* k = static_cast<QKeyEvent*>(ev);
+    // Before Qt shortcuts, game macros and page/editor delivery. No QShortcut registration to lose on rebuild.
+    if (clientMenuEvent(o, k)) return true;
+    if (ev->type() == QEvent::ShortcutOverride) return false;
     modsNow_ = k->modifiers();
     const Qt::KeyboardModifier own = k->key() == Qt::Key_Shift     ? Qt::ShiftModifier
                                      : k->key() == Qt::Key_Control ? Qt::ControlModifier

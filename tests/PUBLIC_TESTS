@@ -12,80 +12,27 @@ tests/platform_test.cpp
 tests/browsing_test.cpp
 tests/choicefetches_test.cpp
 tests/cauth_test.cpp
-tests/fonfile.h
 tests/privatefile.h
-tests/gdifon_test.cpp
 tests/headlessacks_test.cpp
-tests/mousechain_test.cpp
 tests/outputtarget_test.cpp
 tests/prompt_stat_test.cpp
 tests/reconnect_test.cpp
-tests/mapcadence_test.cpp
 tests/rscstore_test.cpp
 tests/usermacros_test.cpp
 tests/winicon_test.cpp
 
 # --- hand-written worlds (stock DreamDaemon)
-tests/atomname_test.cpp
-tests/data/atomname-world/
-# (atomname reads the shared sheet from menuicons-world, listed below)
-tests/clientanim_test.cpp
-tests/data/clientanim-world/
-tests/clientpixel_test.cpp
-tests/data/clientpixel-world/
-tests/gif_anim_test.cpp
-tests/data/gifanim/
+tests/wingetcontrols_test.cpp
+tests/data/winget-controls-world/
+tests/data/popup-visibility-world/
+tests/data/browser-pane-world/
+tests/data/plane-target-budget-world/
+tests/data/plane-source-center-world/
 tests/glidecarry_test.cpp
 tests/data/glide-world/
 tests/data/glidenpc-world/
 tests/glidezero_test.cpp
 tests/data/glide-zero/
-tests/ddmiops_test.cpp
-tests/data/ddmiops-world/
-tests/holomap_test.cpp
-tests/data/holomap-world/
-tests/hudhits_test.cpp
-tests/data/hudhits-world/
-tests/hudstack_test.cpp
-tests/data/hudstack-world/
-tests/bandorder_test.cpp
-tests/data/bandorder-world/
-tests/hudoverlay_test.cpp
-tests/data/hudoverlay-world/
-tests/jpeg_test.cpp
-tests/data/jpeg/
-tests/dragout_test.cpp
-tests/data/dragout-world/
-tests/menuicon_test.cpp
-tests/data/menuicons-world/
-tests/movanim_test.cpp
-tests/data/movanim-world/
-tests/mousehover_test.cpp
-tests/data/mousehover-world/
-tests/mousewheel_test.cpp
-tests/data/mousewheel-world/
-tests/progbar_test.cpp
-tests/data/progbar-world/
-tests/runechat_test.cpp
-tests/data/runechat-world/
-tests/secmapmouse_test.cpp
-tests/data/secmapmouse-world/
-tests/staticon_test.cpp
-tests/data/staticons-world/
-tests/visanim_test.cpp
-tests/data/visanim-world/
-tests/zas_test.cpp
-tests/data/zas-world/
-tests/zmouse_test.cpp
-tests/data/zmouse-world/
-tests/particles_test.cpp
-tests/data/particles-world/
-tests/flickz_test.cpp
-tests/data/flickz-world/
-tests/aistatic_test.cpp
-tests/data/aistatic-world/
-tests/passmouse_test.cpp
-tests/data/passmouse-world/
 tests/data/popupmenu-world/
 tests/menulist_test.cpp
 tests/verboverride_test.cpp
@@ -100,12 +47,12 @@ tests/data/verbcell-world/
 tests/data/verblate-world/
 tests/data/verbpile-world/
 tests/data/verbgong-world/
-tests/scene_cache_test.cpp
 
 # --- shell (Qt Widgets / WebEngine)
 shell/tests/browse_pages.h
 shell/tests/browse_test.cpp
 shell/tests/input_test.cpp
+shell/tests/screenshot_test.cpp
 shell/tests/live_skin.h
 shell/tests/paste_scan_test.cpp
 shell/tests/prompt_skin.h
@@ -113,12 +60,6 @@ shell/tests/prompt_test.cpp
 shell/tests/serverkey_test.cpp
 shell/tests/shell_test.cpp
 shell/tests/urlopener_test.cpp
-
-# --- renderer controls and the GPU renderer (GPU tests build only with -DFUGUE_BUILD_GPU=ON)
-app/tests/rendercontrols_test.cpp
-app/tests/gpu_renderthread_test.cpp
-app/tests/gpu_present_test.cpp
-rendergpu/tests/executor_test.cpp
 
 # --- account and pager (temp HOME, synthetic identities)
 account/tests/account_codec_test.cpp

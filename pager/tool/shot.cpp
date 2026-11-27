@@ -11,6 +11,7 @@
 #include <QPixmap>
 #include <QTemporaryDir>
 #include <cstdio>
+#include <cstdlib>
 #include "platform/file.h"
 #include "account/store.h"
 #include "pager/ui/pagerwindow.h"
@@ -21,8 +22,10 @@ using namespace fugue::pager;
 static void put(const QString& path, const QByteArray& body) {
     QDir().mkpath(QFileInfo(path).absolutePath());
     QFile f(path);
-    f.open(QIODevice::WriteOnly);
-    f.write(body);
+    if (!f.open(QIODevice::WriteOnly) || f.write(body) != body.size()) {
+        std::fprintf(stderr, "cannot write %s: %s\n", qPrintable(path), qPrintable(f.errorString()));
+        std::exit(EXIT_FAILURE);
+    }
 }
 
 int main(int argc, char** argv) {
@@ -36,7 +39,10 @@ int main(int argc, char** argv) {
     QDir().mkpath(out);
 
     put(home.path() + "/bin/fugue", "#!/bin/sh\n");
-    ::chmod((home.path() + "/bin/fugue").toUtf8().constData(), 0755);
+    if (platform::chmod((home.path() + "/bin/fugue").toUtf8().constData(), 0755) != 0) {
+        std::perror("chmod synthetic client");
+        return EXIT_FAILURE;
+    }
     qputenv("FUGUE_CLIENT", (home.path() + "/bin/fugue").toUtf8());
     put(home.path() + "/.byond/cfg/key.txt", "BEGIN KEY Fake Tester\nsynthetic-line-1\n`\nEND KEY\n");
 

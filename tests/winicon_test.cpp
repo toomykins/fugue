@@ -3,6 +3,7 @@
 // and once against a real ResourcePump for the prioritize hand-off.
 #include <QTemporaryDir>
 #include <QtTest>
+#include "tests/testmain.h"
 #include <map>
 #include "net/bytes.h"
 #include "net/resource.h"
@@ -239,5 +240,5 @@ private slots:
     }
 };
 
-QTEST_APPLESS_MAIN(WinIconTest)
+FUGUE_TEST_APPLESS_MAIN(WinIconTest)
 #include "winicon_test.moc"

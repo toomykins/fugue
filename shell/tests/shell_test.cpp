@@ -1,8 +1,12 @@
-// shell/ unit tests (offscreen QPA): skin -> widget geometry, the map widget's pixel path, and the focus table.
+// shell/ unit tests (offscreen QPA): skin -> widget geometry and the focus table.
 #include <QApplication>
 #include <QLineEdit>
+#include <QFile>
+#include <QPushButton>
 #include <QSignalSpy>
 #include <QtTest>
+#include <map>
+#include "tests/testmain.h"
 #include "shell/browserpane.h"
 #include "shell/focusfilter.h"
 #include "shell/skinwindow.h"
@@ -66,46 +70,201 @@ private slots:
         delete win;
     }
 
+    void paneClipsButtonWithoutResizingIt() {
+        QFile file(QFINDTESTDATA("../../tests/data/splitter-world/skin.dmf"));
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        SkinWindow window;
+        QVERIFY(window.loadSkin(file.readAll().toStdString()).isEmpty());
+        window.resize(window.designSize());
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        auto* button = window.findChild<QPushButton*>("row.menu");
+        QVERIFY(button);
+        QCOMPARE(button->height(), 6);  // 9px pane, y=5, 27px design button in a 30px design pane
+        QCOMPARE(button->mask().boundingRect(), QRect(0, 0, button->width(), 4));
+        // The clipped tail must not receive input in the adjacent pane.
+        const QPoint tail = button->mapTo(&window, QPoint(1, 5));
+        QVERIFY(window.childAt(tail) != button);
+        QVERIFY(window.childAt(button->mapTo(&window, QPoint(1, 1))) == button);
+        window.live()->winset("nested.split", "splitter=0");
+        window.syncFromLive();
+        QVERIFY(!button->isVisible());
+        window.live()->winset("nested.split", "splitter=50");
+        window.syncFromLive();
+        QVERIFY(button->isVisible());
+        QCOMPARE(button->height(), 216);
+        QCOMPARE(button->mask().boundingRect().height(), 214);
+        // A smaller design button fully inside the pane removes the previous mask.
+        window.resize(640, 880 + window.statusBarHeight());
+        window.live()->winset("row.menu", "size=88x1");
+        window.syncFromLive();
+        QVERIFY(button->mask().isEmpty());
+        window.close();
+        win->activateWindow();
+        QVERIFY(QTest::qWaitFor([&] { return win->isActiveWindow(); }));
+    }
+    void singleChildBrowserFillsPane() {
+        QFile file(QFINDTESTDATA("../../tests/data/child-sizing-world/skin.dmf"));
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        SkinWindow window;
+        QVERIFY(window.loadSkin(file.readAll().toStdString()).isEmpty());
+        window.resize(window.designSize());
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        auto* browser = window.findChild<BrowserPane*>("chat.browser");
+        QVERIFY(browser);
+        QCOMPARE(browser->geometry(), QRect(0, 160, 300, 150));
+        QVERIFY(!window.splitterHandle("main.nested"));
+        window.live()->winset("main.nested", "size=420x210");
+        window.syncFromLive();
+        QCOMPARE(browser->geometry(), QRect(0, 160, 420, 210));
+        window.live()->winset("main.nested", "right=extra_right");
+        window.syncFromLive();
+        // Default axis is horizontal; attaching a second pane brings the divider back.
+        QCOMPARE(browser->geometry(), QRect(0, 160, 420, 103));
+        QVERIFY(window.splitterHandle("main.nested"));
+        window.live()->winset("main.nested", "right=\"\"");
+        window.syncFromLive();
+        QCOMPARE(browser->geometry(), QRect(0, 160, 420, 210));
+        QVERIFY(window.splitterHandle("main.nested")->isHidden());
+        window.close();
+        win->activateWindow();
+        QVERIFY(QTest::qWaitFor([&] { return win->isActiveWindow(); }));
+    }
+    // Runtime winsets of the main window's size, pos and is-maximized and of its controls' sizes and places, step by step
+    // as tests/data/winset-size-world/world.dm sends them, against what stock DreamSeeker 516.1689 answered (stock.log
+    // there, at 96 dpi, where its pixels are this client's logical ones) and the widgets those answers describe.
+    void runtimeSizeWinsets() {
+        QFile skin(QFINDTESTDATA("../../tests/data/winset-size-world/world.dmf"));
+        QFile log(QFINDTESTDATA("../../tests/data/winset-size-world/stock.log"));
+        QVERIFY(skin.open(QIODevice::ReadOnly) && log.open(QIODevice::ReadOnly));
+        std::map<QString, std::map<QString, QString>> stock;
+        for (const QString& line : QString::fromUtf8(log.readAll()).split('\n', Qt::SkipEmptyParts)) {
+            const QStringList words = line.trimmed().split(' ');
+            for (const QString& word : words.mid(1)) {
+                const auto eq = word.indexOf('=');
+                stock[words[0].chopped(1)][word.left(eq)] = word.mid(eq + 1);
+            }
+        }
+        SkinWindow window;
+        // The world's Login() sizes the window before this client has the skin: the winset waits for the skin, and the
+        // window opens at that size rather than the skin's design size, as stock's does.
+        window.live()->winset("main", "size=240x240");
+        QVERIFY(window.loadSkin(skin.readAll().toStdString()).isEmpty());
+        window.resize(window.designSize());
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        QCOMPARE(window.statusBarHeight(), 19);  // stock's strip at 96 dpi
+        const struct {
+            const char *label, *control, *params;
+        } steps[] = {{"start", "", ""},
+                     {"win288", "", "main.size=288x288"},
+                     {"map160", "", "map.size=160x160"},
+                     {"win224", "", "main.size=224x224"},
+                     {"win288b", "", "main.size=288x288"},
+                     {"children", "", "fixed.size=64x64;half.size=100x20"},
+                     {"map0x0", "", "map.size=0x0"},
+                     {"map100x0", "", "map.size=100x0"},
+                     {"reset", "", "main.size=224x224;map.size=224x224"},
+                     {"fixture", "", "main.size=288x288;map.size=288x288"},
+                     {"ctlwin", "main", "size=256x256"},
+                     {"ctlmap", "map", "size=128x128"},
+                     {"fixed0x0", "", "fixed.size=0x0"},
+                     {"win224c", "", "main.size=224x224"},
+                     {"fixedpos", "", "fixed.size=32x32;fixed.pos=10,20"},
+                     {"halfpos", "", "half.pos=8,100"},
+                     {"halfboth", "", "half.pos=4,150;half.size=50x30"},
+                     {"win288c", "", "main.size=288x288"},
+                     {"mainpos", "", "main.pos=100,120"},
+                     {"rtnew", "rt", "parent=main;type=map;pos=20,40;size=100x100;anchor1=0,0;anchor2=100,100"},
+                     {"win224d", "", "main.size=224x224"},
+                     {"rtsize", "", "rt.size=80x60"},
+                     {"rtpos", "", "rt.pos=10,10"},
+                     {"win256", "", "main.size=256x256"},
+                     {"kidsize", "", "kid.size=96x96"},
+                     {"panesize", "", "pane.size=40x40"},
+                     {"pl0x0", "", "pl.size=0x0"},
+                     {"loosesize", "", "loose.size=70x30"},
+                     {"fltsize", "", "flt.size=120x80"},
+                     {"max", "", "main.is-maximized=true"},
+                     {"maxsize", "", "main.size=300x300"},
+                     {"unmax", "", "main.is-maximized=false"}};
+        auto winget = [&](const char* id, const char* param) {
+            std::string out;
+            return window.live()->winget(id, param, out) ? QString::fromStdString(out) : QString();
+        };
+        auto size = [](const QSize& s) { return QString("%1x%2").arg(s.width()).arg(s.height()); };
+        auto client = [&] {
+            return QSize(window.width(), window.height() - window.statusBarHeight() - window.menuBarHeight());
+        };
+        bool moved = false, sizedFloat = false;
+        for (const auto& step : steps) {
+            if (*step.params) window.live()->winset(step.control, step.params);
+            window.syncFromLive();
+            const QString label = step.label;
+            const auto& want = stock.at(label);
+            const bool maximized = label == "max" || label == "maxsize";
+            QTRY_COMPARE(window.isMaximized(), maximized);
+
+            QCOMPARE(winget("main", "is-maximized"), want.at("main.is-maximized"));
+            // While maximized `size` is the size the window is restored to, `inner-size` the real client area.
+            QTRY_COMPARE(winget("main", "size"), want.at("main.size"));
+            QTRY_COMPARE(winget("main", "inner-size"), maximized ? size(client()) : want.at("main.inner-size"));
+            if (maximized) continue;  // the controls follow a client area as big as this screen
+            // the window's client area, the menu bar and status strip not counted
+            QTRY_COMPARE(size(client()), want.at("main.size"));
+            // outer-size is this client's own frame, not stock's
+            QTRY_COMPARE(winget("main", "outer-size"), size(window.frameGeometry().size()));
+            moved = moved || label == "mainpos";
+            if (moved) {
+                QCOMPARE(winget("main", "pos"), want.at("main.pos"));
+                QTRY_COMPARE(QString("%1,%2").arg(window.frameGeometry().x()).arg(window.frameGeometry().y()),
+                             want.at("main.pos"));
+            }
+            for (const char* id : {"map", "fixed", "half", "kid", "pl", "rt"}) {
+                const QString key = id;
+                QCOMPARE(winget(id, "size"), want.at(key + ".size"));
+                QCOMPARE(winget(id, "pos"), want.at(key + ".pos"));
+                if (key == "kid" || key == "rt") continue;
+                auto* widget = window.findChild<QWidget*>((key == "pl" ? "pane." : "main.") + key);
+                QVERIFY(widget);
+                if (key == "pl") {  // its pos is in the pane
+                    QCOMPARE(size(widget->size()), want.at(key + ".size"));
+                    continue;
+                }
+                // The widget is what shows of the control: clipped to the client area and the status strip below it,
+                // which a control can cover as in stock.
+                const QStringList p = want.at(key + ".pos").split(','), s = want.at(key + ".size").split('x');
+                const QRect shown = QRect(p[0].toInt(), p[1].toInt(), s[0].toInt(), s[1].toInt()) &
+                                    QRect(QPoint(0, 0), client() + QSize(0, window.statusBarHeight()));
+                QCOMPARE(widget->geometry().translated(0, -window.menuBarHeight()), shown);
+            }
+            // The floating window from its first size winset on: before it, stock answers 120x100 for its unshown
+            // 100x100 window (no narrower than the system lets a captioned window be), this client the .dmf size.
+            sizedFloat = sizedFloat || label == "fltsize";
+            for (const char* id : {"pane", "loose", "ll", "flt", "fl"})
+                if (sizedFloat || id[0] != 'f') QCOMPARE(winget(id, "size"), want.at(QString(id) + ".size"));
+        }
+        window.close();
+        win->activateWindow();
+        QVERIFY(QTest::qWaitFor([&] { return win->isActiveWindow(); }));
+    }
     void designSizeAndMapRect() {
         // the MAIN window states no `statusbar`, so it gets DreamSeeker's default strip below the client area
-        QCOMPARE(win->statusBarHeight(), 18);
-        QCOMPARE(win->designSize(), QSize(560, 560 + 18));
-        QCOMPARE(win->mapControlRect(), QRect(0, 0, 480, 480));
+        QCOMPARE(win->statusBarHeight(), 19);
+        QCOMPARE(win->designSize(), QSize(560, 560 + 19));
+        QCOMPARE(win->map()->geometry(), QRect(0, 0, 480, 480));
     }
     void relayoutOnResize() {
         win->resize(800, 700);
-        QCOMPARE(win->mapControlRect().topLeft(), QPoint(0, 0));  // anchors none: designed extent kept
-        QCOMPARE(win->mapControlRect().size(), QSize(480, 480));
+        QCOMPARE(win->map()->geometry().topLeft(), QPoint(0, 0));  // anchors none: designed extent kept
+        QCOMPARE(win->map()->size(), QSize(480, 480));
         auto* in = win->findChild<QLineEdit*>();
         QVERIFY(in);
         QCOMPARE(in->width(), 800);                 // anchored 0%..100% horizontally
-        QCOMPARE(in->y(), 500 + (700 - 18 - 560));  // anchored to the client area's bottom edge (above the status bar)
+        QCOMPARE(in->y(), 500 + (700 - 19 - 560));  // anchored to the client area's bottom edge (above the status bar)
         win->resize(560, 560);
         QCOMPARE(in->width(), 560);
-    }
-    void mapPaintsFramePixelForPixel() {
-        QImage f(480, 480, QImage::Format_RGBX8888);
-        for (int y = 0; y < 480; y++)
-            for (int x = 0; x < 480; x++) f.setPixel(x, y, qRgb(x & 255, y & 255, (x ^ y) & 255));
-        win->setMapFrame(f);
-        QImage g = win->grab().toImage().convertToFormat(QImage::Format_RGB32).copy(win->mapControlRect());
-        QCOMPARE(g, f.convertToFormat(QImage::Format_RGB32));  // scale 1: an exact blit
-        QCOMPARE(win->map()->scale(), 1);
-    }
-    void integerZoomIsPointSampled() {
-        win->map()->setIconSize(64);  // zoom 2
-        QImage f(100, 100, QImage::Format_RGBX8888);
-        for (int y = 0; y < 100; y++)
-            for (int x = 0; x < 100; x++) f.setPixel(x, y, qRgb(x * 2, y * 2, 77));
-        win->setMapFrame(f);
-        QCOMPARE(win->map()->scale(), 2);
-        QImage g = win->grab().toImage().convertToFormat(QImage::Format_RGB32);
-        QRect ir = win->map()->imageRect().translated(win->mapControlRect().topLeft());
-        QCOMPARE(ir.size(), QSize(200, 200));
-        for (int y = 0; y < 200; y += 7)
-            for (int x = 0; x < 200; x += 5)  // every sampled pixel is a source pixel, no blends
-                QCOMPARE(g.pixel(ir.x() + x, ir.y() + y), f.pixel(x / 2, y / 2) | 0xff000000u);
-        win->map()->setIconSize(32);
     }
     void focusTable() {
         QSignalSpy spy(filt, &FocusFilter::macroFired);
@@ -145,7 +304,7 @@ private slots:
     }
 };
 
-int main(int argc, char** argv) {
+int FUGUE_TEST_ENTRY(int argc, char** argv) {
     registerSchemes();
     QApplication app(argc, argv);
     ShellTest t;

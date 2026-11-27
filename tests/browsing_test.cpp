@@ -1,5 +1,6 @@
 // The browse() rules of model/browsing.h: parameter parsing, the output() hand-off, browse(file()) and the page-call bridge.
 #include <QtTest>
+#include "tests/testmain.h"
 #include "model/browsing.h"
 
 using namespace fugue::model;
@@ -65,7 +66,11 @@ private slots:
         QVERIFY(parsePageCall("stat.stat:update", "x", c));
         QCOMPARE(c.window, std::string("stat"));  // split at the LAST dot
         QVERIFY(parsePageCall("browseroutput:ehjaxCallback", "pang", c));
-        QVERIFY(!parsePageCall("browseroutput:output", "line", c));  // chat output stays chat
+        QVERIFY(!parsePageCall("browseroutput:output", "line", c));               // chat output stays chat
+        QVERIFY(parsePageCall("browseroutput:output", "a%26b&%2526&", c, true));  // explicit local call
+        QCOMPARE(c.fn, std::string("output"));
+        QCOMPARE(c.args, (std::vector<std::string>{"a&b", "%26", ""}));
+        QVERIFY(!parsePageCall("browseroutput", "line", c, true));  // not a browser function call
         QVERIFY(!parsePageCall("browseroutput", "line", c));
         QVERIFY(!parsePageCall("win.browser", "<html>", c));  // no function: a REPLACE, not a call
         QVERIFY(parsePageCall("mapwindow.credits:setupCredits", "Cast&Producers&default&20&2000",
@@ -182,5 +187,5 @@ private slots:
         QVERIFY(recs[1].name.empty());
     }
 };
-QTEST_APPLESS_MAIN(BrowsingTest)
+FUGUE_TEST_APPLESS_MAIN(BrowsingTest)
 #include "browsing_test.moc"

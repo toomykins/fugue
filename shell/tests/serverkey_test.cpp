@@ -1,6 +1,7 @@
 // shell/serverkey.h: a link() to the same server keeps the per-server macro key; another server changes it.
 #include <QSignalSpy>
 #include <QtTest>
+#include "tests/testmain.h"
 #include "shell/serverkey.h"
 
 using fugue::shell::ServerKey;
@@ -32,16 +33,18 @@ private slots:
         QCOMPARE(changed.count(), 1);
         QCOMPARE(k.port(), quint16(7778));
     }
-    // The resolved path: two spellings of one address keep the key, two addresses change it.
-    void resolvedAddressesDecide() {
+    // Literal IPs complete asynchronously without depending on reverse DNS.
+    void literalAddressesDecide() {
         ServerKey k("10.1.2.3", 7777);
         QSignalSpy changed(&k, &ServerKey::changed), kept(&k, &ServerKey::kept);
         k.moved("::ffff:10.1.2.3", 7777);
-        QVERIFY(kept.wait(20000));
+        QCOMPARE(kept.count(), 0);  // preserve queued completion / overtaking
+        QTRY_COMPARE(kept.count(), 1);
         QCOMPARE(changed.count(), 0);
         QCOMPARE(k.host(), QString("10.1.2.3"));
         k.moved("10.1.2.4", 7777);
-        QVERIFY(changed.wait(20000));
+        QCOMPARE(changed.count(), 0);
+        QTRY_COMPARE(changed.count(), 1);
         QCOMPARE(k.host(), QString("10.1.2.4"));
     }
     void aLaterMoveOvertakesALookup() {
@@ -50,10 +53,16 @@ private slots:
         k.moved("10.1.2.4", 7777);  // would change the key once resolved
         k.moved("10.1.2.3", 7777);  // back at the keyed server before that
         QCOMPARE(kept.count(), 1);
-        QTest::qWait(1500);
+        // Both literal-address completions were queued before this barrier.
+        // Wait for them, not an arbitrary interval that may outlive (or miss) DNS.
+        bool drained = false;
+        QMetaObject::invokeMethod(&k, [&] { drained = true; }, Qt::QueuedConnection);
+        QTRY_VERIFY(drained);
         QCOMPARE(changed.count(), 0);
+        QCOMPARE(kept.count(), 1);
+        QCOMPARE(k.host(), QString("10.1.2.3"));
     }
 };
 
-QTEST_GUILESS_MAIN(ServerKeyTest)
+FUGUE_TEST_GUILESS_MAIN(ServerKeyTest)
 #include "serverkey_test.moc"

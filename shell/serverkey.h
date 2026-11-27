@@ -1,7 +1,7 @@
 // The server a window's per-server state (the player's own macro list, skin/usermacros.h) is filed under. A link() that
 // reaches the same server keeps it: the same port and the same host name, both loopback, or a common resolved address.
 // vg links every client to byond://[world.address]:[world.port], an IP, at the end of each round, whatever name the
-// player joined by. Names are resolved by QHostInfo, off the session thread.
+// player joined by. Names are resolved by QHostInfo, off the session thread; literal IPs skip DNS with queued completion.
 #pragma once
 #include <QHostAddress>
 #include <QList>

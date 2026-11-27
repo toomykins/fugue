@@ -1,0 +1,14 @@
+READY client-1
+
+READY client-2
+
+TRIGGER 3bf1c4b93f5546028d043a9c0f6e33b8
+
+ACTION start 20
+
+ACTION assigned 25
+
+ACTION settled 40
+
+ACTION end 50
+

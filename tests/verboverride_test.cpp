@@ -9,8 +9,12 @@
 // sent for each typed line against the same DD: the override's id on the own mob, and for Use-It, carried by two obj
 // types under two ids, a `Use-It word` listbox over both whose picks go out under each obj's own id.
 #include <QtTest>
-#include <fstream>
-#include <regex>
+#include "tests/recordedinput.h"
+#ifndef Q_MOC_RUN
+#include "tests/recordedverbs.h"
+#endif
+#include "tests/testmain.h"
+#include <algorithm>
 #include "model/verbmenu.h"
 #include "model/world.h"
 #include "net/bytes.h"
@@ -18,50 +22,23 @@
 #include "proto/enc_c2s_0002_input.h"
 
 using namespace fugue;
-using proto::enc::VerbArg;
 
 namespace {
-Bytes unhex(const std::string& h) {
-    Bytes b;
-    auto v = [](char c) { return c <= '9' ? c - '0' : (c | 32) - 'a' + 10; };
-    for (size_t i = 0; i + 1 < h.size(); i += 2) b.push_back(uint8_t(v(h[i]) << 4 | v(h[i + 1])));
-    return b;
-}
-std::string hex(const Bytes& b) {
-    static const char* d = "0123456789abcdef";
-    std::string o;
-    for (uint8_t c : b) {
-        o += d[c >> 4];
-        o += d[c & 15];
-    }
-    return o;
-}
-
-struct DsSend {
-    std::string line, pick;
-    uint16_t verb;
-    uint8_t kind;
-    bool self;
-    uint32_t ref;
-    std::string text;
-    bool hasText;
-};
+using DsSend = testinput::RecordedVerb;
 
 struct Recorded {
     model::Session sess;
     net::InputModel im;
+    QString error;
     bool load() {
-        std::ifstream f(std::string(FUGUE_TEST_DATA_DIR) + "/verboverride-world/frames.txt");
-        if (!f) return false;
-        std::string line;
-        while (std::getline(f, line)) {
-            if (line.rfind("0x", 0) != 0) continue;
-            uint16_t typ = uint16_t(std::stoul(line.substr(2, 4), nullptr, 16));
-            size_t sp = line.find(' ', line.find("len="));
-            Bytes body = sp == std::string::npos ? Bytes{} : unhex(line.substr(sp + 1));
-            im.onFrame(typ, body);
-            sess.ingest(typ, body);
+        const auto path = QString(FUGUE_TEST_DATA_DIR) + "/verboverride-world/frames.txt";
+        std::vector<testinput::RecordedFrame> frames;
+        if (!testinput::readRecordedFrames(path, frames, error)) return false;
+        for (const auto& frame : frames) {
+            im.onFrame(frame.type, frame.body);
+            sess.ingest(frame.type, frame.body);
         }
+        if (!sess.world().haveSelf) error = path + ": Recorded world has no player";
         return sess.world().haveSelf;
     }
     // The app's resolver (app/sessionworker.cpp srcFor).
@@ -79,38 +56,6 @@ struct Recorded {
         };
     }
 };
-
-void loadDs(std::vector<DsSend>& sends, std::vector<std::string>& listbox) {
-    std::ifstream f(std::string(FUGUE_TEST_DATA_DIR) + "/verboverride-world/dreamseeker-verbs.txt");
-    std::regex re(R"(^([^\t]+)\tverb=(\d+) src=(\d+):(self|\d+)(?: args=text:(\S+))?)");
-    std::regex lb(R"(^Use-It\tlistbox "Use-It word": (\S+))");
-    std::string line;
-    std::smatch m;
-    while (std::getline(f, line)) {
-        if (std::regex_search(line, m, lb)) {
-            std::string s = m[1];
-            for (size_t p = 0, q; p <= s.size(); p = q + 1) {
-                q = s.find('|', p);
-                if (q == std::string::npos) q = s.size();
-                listbox.push_back(s.substr(p, q - p));
-            }
-            continue;
-        }
-        if (!std::regex_search(line, m, re)) continue;
-        DsSend d;
-        std::string typed = m[1];
-        size_t arrow = typed.find(" <- ");
-        d.line = arrow == std::string::npos ? typed : typed.substr(0, arrow);
-        d.pick = arrow == std::string::npos ? "" : typed.substr(arrow + 4);
-        d.verb = uint16_t(std::stoul(m[2]));
-        d.kind = uint8_t(std::stoul(m[3]));
-        d.self = m[4] == "self";
-        d.ref = d.self ? 0 : uint32_t(std::stoul(m[4]));
-        d.hasText = m[5].matched;
-        d.text = m[5];
-        sends.push_back(d);
-    }
-}
 }  // namespace
 
 class VerbOverride : public QObject {
@@ -120,16 +65,42 @@ class VerbOverride : public QObject {
 
 private slots:
     void initTestCase() {
-        loadDs(sends_, listbox_);
+        const auto path = QString(FUGUE_TEST_DATA_DIR) + "/verboverride-world/dreamseeker-verbs.txt";
+        std::vector<DsSend> observations;
+        QString error;
+        QVERIFY2(testinput::readRecordedVerbs(path, observations, error), qPrintable(error));
+        QCOMPARE(int(observations.size()), 9);
+        for (const auto& observation : observations) {
+            if (observation.what == "send") {
+                QVERIFY(observation.ref != "client");
+                QVERIFY(observation.args.empty() ||
+                        (observation.args.size() == 1 && observation.args[0].tag == 2));
+                sends_.push_back(observation);
+            } else {
+                QCOMPARE(observation.what, std::string("listbox"));
+                QCOMPARE(observation.line, std::string("Use-It"));
+                QCOMPARE(observation.title, std::string("Use-It word"));
+                QVERIFY(listbox_.empty());
+                listbox_ = observation.names;
+            }
+        }
         QCOMPARE(int(sends_.size()), 8);
         QCOMPARE(int(listbox_.size()), 3);
+        int picks = 0;
+        for (const auto& send : sends_) {
+            if (send.pick.empty()) continue;
+            QCOMPARE(send.line, std::string("Use-It"));
+            QVERIFY(std::find(listbox_.begin(), listbox_.end(), send.pick) != listbox_.end());
+            ++picks;
+        }
+        QCOMPARE(picks, 3);
     }
 
     // Both ids of each overridden name are in the dictionary: Whisper 2 (/mob, which the human does not carry) and 9
     // (/mob/living), Poke 8 and 13. Ids are DreamDaemon's own: this session learned 9 first, as a human.
     void theDictionaryHoldsBothIds() {
         Recorded r;
-        QVERIFY(r.load());
+        QVERIFY2(r.load(), qPrintable(r.error));
         int whisper = 0, poke = 0;
         for (const auto& [id, e] : r.im.verbs()) {
             whisper += e.name == "Whisper";
@@ -142,7 +113,7 @@ private slots:
 
     void eachTypedLineGoesOutAsDreamSeekerSentIt() {
         Recorded r;
-        QVERIFY(r.load());
+        QVERIFY2(r.load(), qPrintable(r.error));
         const model::World& w = r.sess.world();
         for (const DsSend& d : sends_) {
             net::CommandResult res = r.im.verbCommand(d.line, true, r.srcFor());
@@ -155,28 +126,23 @@ private slots:
                     if (c.name == d.pick) picked.push_back(c);
                 }
                 QVERIFY(names == listbox_);
+                QCOMPARE(int(picked.size()), 1);
                 QCOMPARE(QString::fromStdString(res.srcChoice->title), QString("Use-It word"));
                 res = r.im.verbCommand(res.srcChoice->line, true, [&](uint16_t) { return picked; });
             }
             QVERIFY2(res.frames.size() == 1, qPrintable(QString::fromStdString(d.line + ": " + res.error)));
-            std::vector<VerbArg> args;
-            if (d.hasText) {
-                VerbArg a;
-                a.tag = 2;
-                a.str = d.text;
-                args.push_back(a);
-            }
-            Bytes want = proto::enc::encodeVerb(d.verb, d.kind, d.self ? w.selfRef : d.ref, args);
-            QVERIFY2(hex(res.frames[0].body) == hex(want),
-                     qPrintable(QString::fromStdString(d.line + " " + d.pick + ": got " + hex(res.frames[0].body) +
-                                                       ", DreamSeeker " + hex(want))));
+            const auto ref = d.ref == "self" ? w.selfRef : uint32_t(std::stoul(d.ref));
+            Bytes want = proto::enc::encodeVerb(d.verb, d.kind, ref, d.args);
+            QVERIFY2(res.frames[0].body == want,
+                     qPrintable(QString::fromStdString(d.line + " " + d.pick + ": got " + hexEncode(res.frames[0].body) +
+                                                       ", DreamSeeker " + hexEncode(want))));
         }
     }
 
     // A verb the dictionary knows but nothing carries: DreamSeeker sends nothing and prints nothing.
     void anUncarriedVerbIsDroppedSilently() {
         Recorded r;
-        QVERIFY(r.load());
+        QVERIFY2(r.load(), qPrintable(r.error));
         net::CommandResult res =
             r.im.verbCommand("Whisper hi", true, [](uint16_t) { return std::vector<net::SrcCandidate>{}; });
         QVERIFY(res.frames.empty() && !res.srcChoice);
@@ -189,12 +155,12 @@ private slots:
     // A prefix that only a verb and its override share completes to their name.
     void anOverrideIsNoAmbiguousPrefix() {
         Recorded r;
-        QVERIFY(r.load());
+        QVERIFY2(r.load(), qPrintable(r.error));
         std::string out;
         QVERIFY(r.im.spaceCompletion("Whis", out));
         QCOMPARE(QString::fromStdString(out), QString("Whisper \""));
     }
 };
 
-QTEST_GUILESS_MAIN(VerbOverride)
+FUGUE_TEST_GUILESS_MAIN(VerbOverride)
 #include "verboverride_test.moc"

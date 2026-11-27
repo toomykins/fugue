@@ -78,7 +78,16 @@ BrowseHost::BrowseHost(QWidget* anchor, QObject* parent) : QObject(parent), anch
         connect(app, &QCoreApplication::aboutToQuit, this, [this] { quitting_ = true; });
     origin_->setBridge([this](int pane, const QByteArray& body) {
         BrowserPane* p = panes_.value(pane);
-        return handleCall(p, model::parseByondUrl(QString::fromUtf8(body).toStdString()));
+        if (!p) return QString();
+        QString call = QString::fromUtf8(body);
+        auto u = model::parseByondUrl(call.toStdString());
+        const auto document = u.get("__fugueDocument");
+        if (!document.empty()) {
+            if (QString::fromStdString(document).toULongLong() != p->document()) return QString();
+            const auto at = call.lastIndexOf("__fugueDocument=");
+            call.truncate(at - 1);
+        }
+        return handleCall(p, model::parseByondUrl(call.toStdString()));
     });
     connect(origin_, &LocalOrigin::topic, this, [this](const QString& href) { topicFrom(href); });
     LOGB("local origin %s (listening=%d)\n", origin_->base().left(40).toUtf8().constData(), origin_->listening());
@@ -174,7 +183,8 @@ static bool looksLikeChat(const QString& name, const QString& html) {
 // where stock DreamSeeker's untitled popup shows nothing at all.
 static void setPopupTitle(QWidget* w, const QString& t) { w->setWindowTitle(t.isEmpty() ? QStringLiteral(" ") : t); }
 
-void BrowseHost::open(const QString& name0, const QString& params, const QString& html) {
+void BrowseHost::open(const QString& name0, const QString& params, const QString& html, quint64 skinRevision) {
+    if (skinRevision == ~quint64(0)) skinRevision = live_ ? live_->propertyRevision() : 0;
     model::BrowseParams p = model::parseBrowseParams(params.toStdString());
     QString name = name0;
     if (p.display == 0) {  // saved, never shown
@@ -200,14 +210,17 @@ void BrowseHost::open(const QString& name0, const QString& params, const QString
             LOGB("machine page \"%s\": answered natively -> %s\n", name.toUtf8().constData(),
                  QString::fromStdString(*href).left(120).toUtf8().constData());
             topicFrom(QString::fromStdString(*href));
+            return;
         }
-        return;
+        // A name is not evidence of a machine-only document. Real pages with
+        // external scripts must load, including hidden dynamic browser controls.
     }
     QString file = pageFileFor(name, p);
     Slot s;
     s.name = name;
     s.file = file;
     s.p = p;
+    s.worldTitleWrite = s.worldVisibilityWrite = skinRevision;
     // Lookup order: 1. a created skin control of that name, 2. a control the skin declares but has not created,
     // 3. a top-level window.
     BrowserPane* docked = nullptr;
@@ -244,13 +257,9 @@ void BrowseHost::open(const QString& name0, const QString& params, const QString
     }
     if (declared_ && declared_(name)) {
         pendingDocked_[name] = {params, html};
-        if (hidden_ && hidden_(name)) {
-            // It runs now, windowless; a later is-visible=true hands this same page to the control (takeHidden).
-            openHidden(name, file, p, html);
-            return;
-        }
-        LOGB("browse(\"%s\"): the skin declares that control but it is not on screen - held for it\n",
-             name.toUtf8().constData());
+        // A declared browser must run even if its pane is not attached yet. Its own is-visible can be true;
+        // the startup script may be the handshake that makes the server attach it. Adopt the same page later.
+        openHidden(name, file, p, html);
         return;
     }
     if (hiddenWindow_ && hiddenWindow_(name)) {
@@ -264,12 +273,16 @@ void BrowseHost::open(const QString& name0, const QString& params, const QString
         Slot& e = *it;
         e.p = p;
         e.file = file;
+        e.worldTitleWrite = e.worldVisibilityWrite = skinRevision;
         origin_->setPage(file, html);
         if (p.w > 0 && p.h > 0) applyPopupProps(e, "size", QString("%1x%2").arg(p.w).arg(p.h));
         e.pane->openFile(file);
         e.popup->show();
         e.popup->raise();
-        if (live_) live_->setPopupShown(name.toStdString(), true);
+        if (live_) {
+            live_->setPopupShown(name.toStdString(), true, skinRevision);
+            syncPopupProps(live_->snapshot().props);
+        }
         LOGB("browse(\"%s\") -> existing popup reloaded\n", name.toUtf8().constData());
         return;
     }
@@ -293,8 +306,13 @@ void BrowseHost::open(const QString& name0, const QString& params, const QString
     if (!p.resizable()) w->setFixedSize(W, H);  // can_resize=0 pins min and max
     if (p.posSet) w->move(p.x, p.y);
     // The page title and a world winset of `title` both set the title bar; the last writer wins.
-    connect(s.pane->page(), &QWebEnginePage::titleChanged, w,
-            [w, pg = s.pane->page()](const QString& t) { setPopupTitle(w, popupTitle(t, pg->url())); });
+    connect(s.pane->page(), &QWebEnginePage::titleChanged, w, [this, w, name, pg = s.pane->page()](const QString& t) {
+        auto slot = slots_.constFind(name);
+        if (slot == slots_.constEnd() || slot->popup != w) return;
+        const QString title = popupTitle(t, pg->url());
+        setPopupTitle(w, title);
+        if (live_) live_->setPopupTitle(name.toStdString(), title.toStdString());
+    });
     // winget(popup, "pos") reports the popup's real place, not the requested one.
     connect(w, &PopupWidget::placed, this, [this, name](int x, int y) {
         if (live_) live_->setWindowPos(name.toStdString(), x, y);
@@ -313,6 +331,7 @@ void BrowseHost::open(const QString& name0, const QString& params, const QString
             std::string v;
             if (live_->winget(name.toStdString(), "on-close", v)) onClose = QString::fromStdString(v).trimmed();
             live_->setPopupShown(name.toStdString(), false);
+            live_->setPopupTitle(name.toStdString(), "");
         }
         LOGB("popup \"%s\" closed by the player%s%s\n", name.toUtf8().constData(),
              onClose.isEmpty() ? " (no on-close registered)" : ": on-close ", onClose.left(120).toUtf8().constData());
@@ -329,22 +348,21 @@ void BrowseHost::open(const QString& name0, const QString& params, const QString
         else if (!onClose.isEmpty())
             emit onCloseCommand(name, onClose);
     });
-    if (live_) {  // the title the world already set, so syncPopupTitles does not re-apply it
-        std::string v;
-        if (live_->winget(name.toStdString(), "title", v)) s.worldTitle = QString::fromStdString(v);
-    }
+    if (live_) live_->setPopupTitle(name.toStdString(), w->windowTitle().trimmed().toStdString(), skinRevision);
     slots_[name] = s;
     origin_->setPage(file, html);
     s.pane->openFile(file);
     w->show();
-    if (live_) live_->setPopupShown(name.toStdString(), true);
+    if (live_) {
+        live_->setPopupShown(name.toStdString(), true, skinRevision);
+        syncPopupProps(live_->snapshot().props);
+    }
     LOGB("browse(\"%s\") -> top-level window %dx%d resize=%d titlebar=%d (%d bytes)\n", name.toUtf8().constData(), W, H,
          p.resizable(), p.hasTitlebar(), int(html.toUtf8().size()));
 }
 
-// A page for a BROWSER control the skin declares `is-visible = false` runs in a browser with no window, as in stock
-// DreamSeeker. It is recorded in slots_ like any page, so pageCall() can deliver output() calls into it (vg's
-// jukebox sends SetMusic that way).
+// An unplaced BROWSER (hidden control or unattached pane) runs without a window, as in stock DreamSeeker.
+// It is recorded in slots_ like any page, so output() and its startup scripts work before placement.
 void BrowseHost::openHidden(const QString& name, const QString& file, const model::BrowseParams& p,
                             const QString& html) {
     auto it = slots_.find(name);
@@ -370,11 +388,8 @@ void BrowseHost::openHidden(const QString& name, const QString& file, const mode
     slots_[name] = s;
     origin_->setPage(file, html);
     s.pane->openFile(file);
-    LOGB(
-        "browse(\"%s\") -> HIDDEN page at %s (no window: the skin declares is-visible=false, and DreamSeeker runs it "
-        "anyway"
-        " - this is where jukebox/media audio plays)\n",
-        name.toUtf8().constData(), origin_->urlFor(file).toUtf8().constData());
+    LOGB("browse(\"%s\") -> HIDDEN page at %s (unplaced skin browser; document runs before placement)\n",
+         name.toUtf8().constData(), origin_->urlFor(file).toUtf8().constData());
 }
 
 void BrowseHost::dropHidden(const QString& name) {
@@ -411,6 +426,10 @@ void BrowseHost::close(const QString& name) {
     }
     origin_->removePage(it->file);
     if (it->popup) {
+        if (live_) {
+            live_->setPopupShown(name.toStdString(), false);
+            live_->setPopupTitle(name.toStdString(), "");
+        }
         it->popup->disconnect(this);
         it->popup->hide();
         it->popup->deleteLater();
@@ -432,7 +451,8 @@ BrowserPane* BrowseHost::paneFor(const QString& window) const {
             (s.hidden && s.name.section('.', -1) == window))
             return s.pane;
     for (const Ctl& c : controls_)
-        if (c.ctl == window || (c.byWindow && c.win == window)) return c.pane->name.isEmpty() ? nullptr : c.pane;
+        if (c.ctl == window || c.win + "." + c.ctl == window || (c.byWindow && c.win == window))
+            return c.pane->name.isEmpty() ? nullptr : c.pane;
     return nullptr;
 }
 
@@ -562,11 +582,21 @@ QString BrowseHost::jsCallback(const QString& cb, const QJsonValue& v) const {
     return QString("try{(%1)(%2)}catch(e){}").arg(cb, js);
 }
 
-static QJsonValue convProp(const QString& prop, const QString& v) {
+static QJsonValue convProp(const QString& prop, const QString& v, qreal scale = 1) {
     static const QRegularExpression pt(R"(^(-?\d+),(-?\d+)$)");
     if (prop == "pos" || prop == "anchor1" || prop == "anchor2") {
         auto m = pt.match(v);
-        if (m.hasMatch()) return QJsonObject{{"x", m.captured(1).toInt()}, {"y", m.captured(2).toInt()}};
+        const qreal factor = prop == "pos" ? scale : 1;
+        if (m.hasMatch())
+            return QJsonObject{{"x", qRound(m.captured(1).toInt() * factor)},
+                               {"y", qRound(m.captured(2).toInt() * factor)}};
+    }
+    if (prop == "size" || prop == "view-size" || prop == "inner-size" || prop == "outer-size") {
+        static const QRegularExpression size(R"(^(-?\d+)x(-?\d+)$)");
+        auto m = size.match(v);
+        if (m.hasMatch())
+            return QJsonObject{{"x", qRound(m.captured(1).toInt() * scale)},
+                               {"y", qRound(m.captured(2).toInt() * scale)}};
     }
     if (prop == "type") return v.toUpper();
     if (v == "true") return true;
@@ -599,8 +629,10 @@ QJsonObject BrowseHost::wingetObject(const QString& id, const QString& propSpec)
     auto it = slots_.constFind(id);
     if (it != slots_.constEnd() && it->popup) {
         QWidget* w = it->popup;
-        QJsonObject all{{"pos", QJsonObject{{"x", w->pos().x()}, {"y", w->pos().y()}}},
-                        {"size", QString("%1x%2").arg(w->width()).arg(w->height())},
+        QJsonObject all{{"pos", QJsonObject{{"x", qRound(w->pos().x() * w->devicePixelRatioF())},
+                                            {"y", qRound(w->pos().y() * w->devicePixelRatioF())}}},
+                        {"size", QJsonObject{{"x", qRound(w->width() * w->devicePixelRatioF())},
+                                             {"y", qRound(w->height() * w->devicePixelRatioF())}}},
                         {"is-visible", w->isVisible()},
                         {"titlebar", it->p.hasTitlebar()},
                         {"can-resize", it->p.resizable()},
@@ -615,7 +647,7 @@ QJsonObject BrowseHost::wingetObject(const QString& id, const QString& propSpec)
         for (const QString& p : props == QStringList{"*"} ? wild : props) {
             std::string v;
             if (live_->winget(id.toStdString(), p.toStdString(), v))
-                out[p] = convProp(p, QString::fromStdString(v));
+                out[p] = convProp(p, QString::fromStdString(v), anchor_->devicePixelRatioF());
             else if (props != QStringList{"*"})
                 out[p] = QJsonValue::Null;  // a named property is always returned as a key
         }
@@ -625,21 +657,25 @@ QJsonObject BrowseHost::wingetObject(const QString& id, const QString& propSpec)
     return out;
 }
 
-// A world winset of a popup's title is applied only when the value changes: the page may have set its own title
-// since, and the last writer wins.
-void BrowseHost::syncPopupTitles(const skin::PropStore& props) {
+// Property write stamps distinguish an unchanged snapshot from a repeated world write after a page changed
+// the window. One stamp per supported property, no queued command history. Browse resets consume only writes
+// preceding that browse's worker-side stamp, not later winsets already present in a coalesced GUI snapshot.
+void BrowseHost::syncPopupProps(const skin::PropStore& props) {
     for (Slot& s : slots_) {
         if (!s.popup) continue;
-        std::string v;
-        if (!props.get(s.name.toStdString(), "title", v)) continue;
-        QString t = QString::fromStdString(v);
-        if (t == s.worldTitle) continue;
-        s.worldTitle = t;
-        setPopupTitle(s.popup, t.trimmed());
+        for (const char* key : {"title", "is-visible"}) {
+            const auto revision = props.revision(s.name.toStdString(), key);
+            quint64& consumed = QString::fromLatin1(key) == "title" ? s.worldTitleWrite : s.worldVisibilityWrite;
+            if (revision <= consumed) continue;
+            std::string value;
+            if (!props.get(s.name.toStdString(), key, value)) continue;
+            consumed = revision;
+            applyPopupProps(s, QString::fromLatin1(key), QString::fromStdString(value), revision);
+        }
     }
 }
 
-void BrowseHost::applyPopupProps(Slot& s, const QString& prop, const QString& val) {
+void BrowseHost::applyPopupProps(Slot& s, const QString& prop, const QString& val, quint64 throughRevision) {
     QWidget* w = s.popup;
     if (!w) return;
     if (prop == "size") {
@@ -654,10 +690,9 @@ void BrowseHost::applyPopupProps(Slot& s, const QString& prop, const QString& va
         model::BrowseParams q = model::parseBrowseParams("pos=" + val.toStdString());
         if (q.posSet) w->move(q.x, q.y);
     } else if (prop == "is-visible") {
-        if (val == "true" || val == "1")
-            w->show();
-        else
-            w->hide();
+        const bool shown = skin::winsetBool(val.toStdString());
+        w->setVisible(shown);
+        if (live_) live_->setPopupShown(s.name.toStdString(), shown, throughRevision);
     } else if (prop == "can-resize") {
         bool on = !(val == "false" || val == "0");
         s.p.canResize = on;
@@ -673,6 +708,7 @@ void BrowseHost::applyPopupProps(Slot& s, const QString& prop, const QString& va
         }
     } else if (prop == "title") {
         setPopupTitle(w, val.trimmed());
+        if (live_) live_->setPopupTitle(s.name.toStdString(), val.trimmed().toStdString(), throughRevision);
     } else {
         LOGB("popup winset %s=%s: not applied\n", prop.toUtf8().constData(), val.left(40).toUtf8().constData());
     }
@@ -700,12 +736,30 @@ QString BrowseHost::applyWinset(BrowserPane*, const model::ByondUrl& u) {
             continue;
         }
         auto it = slots_.find(ctl);
-        if (it != slots_.end() && it->popup) {
+        const bool popup = it != slots_.end() && it->popup;
+        // Browser geometry is in device pixels (getBoundingClientRect * DPR, window.screenLeft * DPR).
+        // The live skin and Qt widgets use logical pixels. Round only here. A popup is no exception: winget answers
+        // its place and size in device pixels, and tgui adds the difference between the two to every position it
+        // sets, so a popup moved by unscaled numbers drifts further off with each opening on a scaled display.
+        if (prop == "size" || prop == "pos") {
+            static const QRegularExpression geometry(R"(^(-?\d+(?:\.\d+)?)[x,](-?\d+(?:\.\d+)?)$)");
+            const qreal dpr = popup ? it->popup->devicePixelRatioF() : anchor_->devicePixelRatioF();
+            auto m = geometry.match(v);
+            if (m.hasMatch())
+                v = QString("%1%2%3")
+                        .arg(qRound(m.captured(1).toDouble() / dpr))
+                        .arg(prop == "size" ? 'x' : ',')
+                        .arg(qRound(m.captured(2).toDouble() / dpr));
+        }
+        if (popup) {
             applyPopupProps(*it, prop, v);
             continue;
         }
         if (!live_) continue;
-        skin::WinsetResult r = live_->winset(ctl.toStdString(), prop.toStdString() + "=" + v.toStdString());
+        // URL-encode the value before passing it to the DM winset parser: a
+        // semicolon or quote inside a JS value must never become another pair.
+        const auto encoded = QUrl::toPercentEncoding(v);
+        skin::WinsetResult r = live_->winset(ctl.toStdString(), prop.toStdString() + "=" + encoded.toStdString(), true);
         LOGB("winset %s%s%s=%s -> applied %zu unhandled %zu\n", ctl.toUtf8().constData(), ctl.isEmpty() ? "" : ".",
              prop.toUtf8().constData(), v.left(40).toUtf8().constData(), r.applied.size(), r.unhandled.size());
     }
@@ -714,6 +768,14 @@ QString BrowseHost::applyWinset(BrowserPane*, const model::ByondUrl& u) {
 
 QString BrowseHost::handleCall(BrowserPane* from, const model::ByondUrl& u) {
     QString js;
+    if (from && live_) {
+        const auto identity = from->property("runtimeIdentity").toULongLong();
+        if (identity) {
+            auto snap = live_->snapshot();
+            const auto* c = snap.tree.byName(from->name.toStdString());
+            if (!c || c->runtimeIdentity != identity) return {};
+        }
+    }
     if (u.path.empty()) {
         // A Topic. A bare "?" href arrives as "byond://?..".
         QString q;

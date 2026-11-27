@@ -1,6 +1,7 @@
 // Which account a client run plays as (pager/clientaccount.h). Each case runs under a scratch HOME holding a signed-in
 // pager.json and identity file, so a guest run must ignore that record.
 #include <QtTest>
+#include "tests/testmain.h"
 #include <QTemporaryDir>
 #include <set>
 #include "account/login.h"
@@ -85,7 +86,7 @@ private slots:
     void nonPlayerRunIsAGuest() {  // only a player launch reads the signed-in account
         QTemporaryDir home;
         signIn(home);
-        AccountRequest r;  // not a player launch: --state-dir, --connect, --screenshot, a test hook
+        AccountRequest r;  // not a player launch: --state-dir, --connect, a test hook
         bool minted = false;
         AccountDecision d = pager::decideAccount(r, [&](const std::string&, std::string*) {
             minted = true;
@@ -194,14 +195,12 @@ private slots:
         // Qt's arguments counted for the +connect bound, never a target: `+connect h:1 -platform offscreen`
         QVERIFY(isPagerAccount(launch({"dreamseeker", "+connect", "h:1", "-platform", "offscreen"}, false, {2, 3})));
     }
-    void stateDirScreenshotAndHooksAreGuests() {
+    void stateDirAndHooksAreGuests() {
         QTemporaryDir home;
         signIn(home);
         QVERIFY(isGuest(launch({"dreamseeker", "byond://h:1", "-pager", "--state-dir", "/tmp/x"})));
         QVERIFY(isGuest(launch({"dreamseeker", "byond://h:1", "--state-dir=/tmp/x"})));
-        QVERIFY(isGuest(launch({"fugue-qt", "h:1", "--screenshot", "out.png", "--after", "3"})));
-        QVERIFY(isGuest(launch({"fugue-qt", "h:1", "--screenshot=out.png"})));
-        QVERIFY(isGuest(launch({"dreamseeker", "byond://h:1"}, true)));  // FUGUE_AUTO_PICK / FUGUE_AUTO_RIGHTCLICK set
+        QVERIFY(isGuest(launch({"dreamseeker", "byond://h:1"}, true)));  // test hook
         QCOMPARE(launch({"dreamseeker", "h:1", "--state-dir", "d"}).req.why, std::string("--state-dir"));
         // a Qt argument that LOOKS like Fugue's is Qt's: removed before the parse, so it isolates nothing
         QVERIFY(isPagerAccount(launch({"dreamseeker", "h:1", "-style", "--state-dir"}, false, {1, 2})));
@@ -213,7 +212,7 @@ private slots:
                  {"fugue-qt", "client", "--connect", "h:1", "--account", kKey,
                   "--no-pacing"},  // the pager's join (launch.cpp)
                  {"fugue-qt", "--connect", "h:1", "--state-dir", "d", "--account=" + kKey},
-                 {"dreamseeker", "h:1", "--screenshot", "o.png", "--account", kKey}}) {
+                 {"dreamseeker", "h:1", "--account", kKey}}) {
             Run r = launch(a);
             QCOMPARE(int(r.d.kind), int(AccountDecision::Account));
             QVERIFY(!r.d.fromPager);
@@ -230,5 +229,5 @@ private slots:
     }
 };
 
-QTEST_GUILESS_MAIN(PagerClientAccount)
+FUGUE_TEST_GUILESS_MAIN(PagerClientAccount)
 #include "pager_clientaccount_test.moc"

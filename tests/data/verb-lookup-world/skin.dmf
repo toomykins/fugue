@@ -1,0 +1,20 @@
+window "main"
+    elem "main"
+        type = MAIN
+        size = 640x440
+        title = "Verb lookup fixture"
+        is-default = true
+        statusbar = false
+    elem "browser"
+        type = BROWSER
+        pos = 0,0
+        size = 640x400
+        anchor1 = 0,0
+        anchor2 = 100,100
+    elem "input"
+        type = INPUT
+        pos = 0,400
+        size = 640x40
+        anchor1 = 0,100
+        anchor2 = 100,100
+        is-default = true

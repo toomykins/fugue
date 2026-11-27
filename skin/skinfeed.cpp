@@ -122,7 +122,7 @@ void SkinFeed::onResource(uint32_t id, const std::string& name, ByteSpan data) {
 }
 
 // Answers a winget the way stock DreamSeeker does. A null or "" control is the client-as-a-whole winget
-// (LiveSkin::wingetGlobal), and a wildcard control is answered by LiveSkin::wingetWildcard. Stock sends a null
+// (LiveSkin::wingetGlobal), and wildcards / control lists by LiveSkin::wingetWildcard. Stock sends a null
 // control as an empty control string, with no flag. The arm is chosen as DreamSeeker chooses it (typeArm).
 std::string SkinFeed::answer(const WingetQuery& q) const {
     if (typeArm(q)) {
@@ -138,7 +138,8 @@ std::string SkinFeed::answer(const WingetQuery& q) const {
             v = version_;
             return true;
         });
-    if (hasWildcard(q.control)) return live_->wingetWildcard(q.control, q.prop);
+    if (hasWildcard(q.control) || q.control.find_first_of(";&") != std::string::npos)
+        return live_->wingetWildcard(q.control, q.prop);
     return live_->wingetParams(q.control, q.prop);
 }
 

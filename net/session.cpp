@@ -1,5 +1,7 @@
 #include "net/session.h"
+#include "net/measuretext.h"
 #include "platform/socket.h"
+#include "platform/readwait.h"
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
@@ -12,8 +14,6 @@
 #include "net/guest.h"
 #include "net/handshake.h"
 #include "net/seq.h"
-#include "proto/messages.h"
-#include "render/dsmaptext.h"
 
 namespace fugue::net {
 namespace {
@@ -34,6 +34,7 @@ std::string cstrAt(ByteSpan b, size_t& p, bool& ok) {
 }  // namespace
 
 Session::Session(SessionConfig cfg, Log log) : cfg_(std::move(cfg)), log_(std::move(log)) {
+    readWait_ = std::make_unique<socket::ReadWait>();
     cfg_.stateDirExplicit = !cfg_.stateDir.empty();
     if (cfg_.stateDir.empty()) cfg_.stateDir = defaultStateDir();
     resetResources();
@@ -59,6 +60,7 @@ Session::~Session() {
 }
 
 void Session::close() {
+    readWait_->reset();
     if (fd_ >= 0) {
         socket::close(fd_);
         fd_ = -1;
@@ -225,6 +227,7 @@ std::string Session::readHandshakeReply(const Handshake& hs, HandshakeReply& hr)
         return "handshake reply type " + std::to_string(reply.type) + " did not decrypt under the base key";
     if (!parseHandshakeReply(plain, hr)) return "handshake reply too short";
     key_ = loginKey(base, hr.nonce);
+    wideVerbIds_ = hr.wideVerbIds();  // reassigned on every handshake, including reboot/relogin
     logf("handshake ok: server major " + std::to_string(hr.major) + ", nonce " + std::to_string(hr.nonce.size()) +
          " bytes, K_login derived");
     return "";
@@ -357,13 +360,14 @@ void Session::run(std::chrono::milliseconds duration) {
             wake_ = false;
             return;
         }
-        // Rounded up to whole ms: truncating would turn the last sub-millisecond of each call into a poll(0) spin.
-        socket::PollFd p{fd_, POLLIN, 0};
-        int r = socket::poll(&p, 1, pollTimeoutMs(std::chrono::duration_cast<std::chrono::microseconds>(end - now)));
+        // Socket readiness OR the precise run deadline. On Windows WSAPoll's coarse
+        // timeout alone would cap a 100 Hz map schedule at roughly 70 Hz.
+        int r = readWait_->wait(fd_, std::chrono::ceil<std::chrono::microseconds>(end - now));
         if (r < 0 && errno == EINTR) continue;
         if (r > 0) {
             uint8_t buf[65536];
             auto n = socket::recv(fd_, buf, sizeof buf, 0);
+            if (n < 0 && (errno == EAGAIN || errno == EINTR)) continue;
             if (n <= 0) {
                 st_.serverClosed = true;
                 st_.closeReason = n == 0 ? "server closed the connection" : std::strerror(errno);
@@ -546,15 +550,7 @@ void Session::handle(uint16_t type, ByteSpan body) {
             break;
         }
         case S2C::MeasureText: {
-            // Reply [w u16][h u16][id u32], laid out as render/dsmaptext.h does. A malformed body gets no reply.
-            proto::MeasureText req;
-            try {
-                req = proto::decodeMeasureText(body);
-            } catch (const std::exception&) { break; }
-            std::string rb = render::dsMeasureTextReplyBody(req, mapStyle_ ? mapStyle_() : std::string());
-            Bytes r(rb.begin(), rb.end());
-            sendFrame(C2S::MeasureText, r);
-            st_.promptsAnswered++;
+            if (const auto reply = measureTextReply(body, textMeasure_)) sendFrame(C2S::MeasureText, *reply);
             break;
         }
         case S2C::Alert: {

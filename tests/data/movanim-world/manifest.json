@@ -1,5 +1,7 @@
 {
   "clock_unix_ns": 1760400000000000000,
+  "tick_ns": 100000000,
+  "start_tick": 11,
   "date": "2026-10-18",
   "eye": {
     "x": 11,
@@ -7,7 +9,7 @@
     "z": 1
   },
   "frames": 844,
-  "note": "frames.txt = every s2c frame except 0x009f; res/\u003cresID\u003e = verified resource bytes (net.ResID(bytes)==name); clock_unix_ns = the pinned render clock (renderab is static)",
+  "note": "frames.txt retains stock-DD s2c frames except 0x009f; res/<resID> contains retained resource bytes. Replay uses clock_unix_ns as a fixed origin, not a stock presentation timestamp. Each @N chat marker assigns arrival tick N to following frames; tick_ns follows world fps = 10, and start_tick is the first chain's recorded tick. Resource arrival times and stock rendered outputs were not retained. Numeric, colour and width expectations remain in movanim_test.cpp, including six historical rounding corrections documented in README.md.",
   "resource_bytes": 493,
   "resource_names": {
     "9fdb5839": "probe.dmi"

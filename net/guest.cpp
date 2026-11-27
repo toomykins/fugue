@@ -48,7 +48,7 @@ std::string defaultStateDir() {
 std::string loadOrCreateSid(const std::string& dir, std::string* err) {
     namespace fs = std::filesystem;
 #ifdef _WIN32
-    const fs::path p = fs::u8path(dir) / "sid";
+    const fs::path p = platform::pathFromUtf8(dir) / "sid";
 #else
     fs::path p = fs::path(dir) / "sid";
 #endif
@@ -69,7 +69,7 @@ std::string loadOrCreateSid(const std::string& dir, std::string* err) {
     for (auto& x : raw) x = uint8_t(rd());
     std::string sid = hexEncode(raw);
 #ifdef _WIN32
-    fs::create_directories(fs::u8path(dir).parent_path(), ec);
+    fs::create_directories(platform::pathFromUtf8(dir).parent_path(), ec);
     platform::mkdir(dir.c_str(), 0700);
     platform::privateWrite(dir + "/sid", sid + "\n", err);
     return sid;

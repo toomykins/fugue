@@ -21,9 +21,10 @@ constexpr uint8_t kArgView = 0x01, kArgOView = 0x02, kArgRange = 0x05, kArgORang
 constexpr uint8_t kArgDefaultRange = 0x7d;
 constexpr uint32_t kTypeMob = 0x0001, kTypeObj = 0x0002, kTypeTurf = 0x0020;
 
-bool inRangeOf(const AtomTarget& t, int px, int py, bool havePos, int n) {
+bool inRangeOf(const AtomTarget& t, int px, int py, bool havePos, const ViewReach& r) {
     if (!havePos || (t.x == 0 && t.y == 0)) return false;  // a HUD atom has no cell, so no range scope admits it
-    return std::abs(t.x - px) <= n && std::abs(t.y - py) <= n;
+    const int dx = t.x - px, dy = t.y - py;
+    return dx >= -r.west && dx <= r.east && dy >= -r.south && dy <= r.north;
 }
 }  // namespace
 
@@ -43,8 +44,8 @@ VerbDef verbDefOf(const proto::Verb& v) {
 
 namespace {
 // The `set src` clause alone (see verbmenu.h); verbAdmitsTarget adds the popup-menu flag gates.
-bool srcClauseAdmits(const VerbDef& e, const AtomTarget& t, int px, int py, bool havePos, int view) {
-    auto range = [&] { return e.head == kHeadDefaultView ? view : int(e.head); };
+bool srcClauseAdmits(const VerbDef& e, const AtomTarget& t, int px, int py, bool havePos, const ViewReach& view) {
+    auto range = [&] { return e.head == kHeadDefaultView ? view : ViewReach(int(e.head)); };
     if (e.src == kVerbSrcDefault) {
         switch (t.kind) {
             case kTargetMob: return false;  // a /mob verb's default src IS usr: an identity clause, never a row
@@ -72,7 +73,7 @@ bool srcClauseAdmits(const VerbDef& e, const AtomTarget& t, int px, int py, bool
 }
 }  // namespace
 
-bool verbAdmitsTarget(const VerbDef& e, const AtomTarget& t, int px, int py, bool havePos, int view) {
+bool verbAdmitsTarget(const VerbDef& e, const AtomTarget& t, int px, int py, bool havePos, const ViewReach& view) {
     if (!t.targetable()) return false;
     uint32_t fl = e.flagWord();
     if ((fl & kVerbFlagNoPopup) || (fl & kVerbFlagHidden)) return false;
@@ -81,7 +82,7 @@ bool verbAdmitsTarget(const VerbDef& e, const AtomTarget& t, int px, int py, boo
 
 namespace {
 // The argument clause alone (see verbmenu.h); verbAdmitsAsArgument adds the popup-menu flag gates.
-bool argClauseAdmits(const VerbArgSpec& a, const AtomTarget& t, int px, int py, bool havePos, int view) {
+bool argClauseAdmits(const VerbArgSpec& a, const AtomTarget& t, int px, int py, bool havePos, const ViewReach& view) {
     uint32_t want = 0;
     switch (t.kind) {
         case kTargetMob: want = kTypeMob; break;
@@ -90,7 +91,7 @@ bool argClauseAdmits(const VerbArgSpec& a, const AtomTarget& t, int px, int py, 
         default: return false;
     }
     if (!(a.typeMask & want)) return false;
-    auto range = [&] { return a.filter == kArgDefaultRange ? view : int(a.filter); };
+    auto range = [&] { return a.filter == kArgDefaultRange ? view : ViewReach(int(a.filter)); };
     switch (a.filterKind) {
         // view / range admit what the player carries (a held item has no cell, so the range test alone would refuse it).
         // The o-forms never do, and exclude usr itself, but keep usr's own turf and what stands on it.
@@ -113,7 +114,7 @@ bool argClauseAdmits(const VerbArgSpec& a, const AtomTarget& t, int px, int py, 
 }
 }  // namespace
 
-bool verbAdmitsAsArgument(const VerbDef& e, const AtomTarget& t, int px, int py, bool havePos, int view) {
+bool verbAdmitsAsArgument(const VerbDef& e, const AtomTarget& t, int px, int py, bool havePos, const ViewReach& view) {
     if (!t.targetable() || e.args.empty()) return false;
     uint32_t fl = e.flagWord();
     if ((fl & kVerbFlagNoPopup) || (fl & kVerbFlagHidden)) return false;
@@ -137,17 +138,23 @@ bool playerPos(const World& w, int& x, int& y) {
 
 int worldView(const World& w) { return w.bounds.view > 0 ? w.bounds.view : 5; }
 
+ViewReach menuViewReach(const World& w) {
+    const int width = w.bounds.viewW, height = w.bounds.viewH;
+    if (width <= 0 || height <= 0 || width > 255 || height > 255) return ViewReach(worldView(w));
+    return ViewReach((width - 1) / 2, width / 2, (height - 1) / 2, height / 2);
+}
+
 namespace {
 
-const std::vector<uint16_t>& verbIdsOf(const World& w, uint32_t appid) {
-    static const std::vector<uint16_t> kNone;
+const std::vector<uint32_t>& verbIdsOf(const World& w, uint32_t appid) {
+    static const std::vector<uint32_t> kNone;
     auto it = w.appearances.find(appid);
     return it == w.appearances.end() ? kNone : it->second.fields.verbs;
 }
 
 // The verbs the player carries: the client appearance's verbs UNION the own mob's when knowable, else the own mob's alone.
-std::vector<uint16_t> ownVerbIds(const World& w) {
-    std::vector<uint16_t> own;
+std::vector<uint32_t> ownVerbIds(const World& w) {
+    std::vector<uint32_t> own;
     // The own mob is keyed selfRef | kRegistryA, or before its WorldState its MobBind; the bare key is an obj ref.
     std::vector<uint32_t> mobApps;
     if (w.haveSelf) {
@@ -158,11 +165,11 @@ std::vector<uint16_t> ownVerbIds(const World& w) {
         }
     }
     if (w.haveClientAppid && w.appearances.count(w.clientAppid) && !mobApps.empty()) {
-        std::set<uint16_t> scope;
-        for (uint16_t id : verbIdsOf(w, w.clientAppid)) scope.insert(id);
+        std::set<uint32_t> scope;
+        for (uint32_t id : verbIdsOf(w, w.clientAppid)) scope.insert(id);
         for (uint32_t a : mobApps)
-            for (uint16_t id : verbIdsOf(w, a)) scope.insert(id);
-        if (!scope.empty()) return std::vector<uint16_t>(scope.begin(), scope.end());
+            for (uint32_t id : verbIdsOf(w, a)) scope.insert(id);
+        if (!scope.empty()) return std::vector<uint32_t>(scope.begin(), scope.end());
     }
     if (!w.haveSelf) return own;
     auto m = w.atoms.find(w.selfRef | kRegistryA);
@@ -170,14 +177,18 @@ std::vector<uint16_t> ownVerbIds(const World& w) {
     return verbIdsOf(w, m->second.appid);
 }
 
-// The category a verb sorts under in the submenu: its own, or "Commands" when uncategorized. "Commands" is DM's
-// client.default_verb_category default, which the MouseSubs carries; a world that changes it is not modelled.
+// The category a verb sorts under in the submenu: its own, or "Commands" when it sets none. "Commands" is DM's
+// client.default_verb_category default, which the MouseSubs carries; a world that changes it is not modelled. A verb
+// with `set category = null` (an empty category and kVerbFlagNullCategory) sorts as the empty category, before every
+// other (stock 516.1689, tests/data/menu-world verbs: nullcat first, then acat in "Alpha", the uncategorized verbs,
+// and zcat in "Zeta" last).
 const std::string& menuCategory(const VerbDef& v) {
-    static const std::string kDefault = "Commands";
-    return v.category.empty() ? kDefault : v.category;
+    static const std::string kDefault = "Commands", kNull;
+    if (v.category.empty()) return (v.flagWord() & kVerbFlagNullCategory) ? kNull : kDefault;
+    return v.category;
 }
 
-bool dict(const World& w, uint16_t id, VerbDef& out) {
+bool dict(const World& w, uint32_t id, VerbDef& out) {
     auto it = w.verbById.find(id);
     if (it == w.verbById.end()) return false;
     out = verbDefOf(it->second);
@@ -229,10 +240,10 @@ std::vector<MenuVerb> atomMenu(const World& w, uint32_t appid, AtomTarget target
     if (!target.targetable()) return out;
     int px = 0, py = 0;
     bool havePos = playerPos(w, px, py);
-    int view = worldView(w);
+    const ViewReach view = menuViewReach(w);
     if (target.kind == kTargetMob && w.haveSelf && target.ref == w.selfRef) target.isSelfMob = true;
-    std::set<uint16_t> seen;
-    for (uint16_t id : verbIdsOf(w, appid)) {
+    std::set<uint32_t> seen;
+    for (uint32_t id : verbIdsOf(w, appid)) {
         if (seen.count(id)) continue;
         VerbDef e;
         if (!dict(w, id, e)) continue;  // not defined yet: the dictionary arrives just in time
@@ -240,7 +251,7 @@ std::vector<MenuVerb> atomMenu(const World& w, uint32_t appid, AtomTarget target
         seen.insert(id);
         out.push_back({e, false});
     }
-    for (uint16_t id : ownVerbIds(w)) {
+    for (uint32_t id : ownVerbIds(w)) {
         if (seen.count(id)) continue;
         VerbDef e;
         if (!dict(w, id, e)) continue;
@@ -364,8 +375,8 @@ VerbSrcRank srcRank(const World& w, VerbSrc src) {
             const std::vector<uint32_t>* mobs = cellList(w.cellMobs, cell);
             const std::vector<uint32_t>* l = mob ? mobs : cellList(w.cellObjs, cell);
             if (l)
-                if (auto at = std::find(l->rbegin(), l->rend(), src.ref); at != l->rend())
-                    r.cell = int(l->rend() - at - 1) + (mob || !mobs ? 0 : int(mobs->size()));
+                if (auto position = std::find(l->rbegin(), l->rend(), src.ref); position != l->rend())
+                    r.cell = int(l->rend() - position - 1) + (mob || !mobs ? 0 : int(mobs->size()));
         }
     } else if (src.kind == kTargetTurf) {
         int x = int(src.ref & 0xffff) + 1, y = int(src.ref >> 16) + 1;
@@ -381,18 +392,18 @@ VerbSrcRank srcRank(const World& w, VerbSrc src) {
     return r;
 }
 
-std::vector<uint16_t> srcAdmittedVerbIds(const World& w) {
-    std::set<uint16_t> out;
+std::vector<uint32_t> srcAdmittedVerbIds(const World& w) {
+    std::set<uint32_t> out;
     int px = 0, py = 0;
     bool havePos = playerPos(w, px, py);
     int view = worldView(w);
     // Each verb is parsed once per call, and each appearance's verb list resolved once: thousands of atoms share a few appearances.
-    std::unordered_map<uint16_t, std::optional<VerbDef>> defs;
+    std::unordered_map<uint32_t, std::optional<VerbDef>> defs;
     std::unordered_map<uint32_t, std::vector<const VerbDef*>> carried;
     auto carries = [&](uint32_t appid) -> const std::vector<const VerbDef*>& {
         auto [it, fresh] = carried.try_emplace(appid);
         if (!fresh) return it->second;
-        for (uint16_t id : verbIdsOf(w, appid)) {
+        for (uint32_t id : verbIdsOf(w, appid)) {
             auto [d, parsed] = defs.try_emplace(id);
             if (parsed) {
                 VerbDef e;
@@ -471,7 +482,7 @@ std::vector<uint16_t> srcAdmittedVerbIds(const World& w) {
     return {out.begin(), out.end()};
 }
 
-std::vector<VerbSrcCandidate> verbSrcCandidates(const World& w, uint16_t id, bool everyAtom) {
+std::vector<VerbSrcCandidate> verbSrcCandidates(const World& w, uint32_t id, bool everyAtom) {
     std::vector<VerbSrcCandidate> out;
     // Does an appearance carry the verb? Memoised per call, since many atoms share an appearance.
     std::unordered_map<uint32_t, bool> memo;
@@ -479,7 +490,7 @@ std::vector<VerbSrcCandidate> verbSrcCandidates(const World& w, uint16_t id, boo
         auto m = memo.find(appid);
         if (m != memo.end()) return m->second;
         bool yes = false;
-        for (uint16_t v : verbIdsOf(w, appid))
+        for (uint32_t v : verbIdsOf(w, appid))
             if (v == id) {
                 yes = true;
                 break;
@@ -761,9 +772,9 @@ uint32_t dmRefOf(const World& w, const AtomTarget& t) {
     return 0;
 }
 
-bool ownVerbSrc(const World& w, uint16_t id, VerbSrc& out) {
+bool ownVerbSrc(const World& w, uint32_t id, VerbSrc& out) {
     auto carries = [&](uint32_t appid) {
-        for (uint16_t v : verbIdsOf(w, appid))
+        for (uint32_t v : verbIdsOf(w, appid))
             if (v == id) return true;
         return false;
     };
@@ -785,6 +796,8 @@ bool ownVerbSrc(const World& w, uint16_t id, VerbSrc& out) {
     out = {kTargetMob, w.selfRef};
     return true;
 }
+
+std::string menuVerbLabel(const VerbDef& v) { return v.name; }
 
 std::vector<size_t> listedMenuAtoms(const std::vector<size_t>& verbCounts) {
     std::vector<size_t> out;

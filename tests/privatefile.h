@@ -10,7 +10,7 @@ inline bool isPrivateFile(const std::string& path) {
     PSID owner = nullptr;
     PACL acl = nullptr;
     PSECURITY_DESCRIPTOR sd = nullptr;
-    auto wide = std::filesystem::u8path(path).wstring();
+    auto wide = fugue::platform::pathFromUtf8(path).wstring();
     if (GetNamedSecurityInfoW(wide.data(), SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION,
                               &owner, nullptr, &acl, nullptr, &sd) != ERROR_SUCCESS)
         return false;

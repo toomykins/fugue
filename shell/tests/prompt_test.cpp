@@ -16,6 +16,7 @@
 #include <QTableWidget>
 #include <QTextEdit>
 #include <QtTest>
+#include "tests/testmain.h"
 #include "model/prompt.h"
 #include "net/input.h"
 #include "shell/browserpane.h"
@@ -506,19 +507,6 @@ private slots:
         key(cb.lineEdit(), Qt::Key_V, Qt::ControlModifier);
         QCOMPARE(cb.lineEdit()->text(), QString("a b"));
     }
-    void middleClickPastesThePrimarySelection() {
-        QClipboard* cb = QGuiApplication::clipboard();
-        if (!cb->supportsSelection())
-            QSKIP("this platform has no primary selection (offscreen QPA): the middle-click arm needs X11");
-        cb->setText("PRIMARY", QClipboard::Selection);
-        cb->setText("CLIPBOARD", QClipboard::Clipboard);
-        QLineEdit le;
-        wirePaste(&le);
-        le.show();
-        QVERIFY(QTest::qWaitForWindowExposed(&le));
-        QTest::mouseClick(&le, Qt::MiddleButton, Qt::NoModifier, QPoint(5, le.height() / 2));
-        QCOMPARE(le.text(), QString("PRIMARY"));
-    }
     void pasteIntoViaApiHonoursTheMode() {  // pasteInto(Selection) is the testable half of the middle click
         QClipboard* cb = QGuiApplication::clipboard();
         QLineEdit le;
@@ -662,54 +650,66 @@ private slots:
         QCOMPARE(row.at(3).at(4).toBool(), true);
         QCOMPARE(row.at(4).at(4).toBool(), false);
     }
-    // An atom row draws its icon cell at the head of the value column, and a click in it counts as stock DreamSeeker counts it (render/scene.h statRowIcon):
-    // a click 10 px in from the left and 10 px up from the bottom of a 32 px icon reads icon-x=10;icon-y=10; its corners read 1,1 and 32,32;
-    // a click on the name right of it reads icon-x=70.
-    void atomRowDrawsItsIconAndCountsClicksInIt() {
+    void thumbnailsClicksSizingReuseAndReplacement() {
         StatPanelWidget w;
-        w.resize(400, 200);
+        w.resize(500, 240);
         w.show();
         QVERIFY(QTest::qWaitForWindowExposed(&w));
-        QImage red(32, 32, QImage::Format_RGBA8888);
-        red.fill(QColor(255, 0, 0));
         StatView v;
-        v.tabs = {"Tile"};
-        v.rows = {{"", "o_red", true, red}, {"", "o_noicon", true, {}}, {"Label:", "o_red", true, red}};
+        v.tabs = {"Contents"};
+        v.generation = 15;
+        v.rows = {{"", "token", true}, {"Text", "42", false}};
+        v.rows[0].thumbnail = QImage(32, 32, QImage::Format_ARGB32);
+        v.rows[0].thumbnail.fill(Qt::red);
+        v.rows[0].identity = 100;
         w.setView(v);
-        w.setControlId("infowindow.info");
-        QRect c = w.table()->visualRect(w.table()->model()->index(0, 1));
-        QVERIFY2(c.height() >= 33, "an icon row holds its 32 px cell plus stock's 1 px");
-        QImage shot = w.table()->viewport()->grab().toImage();
-        QCOMPARE(shot.pixelColor(c.left() + 10, c.top() + 10), QColor(255, 0, 0));
-        QCOMPARE(shot.pixelColor(c.left() + 31, c.top() + 31), QColor(255, 0, 0));
-        QVERIFY(shot.pixelColor(c.left() + 33, c.top() + 10) != QColor(255, 0, 0));  // the cell ends; the name follows
-        QRect lc = w.table()->visualRect(w.table()->model()->index(2, 1));
-        QCOMPARE(shot.pixelColor(lc.left() + 10, lc.top() + 10),
-                 QColor(255, 0, 0));  // a labelled row: the icon in the VALUE column
-        QSignalSpy row(&w, &StatPanelWidget::rowClicked);
-        auto click = [&](QPoint p) {
-            QTest::mouseClick(w.table()->viewport(), Qt::LeftButton, Qt::NoModifier, p);
-            QTest::qWait(500);
-        };
-        click(QPoint(c.left() + 9, c.top() + 22));
-        click(QPoint(c.left(), c.top() + 31));
-        click(QPoint(c.left() + 31, c.top()));
-        click(QPoint(c.left() + 69, c.top() + 12));
-        QRect nc = w.table()->visualRect(w.table()->model()->index(1, 1));
-        click(QPoint(nc.left() + 5, nc.center().y()));
-        QCOMPARE(row.count(), 5);
-        auto xy = [&](int i) {
-            return QString("%1:%2,%3")
-                .arg(row.at(i).at(5).toBool())
-                .arg(row.at(i).at(6).toInt())
-                .arg(row.at(i).at(7).toInt());
-        };
-        QCOMPARE(xy(0), QString("1:10,10"));
-        QCOMPARE(xy(1), QString("1:1,1"));
-        QCOMPARE(xy(2), QString("1:32,32"));
-        QCOMPARE(xy(3), QString("1:70,20"));
-        QCOMPARE(row.at(4).at(0).toInt(), 1);
-        QCOMPARE(row.at(4).at(5).toBool(), false);  // nothing drawn: no icon-x/icon-y
+        QSignalSpy click(&w, &StatPanelWidget::rowClicked);
+        auto cell = [&] { return w.table()->visualRect(w.table()->model()->index(0, 1)); };
+        const QRect rect = cell();
+        QVERIFY(rect.height() >= 36);
+        QVERIFY(rect.height() <= 40);  // logical sizing at any DPR
+        QVERIFY(w.table()->rowHeight(1) < w.table()->rowHeight(0));
+        const QPoint icon(rect.left() + 2, rect.top() + (rect.height() - 32) / 2);
+        QTest::mouseClick(w.table()->viewport(), Qt::LeftButton, Qt::AltModifier, icon + QPoint(9, 22));
+        QCOMPARE(click.count(), 1);
+        QCOMPARE(click[0][0].toInt(), 0);
+        QCOMPARE(click[0][3].toInt(), int(StatPanelWidget::ModAlt));
+        QCOMPARE(click[0][5].toULongLong(), quint64(15));
+        QVERIFY(click[0][6].toBool());
+        QCOMPARE(click[0][7].toInt(), 10);
+        QCOMPARE(click[0][8].toInt(), 10);
+        QTest::mouseClick(w.table()->viewport(), Qt::MiddleButton, Qt::ControlModifier | Qt::ShiftModifier,
+                          icon + QPoint(69, 12));
+        QCOMPARE(click.count(), 2);
+        QCOMPARE(click[1][2].toString(), QString("middle"));
+        QCOMPARE(click[1][3].toInt(), int(StatPanelWidget::ModCtrl | StatPanelWidget::ModShift));
+        QCOMPARE(click[1][7].toInt(), 70);
+        QCOMPARE(click[1][8].toInt(), 20);  // text, not clamped
+        QTest::mouseDClick(w.table()->viewport(), Qt::LeftButton, Qt::NoModifier, icon + QPoint(9, 22));
+        QTest::mouseRelease(w.table()->viewport(), Qt::LeftButton, Qt::NoModifier, icon + QPoint(9, 22));
+        QCOMPARE(click.count(), 4);
+        QVERIFY(click[2][4].toBool());
+        QVERIFY(!click[3][4].toBool());
+        auto* item = w.table()->item(0, 1);
+        w.setView(v);
+        QCOMPARE(w.table()->item(0, 1), item);  // unchanged updates do not recreate items
+        QTest::mousePress(w.table()->viewport(), Qt::LeftButton, Qt::NoModifier, icon + QPoint(9, 22));
+        ++v.generation;
+        ++v.rows[0].identity;
+        w.setView(v);  // visually identical replacement
+        QTest::mouseRelease(w.table()->viewport(), Qt::LeftButton, Qt::NoModifier, icon + QPoint(9, 22));
+        QCOMPARE(click.count(), 4);
+        v.rows[0].thumbnail = {};
+        ++v.generation;
+        w.setView(v);
+        QVERIFY(w.table()->rowHeight(0) < rect.height());
+        QTest::mouseClick(w.table()->viewport(), Qt::LeftButton, Qt::NoModifier, cell().center());
+        QCOMPARE(click.count(), 5);
+        QVERIFY(!click[4][6].toBool());
+        v.rows.clear();
+        ++v.generation;
+        w.setView(v);
+        QCOMPARE(w.table()->rowCount(), 0);
     }
     void verbTabIsAFourColumnGridThatRunsVerbs() {
         StatPanelWidget w;
@@ -764,10 +764,43 @@ private slots:
     }
 };
 
-int main(int argc, char** argv) {
+#ifdef FUGUE_TEST_X11_PRIMARY_SELECTION
+class PrimarySelectionTest : public QObject {
+    Q_OBJECT
+private slots:
+    void initTestCase() {
+        QVERIFY2(QGuiApplication::platformName() == "xcb", "Primary-selection checks require the X11 xcb platform");
+        QVERIFY2(QGuiApplication::clipboard()->supportsSelection(), "The X11 clipboard must support primary selection");
+    }
+    void middleClickPastesThePrimarySelection() {
+        QClipboard* cb = QGuiApplication::clipboard();
+        cb->setText("PRIMARY", QClipboard::Selection);
+        cb->setText("CLIPBOARD", QClipboard::Clipboard);
+        QLineEdit le;
+        wirePaste(&le);
+        le.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&le));
+        QTest::mouseClick(&le, Qt::MiddleButton, Qt::NoModifier, QPoint(5, le.height() / 2));
+        QCOMPARE(le.text(), QString("PRIMARY"));
+    }
+};
+#endif
+
+template<class Test>
+static int runPromptTest(int argc, char** argv) {
     registerSchemes();
     QApplication app(argc, argv);
-    PromptTest t;
+    Test t;
     return QTest::qExec(&t, argc, argv);
 }
+
+int FUGUE_TEST_ENTRY(int argc, char** argv) {
+    return runPromptTest<PromptTest>(argc, argv);
+}
+
+#ifdef FUGUE_TEST_X11_PRIMARY_SELECTION
+int fugue_run_prompt_primary_selection(int argc, char** argv) {
+    return runPromptTest<PrimarySelectionTest>(argc, argv);
+}
+#endif
 #include "prompt_test.moc"

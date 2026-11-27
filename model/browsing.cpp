@@ -236,13 +236,13 @@ std::vector<RscRecord> parseBrowseRscFrame(ByteSpan body) {
     return v;
 }
 
-bool parsePageCall(const std::string& control, const std::string& rawValue, PageCall& out) {
+bool parsePageCall(const std::string& control, const std::string& rawValue, PageCall& out, bool includeOutput) {
     // Any "control:function" calls into the page, whatever the function; stock DreamSeeker never shows it as text.
     // The one exception is chat: vg's "browseroutput:output" is the chat page's own output() and stays chat.
     size_t colon = control.find(':');
     if (colon == std::string::npos) return false;
     std::string ctrl = control.substr(0, colon), fn = control.substr(colon + 1);
-    if (fn.empty() || fn == "output") return false;
+    if (fn.empty() || (!includeOutput && fn == "output")) return false;
     size_t dot = ctrl.rfind('.');
     std::string win = dot == std::string::npos ? ctrl : ctrl.substr(0, dot);
     if (win.empty()) return false;

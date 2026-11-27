@@ -1,0 +1,26 @@
+# Stock DreamSeeker x stock DreamDaemon 516.1689, 2026-11-24, world.dm here.
+# Driven by tools/stockprobe/stockprobe.py click (posted mouse messages; the open menu walked with posted arrow keys) and
+# read from the world's log. Points are client-area pixels of the 576x384 map. Stock draws the atom names of its menu
+# itself, so an entry is known by its place from the top and by what its verbs ran on.
+# part A: the menu a right click on a holder's vis_contents member lists, topmost first. Each entry is the verbs it
+# offers; the last entry is always the floor turf the holder stands on.
+# label	point	member	entries
+ghost	48,80	mob -	anywhere ; anywhere | near
+walker	112,80	mob 2,2,1	anywhere | near ; anywhere | near
+copied-turf	176,80	turf 18,1,1	anywhere | near ; anywhere | near
+far-turf	240,80	turf 3,3,2	anywhere ; anywhere | near
+# part B: a verb picked from an entry and the atom it ran on, as the world logged it (name and x,y,z; - is nothing
+# logged). member is what the holder's vis_contents holds: a mob (- for one with no loc) or a turf, at its own x,y,z.
+# label	member	entry	verb	ran_on
+ghost	mob -	1	anywhere	ghost 0,0,0
+walker	mob 2,2,1	1	near	walker 2,2,1
+walker	mob 2,2,1	1	anywhere	walker 2,2,1
+copied-turf	turf 18,1,1	1	anywhere	copied-turf 18,1,1
+copied-turf	turf 18,1,1	2	anywhere	floor 6,10,1
+far-turf	turf 3,3,2	1	anywhere	-
+far-turf	turf 3,3,2	2	anywhere	floor 8,10,1
+# part C: the left button pressed on jumper (336,80), whose MouseDown moves the mob to z 2 three ticks later, and
+# released at the same point two seconds after. The release is an ordinary one on the new z.
+# label	event	log
+jump	press	DOWN jumper | JUMPED z=2
+jump	release	CLIENT-UP object=The floor location=The floor control=main.map | UP floor loc=the floor | CLICK floor loc=the floor

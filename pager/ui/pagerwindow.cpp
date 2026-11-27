@@ -1234,19 +1234,6 @@ void PagerWindow::showPreferences() {
         prefsDetails_->setObjectName("prefsdetails");
         v->addWidget(prefsDetails_);
         connect(prefsDetails_, &QCheckBox::toggled, this, [this](bool on) { setDetailsVisible(on); });
-        prefsGpu_ = new QCheckBox("Use GPU rendering (experimental)", prefs_);
-        prefsGpu_->setObjectName("prefsgpu");
-        prefsGpu_->setToolTip(
-            "The same setting as the game's Client > Renderer menu. It applies from the next join; "
-            "a running game keeps its renderer unless you switch it there.");
-        v->addWidget(prefsGpu_);
-        connect(prefsGpu_, &QCheckBox::toggled, this, [this](bool on) {
-            std::string e;
-            if (setSavedRenderer(displayIni_.toStdString(), on, &e)) return;
-            setStatus("Could not save the renderer setting: " + Q(e), true);
-            const QSignalBlocker hold(prefsGpu_);
-            prefsGpu_->setChecked(!on);
-        });
         v->addWidget(sep(prefs_));
         auto* h2 = new QLabel("Cache", prefs_);
         h2->setStyleSheet("font-weight:bold;");
@@ -1275,21 +1262,12 @@ void PagerWindow::showPreferences() {
     prefs_->raise();
 }
 QDialog* PagerWindow::preferencesDialog() const { return prefs_; }
-void PagerWindow::setRendererSettings(const QString& displayIni) {
-    displayIni_ = displayIni;
-    updatePrefs();
-}
 
 void PagerWindow::updatePrefs() {
     if (!prefs_) return;
     {
         const QSignalBlocker hold(prefsDetails_);
         prefsDetails_->setChecked(detailsVisible());
-    }
-    prefsGpu_->setVisible(!displayIni_.isEmpty());
-    if (!displayIni_.isEmpty()) {  // re-read: the game's own menu may have changed it
-        const QSignalBlocker hold(prefsGpu_);
-        prefsGpu_->setChecked(savedRendererGpu(displayIni_.toStdString()));
     }
     // Fugue never keeps the password: the identity is the sign-in, and it does not expire on its own.
     QString acct;

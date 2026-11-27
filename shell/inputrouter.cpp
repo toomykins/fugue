@@ -155,7 +155,7 @@ Route routeCommand(const std::string& command, const std::string& keyName, bool 
         r.text = line;
         return r;
     }  // trailing spaces belong to a command_text argument
-    size_t sp = cmd.find(' ');
+    size_t sp = cmd.find_first_of(" \t");
     std::string verb = lower(cmd.substr(0, sp));
     static const struct {
         const char* name;
@@ -165,13 +165,19 @@ Route routeCommand(const std::string& command, const std::string& keyName, bool 
     // A `.northwest` macro is the stock move command, not a walk. The server answers it by calling client.Northwest(),
     // which SS13 forks override: vg's Northwest() treats the hotkey as a drop. Stock DreamSeeker never routes it to
     // the held-key MoveKey verb, so it is sent as the sub-0 move.
+    // With anything after it the command does nothing (stock 516.1689: `.north 3` calls no client proc).
     for (auto& d : dirs)
-        if (verb == d.name) {
+        if (verb == d.name && sp == std::string::npos) {
             r.kind = Route::Move;
             r.dir = d.dir;
             r.down = !up;
             return r;
         }
+    if (verb == ".screenshot") {
+        r.kind = Route::Screenshot;
+        r.text = sp == std::string::npos ? "" : lower(trim(cmd.substr(sp)));
+        return r;
+    }
     if (verb == ".quit") {
         r.kind = Route::Quit;
         return r;
@@ -180,13 +186,7 @@ Route routeCommand(const std::string& command, const std::string& keyName, bool 
         r.kind = Route::Reconnect;
         return r;
     }
-    if (verb == ".screenshot") {  // the Client menu and F2 / Shift+F2 (semantics in shell/screenshot.h)
-        r.kind = Route::Screenshot;
-        if (sp != std::string::npos && lower(trim(cmd.substr(sp))) == "auto") r.text = "auto";
-        return r;
-    }
-    // Stock DreamSeeker's own command table lists both next to `.screenshot`: a skin menu item `.macros` opens the
-    // Macros dialog and `.options` the Options and Messages window (skin/usermacros.h).
+    // Client-side dialogs (skin/usermacros.h).
     if (verb == ".macros") {
         r.kind = Route::Macros;
         return r;
@@ -269,7 +269,10 @@ std::vector<std::string> macroCommandLines(const std::string& command) {
 
 Route routeWorldCommand(const std::string& command, const SkinLookup& lookup) {
     Route r = routeCommand(command, "", false, lookup);
-    if (r.kind == Route::Unsupported) r.kind = Route::Command;
+    if (r.kind != Route::Unsupported) return r;
+    // A malformed `.output` is still the client's own command, never a verb.
+    const std::string line = trim(command);
+    if (lower(line.substr(0, line.find_first_of(" 	"))) != ".output") r.kind = Route::Command;
     return r;
 }
 

@@ -1,9 +1,9 @@
 // S2C::Appearance: atom appearance, interned by appid.
-// Wire layout (516, wide appearance ids u32, narrow verb ids u16):
+// Wire layout (516, wide appearance ids u32, negotiated verb ids u16/u32):
 //   [appid u32][name cstr][suffix cstr][icon_res u32][icon_state cstr][text cstr][maptext cstr]
 //   [maptext_w u16][maptext_h u16][maptext_x s16][maptext_y s16][dir u8][appearance_flags u32]
 //   3 x [tag u8 (+ id u32 iff tag == 2)]  [icon_ref u32]
-//   [nverbs u16][verb u16 x n] [noverlays u16][u32 x n] [nunderlays u16][u32 x n]
+//   [nverbs u16][verb u16/u32 x n] [noverlays u16][u32 x n] [nunderlays u16][u32 x n]
 //   [layer f32][screen_loc cstr] [vars_mask: u8, or u32 re-read from the same offset iff first byte & 0x80]
 //   payloads for each set mask bit in ascending bit order (see varWidth below).
 //
@@ -89,7 +89,7 @@ std::vector<Appearance::Filter> readFilters(Reader& r) {
 
 }  // namespace
 
-Appearance decodeAppearance(ByteSpan body) {
+Appearance decodeAppearance(State& st, ByteSpan body) {
     Reader r(body);
     Appearance m;
     m.appid = r.u32();
@@ -111,7 +111,8 @@ Appearance decodeAppearance(ByteSpan body) {
         if (s.has) s.id = r.u32();
     }
     m.iconRef = r.u32();
-    for (unsigned n = r.u16(), i = 0; i < n; i++) m.verbs.push_back(r.u16());
+    m.wideVerbIds = st.wideVerbIds;
+    for (unsigned n = r.u16(), i = 0; i < n; i++) m.verbs.push_back(m.wideVerbIds ? r.u32() : r.u16());
     for (unsigned n = r.u16(), i = 0; i < n; i++) m.overlays.push_back(r.u32());
     for (unsigned n = r.u16(), i = 0; i < n; i++) m.underlays.push_back(r.u32());
     m.layerBits = r.u32();
@@ -172,7 +173,7 @@ canon::Json toJson(const Appearance& m) {
     std::vector<canon::Json> slots, verbs, overlays, underlays, vars, filters, xf;
     for (const Appearance::Slot& s : m.idSlots)
         slots.push_back(canon::Object().boolean("has", s.has).u("id", s.id).u("tag", s.tag).build());
-    for (uint16_t v : m.verbs) verbs.push_back(canon::u(v));
+    for (uint32_t v : m.verbs) verbs.push_back(canon::u(v));
     for (uint32_t v : m.overlays) overlays.push_back(canon::u(v));
     for (uint32_t v : m.underlays) underlays.push_back(canon::u(v));
     for (const Appearance::Var& v : m.vars)
@@ -217,7 +218,7 @@ canon::Json toJson(const Appearance& m) {
         .set("filters", canon::array(filters))
         .str("renderSource", m.renderSource)
         .str("renderTarget", m.renderTarget)
-        .set("widths", canon::Object().u("id", 4).u("verb", 2).build())
+        .set("widths", canon::Object().u("id", 4).u("verb", m.wideVerbIds ? 4 : 2).build())
         .boolean("hasColor", m.hasColor)
         .u("colorR", m.color[0])
         .u("colorG", m.color[1])

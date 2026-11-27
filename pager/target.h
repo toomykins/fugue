@@ -1,5 +1,5 @@
 // parseTarget: anything a player pastes -> the host:port the client dials. REFUSES `byond://Key.World` hub references.
-// The rules follow dreamseeker.exe's own address parser.
+// The rules follow the addresses stock DreamSeeker accepts.
 #pragma once
 #include <optional>
 #include <string>

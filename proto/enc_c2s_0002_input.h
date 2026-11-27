@@ -47,7 +47,7 @@ struct ClickCmd {
     // with screenLocMap (mapIdParam). Both empty on the default map.
     std::string locStr, screenLocMap;
     int iconX = 16, iconY = 16;  // in the named atom's icon frame, sent unclamped (can be < 1 or > 32 over an overlay)
-    // vis-x/vis-y: the cursor in a TRANSFORMED atom's bounding box (render/hittest.h). Sent, unclamped, right after
+    // vis-x/vis-y: the cursor in a TRANSFORMED atom's bounding box in image coordinates. Sent, unclamped, right after
     // icon-y only when hasVis - stock DreamSeeker's rule (vis pair != icon pair).
     int visX = 0, visY = 0;
     bool hasVis = false;
@@ -55,8 +55,12 @@ struct ClickCmd {
     int screenPX = 0, screenPY = 0;  // 0 = use icon px
     std::string button = "left";
     Mods mods;
+    int screenTileSize = 32;  // world icon size; bounds the screen-loc pixel components
 };
 std::string clickParams(const ClickCmd&);
+// Finalize a canonical narrow mouse body (subtypes 3..8) using this session's
+// negotiated verb-slot width. Worker only; refs/arguments and event IDs are unchanged.
+Bytes mouseWireBody(Bytes body, bool wideId);
 Bytes encodeMouseCmd(
     const ClickCmd&);  // [sub 00 ff ff][over][03 00][loc][02 ctrl\0][02 params\0] (loc: [02 locStr\0] when set)
 // The same shape naming nothing: over and loc null atoms (loc [02 locStr\0] when set), control a null atom when empty.
@@ -67,8 +71,8 @@ std::string mapIdParam(const std::string& id);
 
 // The hover report (sub 0x08), one shape for all three hover procs: the server runs MouseExited on the atom the previous
 // report named and MouseEntered on this one when they differ, and MouseMove when they are the same.
-// params: hoverParams (clickParams without the button; "right=1;" before the modifiers when c.button is "right", a report
-// made while the right button is held), or "screen-loc=X:PX,Y:PY" alone over the letterbox (over and
+// params: hoverParams (clickParams without the button; "right=1;" or "middle=1;" before the modifiers when c.button is
+// "right" or "middle", a report made as a verb menu closes with that button held), or "screen-loc=X:PX,Y:PY" alone over the letterbox (over and
 // loc null). locStr: on a secondary map, loc is that string (the control's short id), and screen-loc carries it.
 std::string hoverParams(const ClickCmd&);
 Bytes encodeHover(const AtomRef& over, const AtomRef& loc, const std::string& control, const std::string& params,
@@ -92,6 +96,13 @@ Bytes encodeInfoClick(uint8_t sub, const AtomRef& over, const std::string& panel
 // pixels: x+1 from the cell's left edge, y+1 from its bottom edge, unclamped. A row with nothing drawn in its cell
 // (no icon, no overlay) sends neither.
 std::string infoClickParams(const std::string& button, const Mods&, bool icon = false, int iconX = 0, int iconY = 0);
+// A hover report over the INFO control is the click's shape with sub 0x08 (encodeInfoClick(kMouseHover, ..)), as stock
+// DreamSeeker 516.1689 sends it (tests/data/hover-world panel.json): over a row naming an atom, that atom, the
+// selected tab's name and the control, params "icon-x=X;icon-y=Y" for a row that draws an icon (counted as for a
+// click) and "" for one that does not; over the panel's empty space (a row's label, past its text, a text row, below
+// the rows) a null atom with the same location and control and params "". Leaving the panel is the map's leave
+// (encodeHoverLeave). Modifiers held: appended as on the map ("ctrl=1", "shift=1", "alt=1"), not measured here.
+std::string infoHoverParams(const Mods&, bool icon, int iconX, int iconY);
 
 // Which mouse events the world subscribed to (MouseSubs FormatFlags word, decoded by net/input.h).
 struct MouseHooks {
@@ -133,10 +144,12 @@ struct VerbArg {
     float num = 0;
     std::string str;
 };
-Bytes encodeVerb(uint16_t verbId, uint8_t srcKind, uint32_t srcRef, const std::vector<VerbArg>& args);
+// Wide wire slots are verified for IDs <=65535; callers must not truncate larger dictionary IDs.
+Bytes encodeVerb(uint16_t verbId, uint8_t srcKind, uint32_t srcRef, const std::vector<VerbArg>& args,
+                 bool wideId = false);
 // Movement verb call: args {dir} or {dir, state} (state only when the verb declares 2 args), src-kind client, src-ref 0
 // (what stock DreamSeeker sends for a /client/verb; the srcRef parameter is ignored).
-Bytes encodeMoveVerb(uint16_t verbId, uint32_t srcRef, int dir, bool down, bool twoArgs);
+Bytes encodeMoveVerb(uint16_t verbId, uint32_t srcRef, int dir, bool down, bool twoArgs, bool wideId = false);
 
 Bytes encodeTopic(const std::string& href);  // strips "byond://", ensures leading '?', NUL-terminated
 

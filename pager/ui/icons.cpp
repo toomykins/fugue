@@ -107,7 +107,7 @@ QPixmap gameIcon(const QString& name, int px) {
     QPixmap p = canvas(px);
     QPainter g(&p);
     aa(g);
-    const uint h = qHash(name.toLower());
+    const auto h = qHash(name.toLower());
     QColor c = QColor::fromHsv(int(h % 360), 150, 190);
     QLinearGradient grad(0, 0, 0, px);
     grad.setColorAt(0, c.lighter(130));

@@ -1,0 +1,21 @@
+window "main"
+    elem "main"
+        type = MAIN
+        size = 720x360
+        is-default = true
+        title = "Darkness fixture"
+    elem "map"
+        type = MAP
+        pos = 0,0
+        size = 288x288
+        is-default = true
+    elem "info"
+        type = INFO
+        pos = 300,0
+        size = 420x288
+        is-default = true
+    elem "input"
+        type = INPUT
+        pos = 0,310
+        size = 720x30
+        is-default = true

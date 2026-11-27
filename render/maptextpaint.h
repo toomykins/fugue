@@ -10,8 +10,8 @@
 // the box cannot hold whole is not drawn at all; a centred or right-aligned one is clipped.
 // PAINT: colour defaults to the sheet's `body` colour (skin/liveskin.h folds in the map's text-color), else white.
 // `text-align` is per line (center = floor((box - w) / 2), right = box - w), w being the line's advances plus its last
-// glyph's overhang. Bitmap italic never inks the box's first column. `-dm-text-outline` is a 1 px 8-way dilation
-// of the glyph coverage in the outline colour, drawn under every fill.
+// glyph's overhang. Bitmap italic never inks the box's first column. `-dm-text-outline` and `text-shadow` are stock's
+// outline and drop-shadow filters run on the drawn text; they reach past the box.
 //
 // Glyphs come from a rasterizer the host installs (setGlyphRasterizer; the app's is shell/ttmetrics.h, on Qt's font stack),
 // the same split as dsmaptext's TrueType metrics, so no Qt Gui dependency reaches render/. DreamSeeker's faces are GDI
@@ -41,9 +41,9 @@ using GlyphRasterizer = std::function<bool(const DsFace& face, char32_t cp, Glyp
 // Set once at start-up (or by a test); clears the glyph and box caches.
 void setGlyphRasterizer(GlyphRasterizer r);
 
-// The maptext box as a straight-alpha RGBA sprite (boxW x boxH), or nullptr when nothing visible would be drawn (no
-// text, no glyphs, no rasterizer, or an empty box). `mapStyle` is the default map control's `style` (the same sheet
-// MeasureText merges in).
-SpritePtr paintMaptext(std::string_view markup, std::string_view mapStyle, int boxW, int boxH);
+// The maptext box as a straight-alpha RGBA sprite, or nullptr when nothing visible would be drawn (no text, no glyphs,
+// no rasterizer, or an empty box). `mapStyle` is the default map control's `style` (the same sheet MeasureText merges
+// in). The sprite is the box with `pad` px round it, as far as an outline or shadow reaches past the box (0 without).
+SpritePtr paintMaptext(std::string_view markup, std::string_view mapStyle, int boxW, int boxH, int* pad = nullptr);
 
 }  // namespace fugue::render

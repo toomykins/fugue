@@ -1,5 +1,6 @@
 // pager/hublink HubThrottle: hub dials are spaced out, and spaced further after each consecutive failure.
 #include <QtTest>
+#include "tests/testmain.h"
 #include "pager/hublink.h"
 
 using namespace fugue::pager;
@@ -33,5 +34,5 @@ private slots:
     }
 };
 
-QTEST_APPLESS_MAIN(PagerHubThrottleTest)
+FUGUE_TEST_APPLESS_MAIN(PagerHubThrottleTest)
 #include "pager_hubthrottle_test.moc"

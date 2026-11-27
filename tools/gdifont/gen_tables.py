@@ -12,13 +12,17 @@ Source: the font files Wine 9.0 resolves for those families (gdimetrics.c prints
     /usr/share/wine/fonts/sserife.fon  md5 159d172e900cfb52533638685a121bd1   (MS Sans Serif 8/10/12pt)
     /usr/share/wine/fonts/coure.fon    md5 fa541bfc84bca578cd4fdaaf1f4fbc11   (Courier 10pt)
 
-Only the 96-dpi strikes are emitted. Usage: gen_tables.py [fontdir] > render/gdifont_tables.inc
+Only the strikes of one resolution are emitted, 96 dpi unless another is named: Windows registers a second set of
+files digitised for 120 dpi (smallf.fon, sseriff.fon, courf.fon), whose strikes carry that number after their widths.
+Usage: gen_tables.py [fontdir [dpi]] > render/gdifont_tables.inc
 """
 import struct
 import sys
 
 FONTDIR = sys.argv[1] if len(sys.argv) > 1 else '/usr/share/wine/fonts'
-FILES = [('smalle.fon', 'kFaceSmallFonts'), ('sserife.fon', 'kFaceMsSansSerif'), ('coure.fon', 'kFaceCourier')]
+DPI = int(sys.argv[2]) if len(sys.argv) > 2 else 96
+E = 'e' if DPI == 96 else 'f'
+FILES = [('small%s.fon' % E, 'kFaceSmallFonts'), ('sserif%s.fon' % E, 'kFaceMsSansSerif'), ('cour%s.fon' % E, 'kFaceCourier')]
 
 
 def strikes(path):
@@ -44,7 +48,7 @@ def strikes(path):
             pts, vres, hres, asc, il, el = struct.unpack_from('<HHHHHH', d, f + 0x44)
             pixh = struct.unpack_from('<H', d, f + 0x58)[0]
             first, last, default = d[f + 0x5f], d[f + 0x60], d[f + 0x61]
-            if hres != 96 or vres != 96:
+            if hres != DPI or vres != DPI:
                 continue
             hdr, step = (0x76, 4) if ver == 0x200 else (0x94, 6)
             adv = [struct.unpack_from('<H', d, f + hdr + (c - first) * step)[0] for c in range(first, last + 1)]
@@ -69,4 +73,4 @@ for fname, sym in FILES:
         a = s['adv']
         for i in range(0, len(a), 32):
             print('    ' + ', '.join('%d' % x for x in a[i:i + 32]) + ',')
-        print('}};')
+        print('}%s};' % ('' if DPI == 96 else ', %d' % DPI))

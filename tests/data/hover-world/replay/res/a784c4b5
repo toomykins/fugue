@@ -1,0 +1,29 @@
+window "main"
+    elem "main"
+        type = MAIN
+        size = 610x336
+        is-default = true
+    elem "map"
+        type = MAP
+        pos = 0,0
+        size = 288x224
+        anchor1 = 0,0
+        anchor2 = none
+        icon-size = 32
+        is-default = true
+    elem "map2"
+        type = MAP
+        pos = 300,0
+        size = 96x32
+        icon-size = 32
+    elem "info"
+        type = INFO
+        pos = 300,40
+        size = 300x184
+        is-default = true
+    elem "grid"
+        type = GRID
+        pos = 0,232
+        size = 288x96
+        cells = 1x2
+        show-names = true

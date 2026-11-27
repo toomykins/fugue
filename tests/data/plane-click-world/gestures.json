@@ -1,0 +1,250 @@
+{
+ "schema": 1,
+ "stock": "DreamSeeker/DreamDaemon 516.1689",
+ "date": "2026-11-26",
+ "method": "tools/stockprobe/stockprobe.py --stock-only --cursor click with set=<case>: pointer moves, presses and releases at MAP pixels in the stock window, the real pointer put on each point. Per action the mouse procs the world logged: the atom's name, for MouseDrag and MouseDrop the atom it is over, and icon-x/y from the params",
+ "cases": [
+  {
+   "case": "relay",
+   "actions": [
+    {
+     "action": "143,111",
+     "logged": [
+      "ENTER part x=16 y=17",
+      "DOWN part x=16 y=17",
+      "UP part x=16 y=17",
+      "CLICK part x=16 y=17"
+     ]
+    },
+    {
+     "action": "152,111",
+     "logged": [
+      "DOWN floor x=25 y=17",
+      "UP floor x=25 y=17",
+      "CLICK floor x=25 y=17"
+     ]
+    },
+    {
+     "action": "80,111",
+     "logged": [
+      "DOWN holder x=17 y=17",
+      "UP holder x=17 y=17",
+      "CLICK holder x=17 y=17"
+     ]
+    },
+    {
+     "action": "111,47",
+     "logged": [
+      "DOWN child x=16 y=17",
+      "UP child x=16 y=17",
+      "CLICK child x=16 y=17"
+     ]
+    },
+    {
+     "action": "move:143,111",
+     "logged": []
+    },
+    {
+     "action": "move:152,111",
+     "logged": []
+    },
+    {
+     "action": "move:80,111",
+     "logged": []
+    },
+    {
+     "action": "move:111,47",
+     "logged": []
+    },
+    {
+     "action": "down:143,111",
+     "logged": [
+      "DOWN part x=16 y=17"
+     ]
+    },
+    {
+     "action": "move:111,47",
+     "logged": [
+      "DRAG part over=child x=16 y=17"
+     ]
+    },
+    {
+     "action": "move:80,111",
+     "logged": [
+      "DRAG part over=holder x=17 y=17"
+     ]
+    },
+    {
+     "action": "up:80,111",
+     "logged": [
+      "UP holder x=17 y=17",
+      "DROP part over=holder x=17 y=17",
+      "ENTER holder x=17 y=17"
+     ]
+    },
+    {
+     "action": "down:111,47",
+     "logged": [
+      "DOWN child x=16 y=17"
+     ]
+    },
+    {
+     "action": "move:152,111",
+     "logged": [
+      "DRAG child over=floor x=25 y=17"
+     ]
+    },
+    {
+     "action": "up:152,111",
+     "logged": [
+      "UP floor x=25 y=17",
+      "DROP child over=floor x=25 y=17",
+      "ENTER floor x=25 y=17"
+     ]
+    }
+   ]
+  },
+  {
+   "case": "outline1",
+   "actions": [
+    {
+     "action": "move:80,111",
+     "logged": []
+    },
+    {
+     "action": "move:71,111",
+     "logged": []
+    },
+    {
+     "action": "move:111,47",
+     "logged": []
+    },
+    {
+     "action": "move:103,47",
+     "logged": []
+    },
+    {
+     "action": "move:143,111",
+     "logged": []
+    },
+    {
+     "action": "down:80,111",
+     "logged": [
+      "DOWN holder x=17 y=17"
+     ]
+    },
+    {
+     "action": "move:111,47",
+     "logged": [
+      "DRAG holder over=child x=16 y=17"
+     ]
+    },
+    {
+     "action": "move:143,111",
+     "logged": [
+      "DRAG holder over=part x=16 y=17"
+     ]
+    },
+    {
+     "action": "up:143,111",
+     "logged": [
+      "UP part x=16 y=17",
+      "DROP holder over=part x=16 y=17",
+      "ENTER part x=16 y=17"
+     ]
+    },
+    {
+     "action": "down:143,111",
+     "logged": [
+      "DOWN part x=16 y=17"
+     ]
+    },
+    {
+     "action": "move:71,111",
+     "logged": [
+      "DRAG part over=floor x=8 y=17"
+     ]
+    },
+    {
+     "action": "up:71,111",
+     "logged": [
+      "UP floor x=8 y=17",
+      "DROP part over=floor x=8 y=17",
+      "ENTER floor x=8 y=17"
+     ]
+    }
+   ]
+  },
+  {
+   "case": "turn90",
+   "actions": [
+    {
+     "action": "move:111,79",
+     "logged": []
+    },
+    {
+     "action": "move:103,79",
+     "logged": []
+    },
+    {
+     "action": "move:120,79",
+     "logged": []
+    },
+    {
+     "action": "move:175,111",
+     "logged": []
+    },
+    {
+     "action": "move:111,143",
+     "logged": []
+    },
+    {
+     "action": "down:111,79",
+     "logged": [
+      "DOWN holder x=16 y=15"
+     ]
+    },
+    {
+     "action": "move:175,111",
+     "logged": [
+      "DRAG holder over=child x=16 y=15"
+     ]
+    },
+    {
+     "action": "move:111,143",
+     "logged": [
+      "DRAG holder over=part x=16 y=15"
+     ]
+    },
+    {
+     "action": "up:111,143",
+     "logged": [
+      "UP part x=16 y=15",
+      "DROP holder over=part x=16 y=15",
+      "ENTER part x=16 y=15"
+     ]
+    },
+    {
+     "action": "down:120,79",
+     "logged": [
+      "DOWN holder x=16 y=24"
+     ]
+    },
+    {
+     "action": "move:103,79",
+     "logged": [
+      "DRAG holder over=floor x=8 y=17"
+     ]
+    },
+    {
+     "action": "up:103,79",
+     "logged": [
+      "UP floor x=8 y=17",
+      "DROP holder over=floor x=8 y=17",
+      "ENTER floor x=8 y=17"
+     ]
+    }
+   ]
+  }
+ ]
+}

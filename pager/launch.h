@@ -54,13 +54,6 @@ std::string autoSignInOffPath();  // ~/.fugue/qt/pager-no-autosignin; "" if no H
 bool autoSignIn();
 bool setAutoSignIn(bool on, std::string* err = nullptr);
 
-// The client's renderer setting, which its Client > Renderer menu also writes (GPU builds): `renderer` = cpu|gpu in
-// <state dir>/display.ini. The state dir is the client's --state-dir when non-empty, else net::defaultStateDir().
-std::string clientStateDir(const std::vector<std::string>& clientFlags);  // the last --state-dir value; "" if none
-std::string displaySettingsPath(const std::string& stateDir);
-bool savedRendererGpu(const std::string& displayIni);  // anything but "gpu" is CPU, as the client reads it
-bool setSavedRenderer(const std::string& displayIni, bool gpu, std::string* err = nullptr);
-
 // Headless join: run argv, stream its merged output to `out` (and client.log, 0600), forward SIGINT/SIGTERM as SIGINT to the
 // child, return the child's exit code. Prints "[pager] client pid N" first so a caller can inspect /proc/N.
 int runHeadless(const std::vector<std::string>& argv, FILE* out);

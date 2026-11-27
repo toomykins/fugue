@@ -1,0 +1,2017 @@
+{
+ "schema": 1,
+ "stock": "DreamSeeker/DreamDaemon 516.1689",
+ "date": "2026-11-25",
+ "method": "tools/stockprobe/stockprobe.py click with set=<case>: left and right clicks at MAP pixels in the stock window. A click is what the world logged (the clicked atom's name, icon-x, icon-y); a menu is the entries of the right-click menu stock showed, topmost first, each named by its verb",
+ "cases": [
+  {
+   "case": "plain",
+   "clicks": [
+    {
+     "at": [
+      80,
+      111
+     ],
+     "over": "holder",
+     "iconX": 17,
+     "iconY": 17
+    },
+    {
+     "at": [
+      70,
+      111
+     ],
+     "over": "floor",
+     "iconX": 7,
+     "iconY": 17
+    },
+    {
+     "at": [
+      88,
+      111
+     ],
+     "over": "floor",
+     "iconX": 25,
+     "iconY": 17
+    },
+    {
+     "at": [
+      111,
+      47
+     ],
+     "over": "child",
+     "iconX": 16,
+     "iconY": 17
+    },
+    {
+     "at": [
+      102,
+      47
+     ],
+     "over": "floor",
+     "iconX": 7,
+     "iconY": 17
+    },
+    {
+     "at": [
+      143,
+      111
+     ],
+     "over": "part",
+     "iconX": 16,
+     "iconY": 17
+    },
+    {
+     "at": [
+      152,
+      111
+     ],
+     "over": "floor",
+     "iconX": 25,
+     "iconY": 17
+    }
+   ],
+   "menus": [
+    {
+     "at": [
+      80,
+      111
+     ],
+     "entries": [
+      "holder",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      111,
+      47
+     ],
+     "entries": [
+      "child",
+      "visholder",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      143,
+      111
+     ],
+     "entries": [
+      "part",
+      "floor"
+     ]
+    }
+   ]
+  },
+  {
+   "case": "outline1",
+   "clicks": [
+    {
+     "at": [
+      80,
+      111
+     ],
+     "over": "holder",
+     "iconX": 17,
+     "iconY": 17
+    },
+    {
+     "at": [
+      71,
+      111
+     ],
+     "over": "floor",
+     "iconX": 8,
+     "iconY": 17
+    },
+    {
+     "at": [
+      88,
+      111
+     ],
+     "over": "floor",
+     "iconX": 25,
+     "iconY": 17
+    },
+    {
+     "at": [
+      111,
+      47
+     ],
+     "over": "child",
+     "iconX": 16,
+     "iconY": 17
+    },
+    {
+     "at": [
+      103,
+      47
+     ],
+     "over": "floor",
+     "iconX": 8,
+     "iconY": 17
+    },
+    {
+     "at": [
+      143,
+      111
+     ],
+     "over": "part",
+     "iconX": 16,
+     "iconY": 17
+    },
+    {
+     "at": [
+      135,
+      111
+     ],
+     "over": "floor",
+     "iconX": 8,
+     "iconY": 17
+    }
+   ],
+   "menus": [
+    {
+     "at": [
+      80,
+      111
+     ],
+     "entries": [
+      "holder",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      111,
+      47
+     ],
+     "entries": [
+      "child",
+      "visholder",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      143,
+      111
+     ],
+     "entries": [
+      "part",
+      "floor"
+     ]
+    }
+   ]
+  },
+  {
+   "case": "turn90",
+   "clicks": [
+    {
+     "at": [
+      111,
+      79
+     ],
+     "over": "holder",
+     "iconX": 16,
+     "iconY": 15
+    },
+    {
+     "at": [
+      104,
+      79
+     ],
+     "over": "floor",
+     "iconX": 9,
+     "iconY": 17
+    },
+    {
+     "at": [
+      103,
+      79
+     ],
+     "over": "floor",
+     "iconX": 8,
+     "iconY": 17
+    },
+    {
+     "at": [
+      119,
+      79
+     ],
+     "over": "holder",
+     "iconX": 16,
+     "iconY": 23
+    },
+    {
+     "at": [
+      120,
+      79
+     ],
+     "over": "holder",
+     "iconX": 16,
+     "iconY": 24
+    },
+    {
+     "at": [
+      111,
+      71
+     ],
+     "over": "floor",
+     "iconX": 16,
+     "iconY": 25
+    },
+    {
+     "at": [
+      111,
+      72
+     ],
+     "over": "holder",
+     "iconX": 9,
+     "iconY": 15
+    },
+    {
+     "at": [
+      111,
+      87
+     ],
+     "over": "holder",
+     "iconX": 24,
+     "iconY": 15
+    },
+    {
+     "at": [
+      111,
+      88
+     ],
+     "over": "floor",
+     "iconX": 16,
+     "iconY": 8
+    },
+    {
+     "at": [
+      175,
+      111
+     ],
+     "over": "child",
+     "iconX": 16,
+     "iconY": 15
+    },
+    {
+     "at": [
+      168,
+      111
+     ],
+     "over": "floor",
+     "iconX": 9,
+     "iconY": 17
+    },
+    {
+     "at": [
+      167,
+      111
+     ],
+     "over": "floor",
+     "iconX": 8,
+     "iconY": 17
+    },
+    {
+     "at": [
+      183,
+      111
+     ],
+     "over": "child",
+     "iconX": 16,
+     "iconY": 23
+    },
+    {
+     "at": [
+      184,
+      111
+     ],
+     "over": "child",
+     "iconX": 16,
+     "iconY": 24
+    },
+    {
+     "at": [
+      111,
+      143
+     ],
+     "over": "part",
+     "iconX": 16,
+     "iconY": 15
+    }
+   ],
+   "menus": [
+    {
+     "at": [
+      111,
+      79
+     ],
+     "entries": [
+      "holder",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      175,
+      111
+     ],
+     "entries": [
+      "child",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      96,
+      144
+     ],
+     "entries": [
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      127,
+      144
+     ],
+     "entries": [
+      "part",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      128,
+      144
+     ],
+     "entries": [
+      "part",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      112,
+      128
+     ],
+     "entries": [
+      "part",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      112,
+      127
+     ],
+     "entries": [
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      112,
+      159
+     ],
+     "entries": [
+      "part",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      112,
+      160
+     ],
+     "entries": [
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      96,
+      79
+     ],
+     "entries": [
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      128,
+      79
+     ],
+     "entries": [
+      "holder",
+      "floor"
+     ]
+    }
+   ]
+  },
+  {
+   "case": "scalex2",
+   "clicks": [
+    {
+     "at": [
+      47,
+      111
+     ],
+     "over": "holder",
+     "iconX": 16,
+     "iconY": 17
+    },
+    {
+     "at": [
+      33,
+      111
+     ],
+     "over": "holder",
+     "iconX": 9,
+     "iconY": 17
+    },
+    {
+     "at": [
+      31,
+      111
+     ],
+     "over": "floor",
+     "iconX": 32,
+     "iconY": 17
+    },
+    {
+     "at": [
+      63,
+      111
+     ],
+     "over": "holder",
+     "iconX": 24,
+     "iconY": 17
+    },
+    {
+     "at": [
+      64,
+      111
+     ],
+     "over": "floor",
+     "iconX": 1,
+     "iconY": 17
+    },
+    {
+     "at": [
+      111,
+      47
+     ],
+     "over": "child",
+     "iconX": 16,
+     "iconY": 17
+    },
+    {
+     "at": [
+      97,
+      47
+     ],
+     "over": "child",
+     "iconX": 9,
+     "iconY": 17
+    },
+    {
+     "at": [
+      95,
+      47
+     ],
+     "over": "floor",
+     "iconX": 32,
+     "iconY": 17
+    },
+    {
+     "at": [
+      96,
+      47
+     ],
+     "over": "child",
+     "iconX": 9,
+     "iconY": 17
+    },
+    {
+     "at": [
+      127,
+      47
+     ],
+     "over": "child",
+     "iconX": 24,
+     "iconY": 17
+    },
+    {
+     "at": [
+      128,
+      47
+     ],
+     "over": "floor",
+     "iconX": 1,
+     "iconY": 17
+    },
+    {
+     "at": [
+      175,
+      111
+     ],
+     "over": "part",
+     "iconX": 16,
+     "iconY": 17
+    }
+   ],
+   "menus": [
+    {
+     "at": [
+      47,
+      111
+     ],
+     "entries": [
+      "holder",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      111,
+      47
+     ],
+     "entries": [
+      "child",
+      "visholder",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      15,
+      111
+     ],
+     "entries": [
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      16,
+      111
+     ],
+     "entries": [
+      "holder",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      79,
+      111
+     ],
+     "entries": [
+      "holder",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      80,
+      111
+     ],
+     "entries": [
+      "holder",
+      "floor"
+     ]
+    }
+   ]
+  },
+  {
+   "case": "turn90-outline1",
+   "clicks": [
+    {
+     "at": [
+      111,
+      79
+     ],
+     "over": "holder",
+     "iconX": 16,
+     "iconY": 15
+    },
+    {
+     "at": [
+      103,
+      79
+     ],
+     "over": "floor",
+     "iconX": 8,
+     "iconY": 17
+    },
+    {
+     "at": [
+      175,
+      111
+     ],
+     "over": "child",
+     "iconX": 16,
+     "iconY": 15
+    },
+    {
+     "at": [
+      167,
+      111
+     ],
+     "over": "floor",
+     "iconX": 8,
+     "iconY": 17
+    },
+    {
+     "at": [
+      111,
+      143
+     ],
+     "over": "part",
+     "iconX": 16,
+     "iconY": 15
+    }
+   ],
+   "menus": [
+    {
+     "at": [
+      111,
+      79
+     ],
+     "entries": [
+      "holder",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      175,
+      111
+     ],
+     "entries": [
+      "child",
+      "floor"
+     ]
+    }
+   ]
+  },
+  {
+   "case": "tree45",
+   "clicks": [
+    {
+     "at": [
+      80,
+      176
+     ],
+     "over": "master",
+     "iconX": 17,
+     "iconY": 16
+    },
+    {
+     "at": [
+      66,
+      162
+     ],
+     "over": "floor",
+     "iconX": 3,
+     "iconY": 30
+    },
+    {
+     "at": [
+      34,
+      34
+     ],
+     "over": "floor",
+     "iconX": 3,
+     "iconY": 30
+    },
+    {
+     "at": [
+      48,
+      48
+     ],
+     "over": "leaner",
+     "iconX": 17,
+     "iconY": 16
+    }
+   ],
+   "menus": [
+    {
+     "at": [
+      80,
+      176
+     ],
+     "entries": [
+      "master",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      66,
+      162
+     ],
+     "entries": [
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      70,
+      166
+     ],
+     "entries": [
+      "master",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      94,
+      176
+     ],
+     "entries": [
+      "master",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      34,
+      34
+     ],
+     "entries": [
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      38,
+      38
+     ],
+     "entries": [
+      "leaner",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      48,
+      48
+     ],
+     "entries": [
+      "leaner",
+      "floor"
+     ]
+    }
+   ]
+  },
+  {
+   "case": "tree45-scalex2",
+   "clicks": [
+    {
+     "at": [
+      47,
+      175
+     ],
+     "over": "master",
+     "iconX": 16,
+     "iconY": 17
+    },
+    {
+     "at": [
+      19,
+      172
+     ],
+     "over": "master",
+     "iconX": 9,
+     "iconY": 14
+    },
+    {
+     "at": [
+      48,
+      176
+     ],
+     "over": "master",
+     "iconX": 17,
+     "iconY": 16
+    }
+   ],
+   "menus": [
+    {
+     "at": [
+      48,
+      176
+     ],
+     "entries": [
+      "master",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      19,
+      172
+     ],
+     "entries": [
+      "master",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      108,
+      191
+     ],
+     "entries": [
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      100,
+      170
+     ],
+     "entries": [
+      "master",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      70,
+      158
+     ],
+     "entries": [
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      70,
+      159
+     ],
+     "entries": [
+      "master",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      70,
+      160
+     ],
+     "entries": [
+      "master",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      90,
+      163
+     ],
+     "entries": [
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      90,
+      164
+     ],
+     "entries": [
+      "master",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      90,
+      165
+     ],
+     "entries": [
+      "master",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      110,
+      168
+     ],
+     "entries": [
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      110,
+      169
+     ],
+     "entries": [
+      "master",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      110,
+      170
+     ],
+     "entries": [
+      "master",
+      "floor"
+     ]
+    }
+   ]
+  },
+  {
+   "case": "iconalpha",
+   "clicks": [
+    {
+     "at": [
+      139,
+      111
+     ],
+     "over": "part",
+     "iconX": 12,
+     "iconY": 17
+    },
+    {
+     "at": [
+      147,
+      111
+     ],
+     "over": "floor",
+     "iconX": 20,
+     "iconY": 17
+    },
+    {
+     "at": [
+      80,
+      111
+     ],
+     "over": "floor",
+     "iconX": 17,
+     "iconY": 17
+    }
+   ],
+   "menus": [
+    {
+     "at": [
+      139,
+      111
+     ],
+     "entries": [
+      "part",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      147,
+      111
+     ],
+     "entries": [
+      "part",
+      "floor"
+     ]
+    }
+   ]
+  },
+  {
+   "case": "rtalpha",
+   "clicks": [
+    {
+     "at": [
+      139,
+      111
+     ],
+     "over": "part",
+     "iconX": 12,
+     "iconY": 17
+    },
+    {
+     "at": [
+      147,
+      111
+     ],
+     "over": "floor",
+     "iconX": 20,
+     "iconY": 17
+    },
+    {
+     "at": [
+      80,
+      111
+     ],
+     "over": "floor",
+     "iconX": 17,
+     "iconY": 17
+    },
+    {
+     "at": [
+      111,
+      47
+     ],
+     "over": "floor",
+     "iconX": 16,
+     "iconY": 17
+    }
+   ],
+   "menus": [
+    {
+     "at": [
+      147,
+      111
+     ],
+     "entries": [
+      "part",
+      "floor"
+     ]
+    }
+   ]
+  },
+  {
+   "case": "ptalpha",
+   "clicks": [
+    {
+     "at": [
+      139,
+      111
+     ],
+     "over": "part",
+     "iconX": 12,
+     "iconY": 17
+    },
+    {
+     "at": [
+      147,
+      111
+     ],
+     "over": "floor",
+     "iconX": 20,
+     "iconY": 17
+    },
+    {
+     "at": [
+      80,
+      111
+     ],
+     "over": "floor",
+     "iconX": 17,
+     "iconY": 17
+    },
+    {
+     "at": [
+      111,
+      47
+     ],
+     "over": "floor",
+     "iconX": 16,
+     "iconY": 17
+    }
+   ],
+   "menus": [
+    {
+     "at": [
+      147,
+      111
+     ],
+     "entries": [
+      "part",
+      "floor"
+     ]
+    }
+   ]
+  },
+  {
+   "case": "rtalpha-inverse",
+   "clicks": [
+    {
+     "at": [
+      139,
+      111
+     ],
+     "over": "floor",
+     "iconX": 12,
+     "iconY": 17
+    },
+    {
+     "at": [
+      147,
+      111
+     ],
+     "over": "part",
+     "iconX": 20,
+     "iconY": 17
+    },
+    {
+     "at": [
+      80,
+      111
+     ],
+     "over": "holder",
+     "iconX": 17,
+     "iconY": 17
+    },
+    {
+     "at": [
+      111,
+      47
+     ],
+     "over": "child",
+     "iconX": 16,
+     "iconY": 17
+    }
+   ]
+  },
+  {
+   "case": "ptalpha-inverse",
+   "clicks": [
+    {
+     "at": [
+      139,
+      111
+     ],
+     "over": "floor",
+     "iconX": 12,
+     "iconY": 17
+    },
+    {
+     "at": [
+      147,
+      111
+     ],
+     "over": "part",
+     "iconX": 20,
+     "iconY": 17
+    },
+    {
+     "at": [
+      80,
+      111
+     ],
+     "over": "holder",
+     "iconX": 17,
+     "iconY": 17
+    }
+   ]
+  },
+  {
+   "case": "turn90-rtalpha",
+   "clicks": [
+    {
+     "at": [
+      111,
+      140
+     ],
+     "over": "part",
+     "iconX": 13,
+     "iconY": 15
+    },
+    {
+     "at": [
+      111,
+      148
+     ],
+     "over": "floor",
+     "iconX": 16,
+     "iconY": 12
+    },
+    {
+     "at": [
+      111,
+      79
+     ],
+     "over": "floor",
+     "iconX": 16,
+     "iconY": 17
+    }
+   ],
+   "menus": [
+    {
+     "at": [
+      111,
+      148
+     ],
+     "entries": [
+      "part",
+      "floor"
+     ]
+    }
+   ]
+  },
+  {
+   "case": "scalex2-ptalpha",
+   "clicks": [
+    {
+     "at": [
+      170,
+      111
+     ],
+     "over": "part",
+     "iconX": 14,
+     "iconY": 17
+    },
+    {
+     "at": [
+      180,
+      111
+     ],
+     "over": "floor",
+     "iconX": 21,
+     "iconY": 17
+    },
+    {
+     "at": [
+      47,
+      111
+     ],
+     "over": "floor",
+     "iconX": 16,
+     "iconY": 17
+    }
+   ]
+  },
+  {
+   "case": "selfturn",
+   "clicks": [
+    {
+     "at": [
+      80,
+      111
+     ],
+     "over": "holder",
+     "iconX": 16,
+     "iconY": 17
+    },
+    {
+     "at": [
+      73,
+      105
+     ],
+     "over": "floor",
+     "iconX": 10,
+     "iconY": 23
+    },
+    {
+     "at": [
+      90,
+      111
+     ],
+     "over": "holder",
+     "iconX": 23,
+     "iconY": 24
+    },
+    {
+     "at": [
+      111,
+      47
+     ],
+     "over": "child",
+     "iconX": 15,
+     "iconY": 16
+    },
+    {
+     "at": [
+      105,
+      41
+     ],
+     "over": "floor",
+     "iconX": 10,
+     "iconY": 23
+    },
+    {
+     "at": [
+      122,
+      47
+     ],
+     "over": "child",
+     "iconX": 23,
+     "iconY": 24
+    }
+   ],
+   "menus": [
+    {
+     "at": [
+      73,
+      105
+     ],
+     "entries": [
+      "holder",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      90,
+      111
+     ],
+     "entries": [
+      "holder",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      105,
+      41
+     ],
+     "entries": [
+      "child",
+      "visholder",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      122,
+      47
+     ],
+     "entries": [
+      "child",
+      "visholder",
+      "floor"
+     ]
+    }
+   ],
+   "date": "2026-11-26"
+  },
+  {
+   "case": "turn90-selfturn",
+   "clicks": [
+    {
+     "at": [
+      111,
+      79
+     ],
+     "over": "holder",
+     "iconX": 17,
+     "iconY": 15
+    },
+    {
+     "at": [
+      105,
+      73
+     ],
+     "over": "floor",
+     "iconX": 10,
+     "iconY": 23
+    },
+    {
+     "at": [
+      121,
+      79
+     ],
+     "over": "holder",
+     "iconX": 9,
+     "iconY": 22
+    },
+    {
+     "at": [
+      111,
+      89
+     ],
+     "over": "holder",
+     "iconX": 24,
+     "iconY": 22
+    },
+    {
+     "at": [
+      175,
+      111
+     ],
+     "over": "child",
+     "iconX": 17,
+     "iconY": 15
+    },
+    {
+     "at": [
+      169,
+      105
+     ],
+     "over": "floor",
+     "iconX": 10,
+     "iconY": 23
+    },
+    {
+     "at": [
+      185,
+      111
+     ],
+     "over": "child",
+     "iconX": 9,
+     "iconY": 22
+    }
+   ],
+   "menus": [
+    {
+     "at": [
+      105,
+      73
+     ],
+     "entries": [
+      "holder",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      121,
+      79
+     ],
+     "entries": [
+      "holder",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      169,
+      105
+     ],
+     "entries": [
+      "child",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      185,
+      111
+     ],
+     "entries": [
+      "child",
+      "floor"
+     ]
+    }
+   ],
+   "date": "2026-11-26"
+  },
+  {
+   "case": "scalex2-selfturn",
+   "clicks": [
+    {
+     "at": [
+      47,
+      111
+     ],
+     "over": "holder",
+     "iconX": 15,
+     "iconY": 17
+    },
+    {
+     "at": [
+      34,
+      105
+     ],
+     "over": "floor",
+     "iconX": 3,
+     "iconY": 23
+    },
+    {
+     "at": [
+      68,
+      111
+     ],
+     "over": "holder",
+     "iconX": 23,
+     "iconY": 24
+    },
+    {
+     "at": [
+      111,
+      47
+     ],
+     "over": "child",
+     "iconX": 15,
+     "iconY": 17
+    },
+    {
+     "at": [
+      98,
+      41
+     ],
+     "over": "floor",
+     "iconX": 3,
+     "iconY": 23
+    },
+    {
+     "at": [
+      132,
+      47
+     ],
+     "over": "child",
+     "iconX": 23,
+     "iconY": 24
+    }
+   ],
+   "menus": [
+    {
+     "at": [
+      34,
+      105
+     ],
+     "entries": [
+      "holder",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      68,
+      111
+     ],
+     "entries": [
+      "holder",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      98,
+      41
+     ],
+     "entries": [
+      "child",
+      "visholder",
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      132,
+      47
+     ],
+     "entries": [
+      "child",
+      "floor"
+     ]
+    }
+   ],
+   "date": "2026-11-26"
+  },
+  {
+   "case": "spin90",
+   "clicks": [
+    {
+     "at": [
+      111,
+      79
+     ],
+     "over": "holder",
+     "iconX": 16,
+     "iconY": 15
+    },
+    {
+     "at": [
+      103,
+      79
+     ],
+     "over": "floor",
+     "iconX": 8,
+     "iconY": 17
+    },
+    {
+     "at": [
+      120,
+      79
+     ],
+     "over": "holder",
+     "iconX": 16,
+     "iconY": 24
+    },
+    {
+     "at": [
+      111,
+      143
+     ],
+     "over": "part",
+     "iconX": 16,
+     "iconY": 15
+    },
+    {
+     "at": [
+      175,
+      111
+     ],
+     "over": "child",
+     "iconX": 16,
+     "iconY": 15
+    },
+    {
+     "at": [
+      80,
+      111
+     ],
+     "over": "floor",
+     "iconX": 17,
+     "iconY": 17
+    },
+    {
+     "at": [
+      143,
+      111
+     ],
+     "over": "floor",
+     "iconX": 16,
+     "iconY": 17
+    }
+   ],
+   "menus": [
+    {
+     "at": [
+      96,
+      144
+     ],
+     "entries": [
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      128,
+      144
+     ],
+     "entries": [
+      "part",
+      "floor"
+     ]
+    }
+   ],
+   "date": "2026-11-26"
+  },
+  {
+   "case": "grow2x",
+   "clicks": [
+    {
+     "at": [
+      47,
+      111
+     ],
+     "over": "holder",
+     "iconX": 16,
+     "iconY": 17
+    },
+    {
+     "at": [
+      31,
+      111
+     ],
+     "over": "floor",
+     "iconX": 32,
+     "iconY": 17
+    },
+    {
+     "at": [
+      63,
+      111
+     ],
+     "over": "holder",
+     "iconX": 24,
+     "iconY": 17
+    },
+    {
+     "at": [
+      64,
+      111
+     ],
+     "over": "floor",
+     "iconX": 1,
+     "iconY": 17
+    },
+    {
+     "at": [
+      175,
+      111
+     ],
+     "over": "part",
+     "iconX": 16,
+     "iconY": 17
+    },
+    {
+     "at": [
+      80,
+      111
+     ],
+     "over": "floor",
+     "iconX": 17,
+     "iconY": 17
+    }
+   ],
+   "menus": [
+    {
+     "at": [
+      15,
+      111
+     ],
+     "entries": [
+      "floor"
+     ]
+    },
+    {
+     "at": [
+      16,
+      111
+     ],
+     "entries": [
+      "holder",
+      "floor"
+     ]
+    }
+   ],
+   "date": "2026-11-26"
+  },
+  {
+   "case": "iconalpha-slide",
+   "clicks": [
+    {
+     "at": [
+      139,
+      111
+     ],
+     "over": "part",
+     "iconX": 12,
+     "iconY": 17
+    },
+    {
+     "at": [
+      147,
+      111
+     ],
+     "over": "part",
+     "iconX": 20,
+     "iconY": 17
+    },
+    {
+     "at": [
+      150,
+      111
+     ],
+     "over": "part",
+     "iconX": 23,
+     "iconY": 17
+    },
+    {
+     "at": [
+      80,
+      111
+     ],
+     "over": "floor",
+     "iconX": 17,
+     "iconY": 17
+    }
+   ],
+   "date": "2026-11-26"
+  },
+  {
+   "case": "rtalpha-rtturn",
+   "clicks": [
+    {
+     "at": [
+      139,
+      107
+     ],
+     "over": "part",
+     "iconX": 12,
+     "iconY": 21
+    },
+    {
+     "at": [
+      147,
+      107
+     ],
+     "over": "part",
+     "iconX": 20,
+     "iconY": 21
+    },
+    {
+     "at": [
+      139,
+      116
+     ],
+     "over": "floor",
+     "iconX": 12,
+     "iconY": 12
+    },
+    {
+     "at": [
+      147,
+      116
+     ],
+     "over": "floor",
+     "iconX": 20,
+     "iconY": 12
+    }
+   ],
+   "date": "2026-11-26"
+  },
+  {
+   "case": "rtalpha-rtoutline",
+   "clicks": [
+    {
+     "at": [
+      139,
+      111
+     ],
+     "over": "part",
+     "iconX": 12,
+     "iconY": 17
+    },
+    {
+     "at": [
+      146,
+      111
+     ],
+     "over": "floor",
+     "iconX": 19,
+     "iconY": 17
+    },
+    {
+     "at": [
+      149,
+      111
+     ],
+     "over": "floor",
+     "iconX": 22,
+     "iconY": 17
+    }
+   ],
+   "date": "2026-11-26"
+  },
+  {
+   "case": "ptalpha-ptturn",
+   "clicks": [
+    {
+     "at": [
+      139,
+      111
+     ],
+     "over": "floor",
+     "iconX": 12,
+     "iconY": 17
+    },
+    {
+     "at": [
+      147,
+      111
+     ],
+     "over": "floor",
+     "iconX": 20,
+     "iconY": 17
+    }
+   ],
+   "date": "2026-11-26"
+  },
+  {
+   "case": "ptalpha-ptoutline",
+   "clicks": [
+    {
+     "at": [
+      139,
+      111
+     ],
+     "over": "part",
+     "iconX": 12,
+     "iconY": 17
+    },
+    {
+     "at": [
+      146,
+      111
+     ],
+     "over": "floor",
+     "iconX": 19,
+     "iconY": 17
+    },
+    {
+     "at": [
+      149,
+      111
+     ],
+     "over": "floor",
+     "iconX": 22,
+     "iconY": 17
+    }
+   ],
+   "date": "2026-11-26"
+  },
+  {
+   "case": "selfmask",
+   "clicks": [
+    {
+     "at": [
+      139,
+      111
+     ],
+     "over": "part",
+     "iconX": 12,
+     "iconY": 17
+    },
+    {
+     "at": [
+      146,
+      111
+     ],
+     "over": "part",
+     "iconX": 19,
+     "iconY": 17
+    },
+    {
+     "at": [
+      149,
+      111
+     ],
+     "over": "floor",
+     "iconX": 22,
+     "iconY": 17
+    }
+   ],
+   "menus": [
+    {
+     "at": [
+      149,
+      111
+     ],
+     "entries": [
+      "part",
+      "floor"
+     ]
+    }
+   ],
+   "date": "2026-11-26"
+  },
+  {
+   "case": "selfmask-inverse",
+   "clicks": [
+    {
+     "at": [
+      139,
+      111
+     ],
+     "over": "floor",
+     "iconX": 12,
+     "iconY": 17
+    },
+    {
+     "at": [
+      149,
+      111
+     ],
+     "over": "part",
+     "iconX": 22,
+     "iconY": 17
+    }
+   ],
+   "date": "2026-11-26"
+  }
+ ]
+}

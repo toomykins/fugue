@@ -1,0 +1,14 @@
+{
+  "byond_version": "516.1688",
+  "world_size": 17,
+  "source": "Foreground-verified stock screenshots and guest wire proxy; darkness-source-wire-runtime, 2026-10-22",
+  "cases": [
+    {"phase":"source-window-lit","config":"ambient=1&see=0&sight=normal&eyex=9&eyey=9","mask":"111111111/111111111/111111111/111111111/111111111/111111111/111111111/111111111/111111111","visible_markers":["target","observer"]},
+    {"phase":"outside1","config":"ambient=0&see=0&sight=normal&eyex=9&eyey=9&lamp=6&lampx=4&lampy=9","mask":"111110000/111110000/111110000/111110000/111110000/111110000/111110000/111110000/111110000","visible_markers":["target","observer"]},
+    {"phase":"outside2","config":"ambient=0&see=0&sight=normal&eyex=9&eyey=9&lamp=6&lampx=3&lampy=9","mask":"111100000/111100000/111100000/111100000/111100000/111100000/111100000/111100000/111100000","visible_markers":["target"]},
+    {"phase":"outside3","config":"ambient=0&see=0&sight=normal&eyex=9&eyey=9&lamp=6&lampx=2&lampy=9","mask":"000000000/000000000/000000000/000000000/000000000/000000000/000000000/000000000/000000000","visible_markers":[]},
+    {"phase":"outside4","config":"ambient=0&see=0&sight=normal&eyex=9&eyey=9&lamp=6&lampx=1&lampy=9","mask":"000000000/000000000/000000000/000000000/000000000/000000000/000000000/000000000/000000000","visible_markers":[]},
+    {"phase":"lamp-invisible","config":"ambient=0&see=0&sight=normal&eyex=9&eyey=9&lamp=3&lampx=7&lampy=9&lamp_invisible=1","mask":"000000000/000000000/111110000/111110000/111110000/111110000/111110000/000000000/000000000","visible_markers":["observer"]},
+    {"phase":"wall-objs","config":"ambient=0&see=0&sight=objs&eyex=9&eyey=9&lamp=6&lampx=7&lampy=9&wall=1&wallx=8","mask":"000000000/000000000/000000000/000000000/000000000/000000000/000000000/000000000/000000000","visible_markers":["target","lamp"]}
+  ]
+}

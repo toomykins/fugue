@@ -1,0 +1,56 @@
+[
+  {
+    "phase": "baseline",
+    "center_rgb": [
+      255,
+      0,
+      255
+    ],
+    "source_supported": true
+  },
+  {
+    "phase": "southwest-source",
+    "center_rgb": [
+      0,
+      255,
+      0
+    ],
+    "source_supported": true
+  },
+  {
+    "phase": "numeric-source",
+    "center_rgb": [
+      0,
+      255,
+      0
+    ],
+    "source_supported": true
+  },
+  {
+    "phase": "numeric-relay-flags",
+    "center_rgb": [
+      0,
+      255,
+      0
+    ],
+    "source_supported": true
+  },
+  {
+    "phase": "center-source",
+    "center_rgb": [
+      255,
+      0,
+      255
+    ],
+    "source_supported": false
+  },
+  {
+    "phase": "removed-consumer",
+    "center_rgb": [
+      255,
+      0,
+      255
+    ],
+    "source_supported": true
+  }
+]

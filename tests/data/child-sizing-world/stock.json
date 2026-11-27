@@ -1,0 +1,118 @@
+{
+  "provenance": {
+    "source": "build/probes/20261102T014625Z-compare-3e3c8a8f/comparison.json",
+    "version": "DreamSeeker 516.1688",
+    "binary_sha256": "dde2893d7d6721eb8cb73d9e6b9f8cb28d86d1e432b42edaad10b066800a97e4",
+    "dpi": 96,
+    "units": "Stock skin pixels; native client 960x720 then 1200x900; startup before reset retained separately",
+    "state": "fixture-reset",
+    "scope": "Selected unmodified winget values, not full UI parity"
+  },
+  "rows": [
+    {
+      "phase": "startup-ready",
+      "client": "640x480",
+      "controls": {
+        "first.content": "300x150",
+        "second.content": "300x150",
+        "chat.browser": "300x150",
+        "upper.content": "300x156",
+        "lower.content": "300x4"
+      },
+      "fraction": {
+        "splitter": "97.500000",
+        "is-vert": "false"
+      }
+    },
+    {
+      "phase": "reset",
+      "client": "960x720",
+      "controls": {
+        "first.content": "300x150",
+        "second.content": "300x150",
+        "chat.browser": "300x150",
+        "upper.content": "300x156",
+        "lower.content": "300x4"
+      },
+      "fraction": {
+        "splitter": "97.500000",
+        "is-vert": "false"
+      }
+    },
+    {
+      "phase": "both",
+      "client": "960x720",
+      "controls": {
+        "first.content": "74x150",
+        "second.content": "300x36",
+        "chat.browser": "300x150",
+        "upper.content": "300x156",
+        "lower.content": "300x4"
+      },
+      "fraction": {
+        "splitter": "97.500000",
+        "is-vert": "false"
+      }
+    },
+    {
+      "phase": "clear",
+      "client": "960x720",
+      "controls": {
+        "first.content": "300x150",
+        "second.content": "300x150",
+        "chat.browser": "300x150",
+        "upper.content": "300x156",
+        "lower.content": "300x4"
+      },
+      "fraction": {
+        "splitter": "97.500000",
+        "is-vert": "false"
+      }
+    },
+    {
+      "phase": "swap",
+      "client": "960x720",
+      "controls": {
+        "first.content": "300x150",
+        "second.content": "300x150",
+        "chat.browser": "300x150",
+        "upper.content": "300x156",
+        "lower.content": "300x4"
+      },
+      "fraction": {
+        "splitter": "97.500000",
+        "is-vert": "false"
+      }
+    },
+    {
+      "phase": "fraction-winset",
+      "client": "960x720",
+      "controls": {
+        "first.content": "300x150",
+        "second.content": "300x150",
+        "chat.browser": "300x150",
+        "upper.content": "300x156",
+        "lower.content": "300x4"
+      },
+      "fraction": {
+        "splitter": "97.500000",
+        "is-vert": "false"
+      }
+    },
+    {
+      "phase": "resize",
+      "client": "1200x900",
+      "controls": {
+        "first.content": "300x150",
+        "second.content": "300x150",
+        "chat.browser": "300x150",
+        "upper.content": "300x156",
+        "lower.content": "300x4"
+      },
+      "fraction": {
+        "splitter": "97.500000",
+        "is-vert": "false"
+      }
+    }
+  ]
+}

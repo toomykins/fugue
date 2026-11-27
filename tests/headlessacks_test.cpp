@@ -1,5 +1,6 @@
 // Browse-page handshakes that a client with no web view answers (model/headlessacks.h).
 #include <QtTest>
+#include "tests/testmain.h"
 #include "model/headlessacks.h"
 
 using namespace fugue::model;
@@ -62,5 +63,5 @@ private slots:
         QVERIFY(a.collect(w).empty());
     }
 };
-QTEST_APPLESS_MAIN(HeadlessAcksTest)
+FUGUE_TEST_APPLESS_MAIN(HeadlessAcksTest)
 #include "headlessacks_test.moc"

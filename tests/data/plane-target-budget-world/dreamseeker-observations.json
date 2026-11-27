@@ -1,0 +1,34 @@
+[
+  {
+    "phase": "baseline",
+    "center_rgb": [
+      255,
+      0,
+      255
+    ]
+  },
+  {
+    "phase": "unused-targets",
+    "center_rgb": [
+      255,
+      0,
+      255
+    ]
+  },
+  {
+    "phase": "active-target",
+    "center_rgb": [
+      0,
+      255,
+      0
+    ]
+  },
+  {
+    "phase": "removed-consumer",
+    "center_rgb": [
+      255,
+      0,
+      255
+    ]
+  }
+]

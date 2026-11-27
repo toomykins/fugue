@@ -24,10 +24,13 @@ Bytes encodeAtomRef(const AtomRef& a) {
     return b;
 }
 
-static int clampPx(int v) { return v < 1 ? 1 : (v > 32 ? 32 : v); }
+static int clampPx(int v, int tile) {
+    if (tile <= 0) tile = 32;
+    return v < 1 ? 1 : (v > tile ? tile : v);
+}
 
-// Order: icon-x, icon-y, vis-x, vis-y, the button (a hover has only "right=1", and only while the right button is held),
-// the modifiers, screen-loc.
+// Order: icon-x, icon-y, vis-x, vis-y, the button (a hover has only "right=1" or "middle=1", and only while a verb menu
+// closes with that button held: stock 516.1689, tests/data/hover-world), the modifiers, screen-loc.
 static std::string mouseParams(const ClickCmd& c, bool withButton) {
     std::string btn = c.button.empty() ? "left" : c.button;
     // icon-x/icon-y are not clamped: they are in the named atom's icon frame, whatever the cursor's distance from it
@@ -36,15 +39,15 @@ static std::string mouseParams(const ClickCmd& c, bool withButton) {
     if (c.hasVis) s += "vis-x=" + std::to_string(c.visX) + ";vis-y=" + std::to_string(c.visY) + ";";
     if (withButton)
         s += btn + "=1;button=" + btn + ";";
-    else if (c.button == "right")
-        s += "right=1;";
+    else if (c.button == "right" || c.button == "middle")
+        s += c.button + "=1;";
     if (c.mods.ctrl) s += "ctrl=1;";
     if (c.mods.shift) s += "shift=1;";
     if (c.mods.alt) s += "alt=1;";
     int spx = c.screenPX ? c.screenPX : c.iconX, spy = c.screenPY ? c.screenPY : c.iconY;
     s += "screen-loc=" + (c.screenLocMap.empty() ? std::string() : mapIdParam(c.screenLocMap) + ":") +
-         std::to_string(c.screenX) + ":" + std::to_string(clampPx(spx)) + "," + std::to_string(c.screenY) + ":" +
-         std::to_string(clampPx(spy));
+         std::to_string(c.screenX) + ":" + std::to_string(clampPx(spx, c.screenTileSize)) + "," +
+         std::to_string(c.screenY) + ":" + std::to_string(clampPx(spy, c.screenTileSize));
     return s;
 }
 
@@ -90,6 +93,14 @@ static Bytes mouseBody(uint8_t sub, const AtomRef& over, const AtomRef& loc, con
     b.push_back(0x02);
     putStr(b, params);
     return b;
+}
+
+Bytes mouseWireBody(Bytes body, bool wideId) {
+    if (body.size() < 4 || body[0] < kMouseClick || body[0] > kMouseHover || body[1] != 0) return {};
+    // The sentinel (0xffff), or sub-7's event ID, occupies the same negotiated
+    // verb slot as sub-2. Stock 516.1688 zero-extends it, never sign-extends.
+    if (wideId) body.insert(body.begin() + 4, {0, 0});
+    return body;
 }
 
 Bytes encodeMouseCmd(const ClickCmd& c) { return mouseBody(c.sub, c.over, c.loc, c.locStr, c.control, clickParams(c)); }
@@ -169,6 +180,13 @@ std::string infoClickParams(const std::string& button, const Mods& m, bool icon,
     return s + "button=" + btn;
 }
 
+std::string infoHoverParams(const Mods& m, bool icon, int iconX, int iconY) {
+    std::string s = icon ? "icon-x=" + std::to_string(iconX) + ";icon-y=" + std::to_string(iconY) : std::string();
+    for (auto [held, name] : {std::pair{m.ctrl, "ctrl=1"}, std::pair{m.shift, "shift=1"}, std::pair{m.alt, "alt=1"}})
+        if (held) s += (s.empty() ? "" : ";") + std::string(name);
+    return s;
+}
+
 MouseHooks allMouseHooks() { return MouseHooks{true, true, true, true, true, true}; }
 
 std::vector<Bytes> pressFrames(ClickCmd c, const MouseHooks& h) {
@@ -200,7 +218,7 @@ std::vector<Bytes> clickSequence(ClickCmd c, const MouseHooks& h) {
 Bytes encodeDragCmd(const DragCmd& d) {
     Bytes b{kMouseExt, 0x00};
     putLe16(b, d.drop ? kMouseEventDrop : kMouseEventDrag);
-    for (uint8_t x : {0x00, 0xff, 0xff, 0x00, 0x00}) b.push_back(x);
+    b.insert(b.end(), {0x00, 0xff, 0xff, 0x00, 0x00});
     b.push_back(7);  // value count
     const std::string none;
     for (auto [r, str] :
@@ -232,7 +250,7 @@ Bytes encodeDragCmd(const DragCmd& d) {
 Bytes encodeWheelCmd(const WheelCmd& w) {
     Bytes b{kMouseExt, 0x00};
     putLe16(b, kMouseEventWheel);
-    for (uint8_t x : {0x00, 0xff, 0xff, 0x00, 0x00}) b.push_back(x);
+    b.insert(b.end(), {0x00, 0xff, 0xff, 0x00, 0x00});
     b.push_back(6);  // value count
     AtomRef o = w.over;
     if (o.kind == RefNull && o.ref == 0) o.ref = 0x0000ffff;
@@ -254,9 +272,12 @@ Bytes encodeWheelCmd(const WheelCmd& w) {
 
 Bytes encodeMove(uint8_t dir) { return Bytes{0x00, 0x00, dir, 0x00, 0x00, 0xff, 0xff, 0x00, 0x00, 0x00}; }
 
-Bytes encodeVerb(uint16_t id, uint8_t srcKind, uint32_t srcRef, const std::vector<VerbArg>& args) {
+Bytes encodeVerb(uint16_t id, uint8_t srcKind, uint32_t srcRef, const std::vector<VerbArg>& args, bool wideId) {
     Bytes b{0x02, 0x00};
-    putLe16(b, id);
+    if (wideId)
+        putLe32(b, id);
+    else
+        putLe16(b, id);
     b.push_back(srcKind);
     putLe32(b, srcRef);
     b.push_back(uint8_t(args.size()));
@@ -276,7 +297,7 @@ Bytes encodeVerb(uint16_t id, uint8_t srcKind, uint32_t srcRef, const std::vecto
     return b;
 }
 
-Bytes encodeMoveVerb(uint16_t id, uint32_t srcRef, int dir, bool down, bool twoArgs) {
+Bytes encodeMoveVerb(uint16_t id, uint32_t srcRef, int dir, bool down, bool twoArgs, bool wideId) {
     std::vector<VerbArg> a;
     VerbArg d;
     d.tag = 0x01;
@@ -290,7 +311,7 @@ Bytes encodeMoveVerb(uint16_t id, uint32_t srcRef, int dir, bool down, bool twoA
     }
     // A /client/verb carries src-ref 0; `srcRef` is unused.
     (void)srcRef;
-    return encodeVerb(id, kVerbSrcClient, 0, a);
+    return encodeVerb(id, kVerbSrcClient, 0, a, wideId);
 }
 
 Bytes encodeTopic(const std::string& href0) {

@@ -1,0 +1,514 @@
+{
+  "byond": "516.1688",
+  "capture": "build\\probes\\20261024T085241Z-6aaed290\\capture-20261024T085249Z-78147a99.png",
+  "sha256": "db20d6d2a666b60b9a12931c9c97af9db0da700c5632027445487bfe5be8a81e",
+  "mapCrop": [
+    8,
+    31,
+    480,
+    480
+  ],
+  "resetTransformWireFlag": "0x01000000",
+  "clicks": [
+    {
+      "case": "absent",
+      "part": "root",
+      "pixel": [
+        73,
+        111
+      ],
+      "rootLocal": [
+        2,
+        20
+      ],
+      "callback": {
+        "icon-x": 3,
+        "icon-y": 12
+      }
+    },
+    {
+      "case": "absent",
+      "part": "wide",
+      "pixel": [
+        138,
+        108
+      ],
+      "rootLocal": [
+        67,
+        17
+      ],
+      "callback": {
+        "icon-x": 68,
+        "icon-y": 15
+      }
+    },
+    {
+      "case": "absent",
+      "part": "tall",
+      "pixel": [
+        62,
+        102
+      ],
+      "rootLocal": [
+        -9,
+        11
+      ],
+      "callback": {
+        "icon-x": -8,
+        "icon-y": 21
+      }
+    },
+    {
+      "case": "identity",
+      "part": "root",
+      "pixel": [
+        233,
+        111
+      ],
+      "rootLocal": [
+        2,
+        20
+      ],
+      "callback": {
+        "icon-x": 3,
+        "icon-y": 12
+      }
+    },
+    {
+      "case": "identity",
+      "part": "wide",
+      "pixel": [
+        298,
+        108
+      ],
+      "rootLocal": [
+        67,
+        17
+      ],
+      "callback": {
+        "icon-x": 68,
+        "icon-y": 15
+      }
+    },
+    {
+      "case": "identity",
+      "part": "tall",
+      "pixel": [
+        222,
+        102
+      ],
+      "rootLocal": [
+        -9,
+        11
+      ],
+      "callback": {
+        "icon-x": -8,
+        "icon-y": 21
+      }
+    },
+    {
+      "case": "rotate",
+      "part": "root",
+      "pixel": [
+        426,
+        105
+      ],
+      "rootLocal": [
+        35,
+        14
+      ],
+      "callback": {
+        "icon-x": 14,
+        "icon-y": 6,
+        "vis-x": 27,
+        "vis-y": 13
+      }
+    },
+    {
+      "case": "rotate",
+      "part": "wide",
+      "pixel": [
+        451,
+        96
+      ],
+      "rootLocal": [
+        60,
+        5
+      ],
+      "callback": {
+        "icon-x": 23,
+        "icon-y": -19,
+        "vis-x": 52,
+        "vis-y": 22
+      }
+    },
+    {
+      "case": "rotate",
+      "part": "tall",
+      "pixel": [
+        412,
+        103
+      ],
+      "rootLocal": [
+        21,
+        12
+      ],
+      "callback": null
+    },
+    {
+      "case": "reverse",
+      "part": "root",
+      "pixel": [
+        96,
+        218
+      ],
+      "rootLocal": [
+        25,
+        -1
+      ],
+      "callback": {
+        "icon-x": 5,
+        "icon-y": 16,
+        "vis-x": 17,
+        "vis-y": 28
+      }
+    },
+    {
+      "case": "reverse",
+      "part": "wide",
+      "pixel": [
+        123,
+        217
+      ],
+      "rootLocal": [
+        52,
+        -2
+      ],
+      "callback": null
+    },
+    {
+      "case": "reverse",
+      "part": "tall",
+      "pixel": [
+        78,
+        224
+      ],
+      "rootLocal": [
+        7,
+        5
+      ],
+      "callback": {
+        "icon-x": 11,
+        "icon-y": -2,
+        "vis-x": -1,
+        "vis-y": 22
+      }
+    },
+    {
+      "case": "shrink",
+      "part": "root",
+      "pixel": [
+        249,
+        232
+      ],
+      "rootLocal": [
+        18,
+        13
+      ],
+      "callback": {
+        "icon-x": 3,
+        "icon-y": 12,
+        "vis-x": 2,
+        "vis-y": 6
+      }
+    },
+    {
+      "case": "shrink",
+      "part": "wide",
+      "pixel": [
+        288,
+        230
+      ],
+      "rootLocal": [
+        57,
+        11
+      ],
+      "callback": {
+        "icon-x": 81,
+        "icon-y": 16,
+        "vis-x": 41,
+        "vis-y": 8
+      }
+    },
+    {
+      "case": "shrink",
+      "part": "tall",
+      "pixel": [
+        234,
+        227
+      ],
+      "rootLocal": [
+        3,
+        8
+      ],
+      "callback": {
+        "icon-x": -27,
+        "icon-y": 22,
+        "vis-x": -13,
+        "vis-y": 11
+      }
+    },
+    {
+      "case": "nested",
+      "part": "root",
+      "pixel": [
+        426,
+        233
+      ],
+      "rootLocal": [
+        35,
+        14
+      ],
+      "callback": {
+        "icon-x": 14,
+        "icon-y": 6,
+        "vis-x": 27,
+        "vis-y": 13
+      }
+    },
+    {
+      "case": "nested",
+      "part": "wide",
+      "pixel": [
+        451,
+        223
+      ],
+      "rootLocal": [
+        60,
+        4
+      ],
+      "callback": {
+        "icon-x": 24,
+        "icon-y": -19,
+        "vis-x": 52,
+        "vis-y": 23
+      }
+    },
+    {
+      "case": "nested",
+      "part": "tall",
+      "pixel": [
+        412,
+        231
+      ],
+      "rootLocal": [
+        21,
+        12
+      ],
+      "callback": null
+    },
+    {
+      "case": "nested",
+      "part": "leaf",
+      "pixel": [
+        449,
+        234
+      ],
+      "rootLocal": [
+        58,
+        15
+      ],
+      "callback": {
+        "icon-x": 13,
+        "icon-y": -17,
+        "vis-x": 50,
+        "vis-y": 12
+      }
+    },
+    {
+      "case": "wide root",
+      "part": "wide",
+      "pixel": [
+        131,
+        356
+      ],
+      "rootLocal": [
+        60,
+        9
+      ],
+      "callback": {
+        "icon-x": 35,
+        "icon-y": -19,
+        "vis-x": 36,
+        "vis-y": 34
+      }
+    },
+    {
+      "case": "wide root",
+      "part": "tall",
+      "pixel": [
+        92,
+        359
+      ],
+      "rootLocal": [
+        21,
+        12
+      ],
+      "callback": null
+    },
+    {
+      "case": "square",
+      "part": "root",
+      "pixel": [
+        267,
+        361
+      ],
+      "rootLocal": [
+        36,
+        14
+      ],
+      "callback": {
+        "icon-x": 14,
+        "icon-y": 5,
+        "vis-x": 28,
+        "vis-y": 13
+      }
+    },
+    {
+      "case": "square",
+      "part": "leaf",
+      "pixel": [
+        240,
+        373
+      ],
+      "rootLocal": [
+        9,
+        26
+      ],
+      "callback": {
+        "icon-x": 2,
+        "icon-y": 32,
+        "vis-x": 1,
+        "vis-y": 1
+      }
+    },
+    {
+      "case": "square",
+      "part": "square",
+      "pixel": [
+        291,
+        352
+      ],
+      "rootLocal": [
+        60,
+        5
+      ],
+      "callback": {
+        "icon-x": 23,
+        "icon-y": -19,
+        "vis-x": 52,
+        "vis-y": 22
+      }
+    },
+    {
+      "case": "reset",
+      "part": "root",
+      "pixel": [
+        428,
+        359
+      ],
+      "rootLocal": [
+        37,
+        12
+      ],
+      "callback": {
+        "icon-x": 16,
+        "icon-y": 4,
+        "vis-x": 29,
+        "vis-y": 15
+      }
+    },
+    {
+      "case": "reset",
+      "part": "wide",
+      "pixel": [
+        458,
+        364
+      ],
+      "rootLocal": [
+        67,
+        17
+      ],
+      "callback": {
+        "icon-x": 11,
+        "icon-y": -26,
+        "vis-x": 59,
+        "vis-y": 10
+      }
+    },
+    {
+      "case": "reset",
+      "part": "tall",
+      "pixel": [
+        412,
+        359
+      ],
+      "rootLocal": [
+        21,
+        12
+      ],
+      "callback": null
+    },
+    {
+      "case": "translate",
+      "part": "root",
+      "pixel": [
+        242,
+        106
+      ],
+      "rootLocal": [
+        11,
+        15
+      ],
+      "callback": {
+        "icon-x": 3,
+        "icon-y": 12
+      }
+    },
+    {
+      "case": "translate",
+      "part": "wide",
+      "pixel": [
+        307,
+        103
+      ],
+      "rootLocal": [
+        76,
+        12
+      ],
+      "callback": {
+        "icon-x": 68,
+        "icon-y": 15
+      }
+    },
+    {
+      "case": "translate",
+      "part": "tall",
+      "pixel": [
+        231,
+        97
+      ],
+      "rootLocal": [
+        0,
+        6
+      ],
+      "callback": {
+        "icon-x": -8,
+        "icon-y": 21
+      }
+    }
+  ],
+  "translationCapture": "build/probes/20261024T090600Z-c6b8fd1a/capture-20261024T090747Z-f9a587e2.png",
+  "pairedPoseComparisons": "build/root-transform-final/poses.json",
+  "pairedMovingMobPoses": "build/root-transform-mob-final/poses.json"
+}

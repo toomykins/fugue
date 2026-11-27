@@ -1,21 +1,18 @@
-// Icon files: PNG .dmi (zTXt/tEXt "Description" metadata), BYOND's legacy "\x04DMI" container, and
-// plain PNG / GIF images used as icons. Qt-free.
-//
-// The dir slot order (S N E W SE SW NE NW) and the 4-dir diagonal collapse (NE/SE to EAST, NW/SW to WEST) follow
-// stock DreamSeeker 516 (see dirIndex()).
+// Qt-free icon metadata and decoded pixel sheets. PNG/DMI metadata parsing,
+// direction selection and instance playback remain in shell/dmiicon.cpp.
 #pragma once
 #include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
 
-#include "render/png.h"
+#include "render/image.h"
 
-namespace fugue::render {
+namespace fugue::assets {
 
 struct IconState {
     std::string name;  // "" is a real state (the unnamed default)
-    int64_t dirs = 1;  // 1, 4 or 8 (other counts parse but dirIndex() rejects them)
+    int64_t dirs = 1;  // 1, 4 or 8; cells use S N E W SE SW NE NW slot order
     int64_t frames = 1;
     bool hasDelays = false;
     std::vector<double> delays;  // deciseconds per frame, as written (may be shorter than `frames`)
@@ -57,13 +54,8 @@ struct ParseResult {
     bool ok() const { return icon != nullptr; }
 };
 
-ParseResult parseIcon(const uint8_t* data, size_t n);
+// GIF/JPEG and bounded legacy-v4 only. Pixel-limit refusal is retryable when a
+// caller shares the allowance across a preparation; unsupported data is not.
+ParseResult parseIcon(const uint8_t* data, size_t n, uint64_t maxPixels = 64 * 1024 * 1024);
 
-// The frame a free-running state shows `elapsedDs` deciseconds into its clock (rewind, loop and delays applied).
-int frameAtTime(const IconState& st, double elapsedDs);
-
-// BYOND dir constant (N=1 S=2 E=4 W=8, diagonals are ORs) -> dir slot within a state of `dirs` dirs.
-// Returns -1 for an unsupported dir count (not 1/4/8). Unknown dir values map to slot 0 (South).
-int dirIndex(int dirs, int byondDir);
-
-}  // namespace fugue::render
+}  // namespace fugue::assets

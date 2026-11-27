@@ -3,9 +3,11 @@
 // 2 px for every move that lands while the sprite is still gliding the way it moves (cap icon/2).
 // Data: tests/data/glide-zero/measured.txt, camera shifts measured on stock DreamSeeker (header there).
 #include <QtTest>
+#include "tests/testmain.h"
+#include <QFile>
+#include <QRegularExpression>
+#include <QSet>
 #include <cmath>
-#include <fstream>
-#include <sstream>
 #include "model/world.h"
 
 using namespace fugue;
@@ -17,20 +19,51 @@ struct Row {
     std::vector<double> v;
 };
 
-std::vector<Row> loadRows() {
-    std::ifstream in(std::string(FUGUE_TEST_DATA_DIR) + "/glide-zero/measured.txt");
-    std::vector<Row> out;
-    std::string line;
-    while (std::getline(in, line)) {
-        if (line.empty() || line[0] == '#') continue;
-        std::istringstream ss(line);
-        Row r;
-        ss >> r.mode >> r.kind;
-        double x;
-        while (ss >> x) r.v.push_back(x);
-        out.push_back(r);
+bool loadRows(std::vector<Row>& out, QString& error) {
+    out.clear();
+    error.clear();
+    const QString path = QStringLiteral(FUGUE_TEST_DATA_DIR "/glide-zero/measured.txt");
+    qsizetype lineNumber = 0;
+    auto fail = [&](const QString& reason) {
+        error = QString("%1:%2: %3").arg(path).arg(lineNumber).arg(reason);
+        return false;
+    };
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) return fail("Cannot read measurements: " + file.errorString());
+    std::vector<Row> rows;
+    QSet<QString> seen;
+    const QRegularExpression whitespace("\\s+");
+    while (!file.atEnd()) {
+        ++lineNumber;
+        const auto line = QString::fromUtf8(file.readLine()).trimmed();
+        if (file.error() != QFileDevice::NoError) return fail("Cannot read measurements: " + file.errorString());
+        if (line.isEmpty() || line.startsWith('#')) continue;
+        const auto fields = line.split(whitespace, Qt::SkipEmptyParts);
+        if (fields.size() < 2 || (fields[0] != "LEGACY" && fields[0] != "PIXEL") ||
+            (fields[1] != "iso" && fields[1] != "held"))
+            return fail("Expected LEGACY or PIXEL, then iso or held, followed by measured values");
+        const auto name = fields[0] + ' ' + fields[1];
+        if (seen.contains(name)) return fail("Duplicate measurement row: " + name);
+        const int samples = fields[1] == "iso" ? 8 : fields[0] == "LEGACY" ? 6 : 7;
+        if (fields.size() != samples + 2)
+            return fail(QString("%1: expected %2 measured values, found %3").arg(name).arg(samples).arg(fields.size() - 2));
+        Row row{fields[0].toStdString(), fields[1].toStdString(), {}};
+        for (qsizetype i = 2; i < fields.size(); ++i) {
+            bool valid = false;
+            const double value = fields[i].toDouble(&valid);
+            if (!valid || !std::isfinite(value))
+                return fail(QString("%1 sample %2: expected a finite number, got '%3'").arg(name).arg(i - 2).arg(fields[i]));
+            row.v.push_back(value);
+        }
+        seen.insert(name);
+        rows.push_back(std::move(row));
     }
-    return out;
+    if (seen.size() != 4) {
+        if (!lineNumber) lineNumber = 1;
+        return fail("Expected all four LEGACY/PIXEL iso/held measurement rows");
+    }
+    out = std::move(rows);
+    return true;
 }
 
 // The view shift (tiles) the model draws at the end of each tick when the eye steps east `moves` times, one per tick.
@@ -71,7 +104,8 @@ private slots:
     }
 
     void matchesMeasuredStock() {
-        auto rows = loadRows();
+        std::vector<Row> rows; QString error;
+        QVERIFY2(loadRows(rows, error), qPrintable(error));
         QCOMPARE(int(rows.size()), 4);
         for (const Row& r : rows) {
             bool held = r.kind == "held";
@@ -100,5 +134,5 @@ private slots:
     }
 };
 
-QTEST_GUILESS_MAIN(GlideZeroTest)
+FUGUE_TEST_GUILESS_MAIN(GlideZeroTest)
 #include "glidezero_test.moc"

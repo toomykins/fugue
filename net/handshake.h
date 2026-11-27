@@ -27,6 +27,9 @@ struct HandshakeReply {
     uint32_t major = 0;
     uint32_t field2 = 0;
     uint8_t flags[3] = {0, 0, 0};
+    // Stock 516.1688: the third handshake flag's bit 1 selects u32 verb IDs.
+    // This is independent of 0x003b's flags (the 33k-proc fixture distinguishes them).
+    bool wideVerbIds() const { return (flags[2] & 2) != 0; }
     Bytes nonce;
 };
 // false when plain is shorter than the 11-byte fixed prefix.

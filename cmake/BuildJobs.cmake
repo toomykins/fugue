@@ -1,0 +1,11 @@
+# One Qt-heavy compilation can use about 860 MiB. Leave 2 GiB for other work.
+cmake_host_system_information(RESULT _memory QUERY AVAILABLE_PHYSICAL_MEMORY)
+cmake_host_system_information(RESULT _cores QUERY NUMBER_OF_PHYSICAL_CORES)
+math(EXPR FUGUE_AUTO_JOBS "(${_memory} - 2048) / 1024")
+if(FUGUE_AUTO_JOBS GREATER _cores)
+  set(FUGUE_AUTO_JOBS ${_cores})
+endif()
+if(FUGUE_AUTO_JOBS LESS 1)
+  set(FUGUE_AUTO_JOBS 1)
+endif()
+execute_process(COMMAND "${CMAKE_COMMAND}" -E echo "${FUGUE_AUTO_JOBS}")

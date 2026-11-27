@@ -1,0 +1,373 @@
+{
+ "schema": 1,
+ "stock": "DreamSeeker/DreamDaemon 516.1688",
+ "date": "2026-11-14",
+ "method": "native 1:1 grabs of stock and Fugue on one server; ink bounding boxes (tile-relative x, y, w, h) read from the stock grab by compare.py; fugueDiff* compare the 96 px crops after the change",
+ "sets": {
+  "a": [
+   {
+    "case": "own-turn",
+    "yellow": [
+     8,
+     8,
+     16,
+     16
+    ],
+    "white": [
+     18,
+     10,
+     4,
+     4
+    ],
+    "blue": [
+     2,
+     18,
+     8,
+     8
+    ],
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "own-scale",
+    "yellow": [
+     1,
+     8,
+     31,
+     16
+    ],
+    "white": [
+     4,
+     10,
+     8,
+     4
+    ],
+    "blue": [
+     2,
+     24,
+     8,
+     2
+    ],
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 1
+   },
+   {
+    "case": "own-turn-pixel",
+    "yellow": [
+     16,
+     4,
+     16,
+     16
+    ],
+    "white": [
+     26,
+     6,
+     4,
+     4
+    ],
+    "blue": [
+     2,
+     18,
+     8,
+     8
+    ],
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "own-turn-target-scale",
+    "yellow": [
+     1,
+     8,
+     30,
+     16
+    ],
+    "white": [
+     20,
+     10,
+     8,
+     4
+    ],
+    "blue": [
+     -3,
+     18,
+     11,
+     8
+    ],
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 1
+   },
+   {
+    "case": "own-scale-target-turn",
+    "yellow": [
+     8,
+     1,
+     16,
+     31
+    ],
+    "white": [
+     18,
+     4,
+     4,
+     8
+    ],
+    "blue": [
+     6,
+     18,
+     2,
+     8
+    ],
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 1
+   },
+   {
+    "case": "own-reset",
+    "yellow": [
+     8,
+     8,
+     16,
+     16
+    ],
+    "white": [
+     18,
+     10,
+     4,
+     4
+    ],
+    "blue": [
+     -3,
+     18,
+     14,
+     8
+    ],
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 1
+   },
+   {
+    "case": "maptext-turn",
+    "yellow": [
+     8,
+     8,
+     16,
+     16
+    ],
+    "white": [
+     2,
+     0,
+     20,
+     14
+    ],
+    "blue": [
+     6,
+     18,
+     6,
+     8
+    ],
+    "fugueDiffOver8": 74,
+    "fugueMaxDiff": 239
+   },
+   {
+    "case": "maptext-only-turn",
+    "yellow": null,
+    "white": [
+     2,
+     0,
+     9,
+     13
+    ],
+    "blue": [
+     6,
+     18,
+     8,
+     8
+    ],
+    "fugueDiffOver8": 74,
+    "fugueMaxDiff": 239
+   },
+   {
+    "case": "maptext-own-turn",
+    "yellow": [
+     8,
+     8,
+     16,
+     16
+    ],
+    "white": [
+     2,
+     0,
+     20,
+     14
+    ],
+    "blue": [
+     2,
+     18,
+     8,
+     8
+    ],
+    "fugueDiffOver8": 74,
+    "fugueMaxDiff": 239
+   },
+   {
+    "case": "overlay-turn",
+    "yellow": [
+     8,
+     8,
+     16,
+     16
+    ],
+    "white": [
+     18,
+     10,
+     4,
+     4
+    ],
+    "blue": [
+     6,
+     18,
+     22,
+     8
+    ],
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "underlay-turn",
+    "yellow": [
+     8,
+     8,
+     16,
+     16
+    ],
+    "white": [
+     18,
+     10,
+     4,
+     4
+    ],
+    "blue": [
+     -4,
+     18,
+     16,
+     18
+    ],
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "overlay-scale",
+    "yellow": [
+     1,
+     8,
+     31,
+     16
+    ],
+    "white": [
+     4,
+     10,
+     8,
+     4
+    ],
+    "blue": [
+     -3,
+     18,
+     28,
+     8
+    ],
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 1
+   },
+   {
+    "case": "overlay-own-turn",
+    "yellow": [
+     8,
+     8,
+     16,
+     16
+    ],
+    "white": [
+     18,
+     10,
+     4,
+     4
+    ],
+    "blue": [
+     2,
+     18,
+     26,
+     8
+    ],
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "overlay-reset",
+    "yellow": [
+     8,
+     8,
+     16,
+     16
+    ],
+    "white": [
+     18,
+     10,
+     4,
+     4
+    ],
+    "blue": [
+     6,
+     18,
+     18,
+     8
+    ],
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "overlay-target-overlay",
+    "yellow": [
+     8,
+     8,
+     16,
+     16
+    ],
+    "white": [
+     18,
+     10,
+     4,
+     4
+    ],
+    "blue": [
+     6,
+     4,
+     22,
+     22
+    ],
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "plain-turn",
+    "yellow": [
+     8,
+     8,
+     16,
+     16
+    ],
+    "white": [
+     18,
+     10,
+     4,
+     4
+    ],
+    "blue": [
+     6,
+     18,
+     6,
+     8
+    ],
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   }
+  ]
+ }
+}

@@ -143,7 +143,7 @@ bool rememberGuest(bool on, std::string* err) {
         return false;
     }
     if (on) return account::atomicWrite(p, "guest\n", err);
-    if (::unlink(p.c_str()) != 0 && errno != ENOENT) {
+    if (platform::unlink(p.c_str()) != 0 && errno != ENOENT) {
         if (err) *err = "remove " + p + ": " + std::strerror(errno);
         return false;
     }
@@ -166,38 +166,11 @@ bool setAutoSignIn(bool on, std::string* err) {
         return false;
     }
     if (!on) return account::atomicWrite(p, "off\n", err);
-    if (::unlink(p.c_str()) != 0 && errno != ENOENT) {
+    if (platform::unlink(p.c_str()) != 0 && errno != ENOENT) {
         if (err) *err = "remove " + p + ": " + std::strerror(errno);
         return false;
     }
     return true;
-}
-
-std::string clientStateDir(const std::vector<std::string>& clientFlags) {
-    std::string dir;
-    for (size_t i = 0; i < clientFlags.size(); i++) {
-        const std::string& a = clientFlags[i];
-        // A bare "--" is dropped by the client's parse (pager/dsargv.cpp), which carries on past it.
-        if (a == "--state-dir" && i + 1 < clientFlags.size())
-            dir = clientFlags[++i];
-        else if (a.rfind("--state-dir=", 0) == 0)
-            dir = a.substr(12);
-    }
-    return dir;
-}
-std::string displaySettingsPath(const std::string& stateDir) {
-    return (stateDir.empty() ? net::defaultStateDir() : stateDir) + "/display.ini";
-}
-bool savedRendererGpu(const std::string& displayIni) {
-    return QSettings(QString::fromStdString(displayIni), QSettings::IniFormat).value("renderer").toString() == "gpu";
-}
-bool setSavedRenderer(const std::string& displayIni, bool gpu, std::string* err) {
-    QSettings s(QString::fromStdString(displayIni), QSettings::IniFormat);
-    s.setValue("renderer", gpu ? "gpu" : "cpu");
-    s.sync();
-    if (s.status() == QSettings::NoError) return true;
-    if (err) *err = "could not save " + displayIni;
-    return false;
 }
 
 namespace {
@@ -223,7 +196,10 @@ int runHeadless(const std::vector<std::string>& argv, FILE* out) {
         std::string dir = lp.substr(0, lp.rfind('/'));
         platform::mkdir(dir.c_str(), 0700);
         int fd = platform::open(lp.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600);
-        if (fd >= 0) logf = ::fdopen(fd, "w");
+        if (fd >= 0) {
+            logf = platform::fdopen(fd, "w");
+            if (!logf) platform::close(fd);
+        }
     }
     gSignal = 0;
     auto oldInt = ::signal(SIGINT, onSignal);

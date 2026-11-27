@@ -1,0 +1,13 @@
+window "main"
+    elem "main"
+        type = MAIN
+        size = 352x352
+        is-default = true
+    elem "map"
+        type = MAP
+        pos = 0,0
+        size = 352x352
+        anchor1 = 0,0
+        anchor2 = 100,100
+        icon-size = 32
+        is-default = true

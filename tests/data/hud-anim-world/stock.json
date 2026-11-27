@@ -1,0 +1,246 @@
+{
+ "schema": 1,
+ "stock": "DreamSeeker/DreamDaemon 516.1688",
+ "date": "2026-11-14",
+ "method": "native 1:1 grabs; clock = floor(320 t) from the map marker's pixel_x; slideX = the sliding HUD marker's x from its screen_loc column; fade = the fading white HUD marker's brightness over black; turnArm = the turning HUD arm's red-arm centroid in its screen tile (centre 16,16); row2 = marker columns on row 2 from column 1 (static pixel_x 16, sliding pixel_y, ended pixel_x tween)",
+ "frames": [
+  {
+   "clock": 47,
+   "slideX": 0,
+   "fade": 216,
+   "turnArm": [
+    23.74,
+    17.52
+   ],
+   "row2": [
+    0,
+    1,
+    128,
+    129,
+    256,
+    257
+   ]
+  },
+  {
+   "clock": 55,
+   "slideX": 0,
+   "fade": 210,
+   "turnArm": [
+    23.68,
+    17.82
+   ],
+   "row2": [
+    0,
+    1,
+    128,
+    129,
+    256,
+    257
+   ]
+  },
+  {
+   "clock": 63,
+   "slideX": 0,
+   "fade": 204,
+   "turnArm": [
+    22.82,
+    17.91
+   ],
+   "row2": [
+    0,
+    1,
+    128,
+    129,
+    256,
+    257
+   ]
+  },
+  {
+   "clock": 71,
+   "slideX": 0,
+   "fade": 197,
+   "turnArm": [
+    23.32,
+    18.41
+   ],
+   "row2": [
+    0,
+    1,
+    128,
+    129,
+    256,
+    257
+   ]
+  },
+  {
+   "clock": 79,
+   "slideX": 0,
+   "fade": 191,
+   "turnArm": [
+    23.35,
+    18.74
+   ],
+   "row2": [
+    0,
+    1,
+    128,
+    129,
+    256,
+    257
+   ]
+  },
+  {
+   "clock": 87,
+   "slideX": 0,
+   "fade": 184,
+   "turnArm": [
+    23.43,
+    19.13
+   ],
+   "row2": [
+    0,
+    1,
+    128,
+    129,
+    256,
+    257
+   ]
+  },
+  {
+   "clock": 95,
+   "slideX": 0,
+   "fade": 178,
+   "turnArm": [
+    22.33,
+    19.04
+   ],
+   "row2": [
+    0,
+    1,
+    128,
+    129,
+    256,
+    257
+   ]
+  },
+  {
+   "clock": 103,
+   "slideX": 0,
+   "fade": 172,
+   "turnArm": [
+    22.64,
+    19.5
+   ],
+   "row2": [
+    0,
+    1,
+    128,
+    129,
+    256,
+    257
+   ]
+  },
+  {
+   "clock": 111,
+   "slideX": 0,
+   "fade": 165,
+   "turnArm": [
+    22.87,
+    20.04
+   ],
+   "row2": [
+    0,
+    1,
+    128,
+    129,
+    256,
+    257
+   ]
+  },
+  {
+   "clock": 119,
+   "slideX": 0,
+   "fade": 159,
+   "turnArm": [
+    22.5,
+    20.15
+   ],
+   "row2": [
+    0,
+    1,
+    128,
+    129,
+    256,
+    257
+   ]
+  },
+  {
+   "clock": 127,
+   "slideX": 0,
+   "fade": 153,
+   "turnArm": [
+    22.35,
+    20.48
+   ],
+   "row2": [
+    0,
+    1,
+    128,
+    129,
+    256,
+    257
+   ]
+  },
+  {
+   "clock": 135,
+   "slideX": 0,
+   "fade": 146,
+   "turnArm": [
+    21.95,
+    20.55
+   ],
+   "row2": [
+    0,
+    1,
+    128,
+    129,
+    256,
+    257
+   ]
+  },
+  {
+   "clock": 143,
+   "slideX": 0,
+   "fade": 140,
+   "turnArm": [
+    22.0,
+    21.05
+   ],
+   "row2": [
+    0,
+    1,
+    128,
+    129,
+    256,
+    257
+   ]
+  },
+  {
+   "clock": 151,
+   "slideX": 0,
+   "fade": 133,
+   "turnArm": [
+    21.76,
+    21.24
+   ],
+   "row2": [
+    0,
+    1,
+    128,
+    129,
+    256,
+    257
+   ]
+  }
+ ]
+}

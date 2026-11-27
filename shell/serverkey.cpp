@@ -50,12 +50,23 @@ void ServerKey::moved(const QString& host, quint16 port) {
         else
             rekey(host, port);
     };
-    QHostInfo::lookupHost(host_, this, [p, done](const QHostInfo& i) {
-        p->from = i.addresses();
+    auto resolve = [this](const QString& name, auto ready) {
+        QHostAddress address;
+        if (address.setAddress(name)) {
+            // Literal addresses need no reverse DNS. Keep completion queued so
+            // a later move can still overtake it, just like a hostname lookup.
+            QMetaObject::invokeMethod(
+                this, [ready, address] { ready(QList<QHostAddress>{address}); }, Qt::QueuedConnection);
+        } else {
+            QHostInfo::lookupHost(name, this, [ready](const QHostInfo& i) { ready(i.addresses()); });
+        }
+    };
+    resolve(host_, [p, done](const QList<QHostAddress>& addresses) {
+        p->from = addresses;
         done();
     });
-    QHostInfo::lookupHost(host, this, [p, done](const QHostInfo& i) {
-        p->to = i.addresses();
+    resolve(host, [p, done](const QList<QHostAddress>& addresses) {
+        p->to = addresses;
         done();
     });
 }

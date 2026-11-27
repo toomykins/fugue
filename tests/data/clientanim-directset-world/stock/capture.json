@@ -1,0 +1,331 @@
+{
+  "complete": true,
+  "world": "D:\\dev\\render5\\tests\\data\\clientanim-directset-world",
+  "params": "",
+  "requested_map_crop_physical": [
+    0,
+    0,
+    352,
+    352
+  ],
+  "settle_seconds": 1.0,
+  "state_policy": "stock existing global configuration; fresh Fugue state directory",
+  "readiness": "two server READY lines, then settle; not a presentation acknowledgement",
+  "capture_method": "PrintWindow client area; not a desktop-compositor observation",
+  "world_sha256": {
+    "world.dm": "f2105003edb4cf078c566763394145107c4a6d9aff7c235b6e7a45af85dd06f0",
+    "world.dmb": "490e67eb3ba9730d95a5ee603272f4cd83cf203de0cb74bc59e2ed93b0a72b73",
+    "world.dme": "3228a9ad06ef6c8963e8b7e63d30701a1577d077fa72f4b1c663f7c9d255dbd4",
+    "world.dmf": "f1629e745d77e3d3846106b692542cd5a9e34b6abf2fb091ba332648de42b4f4",
+    "world.rsc": "b318f3b66fd9fdc91b2e494707a5dc7c769fcef768b6ccf5d01c5ca72472e017"
+  },
+  "executables_sha256": {
+    "C:\\Program Files (x86)\\BYOND\\bin\\dreamseeker.exe": "6be0a716fdbefe1b6d9a26130852856469e3fc3346749e112752f6f9550d44cb",
+    "C:\\Program Files (x86)\\BYOND\\bin\\dd.exe": "acfb1645a8ba23e5babc25d25e569aed82ed062509c89b58c2b1fd4f8ab41838",
+    "D:\\dev\\render5\\build\\ninja\\release\\app\\Release\\fugue-qt.exe": "b55d1e80f5a110654c6d51462e32c36d40e75d6484048e2e887988b481c39f03"
+  },
+  "executable_file_versions": {
+    "C:\\Program Files (x86)\\BYOND\\bin\\dreamseeker.exe": "5.0.516.1689",
+    "C:\\Program Files (x86)\\BYOND\\bin\\dd.exe": "5.0.516.1689",
+    "D:\\dev\\render5\\build\\ninja\\release\\app\\Release\\fugue-qt.exe": null
+  },
+  "dreamdaemon_version": "516.1689",
+  "system_dpi": 144,
+  "captured_utc": "2026-11-25T00:32:38.090215+00:00",
+  "monotonic_origin_ns": 162765592736700,
+  "duration_ns": 4000000000,
+  "interval_ns": 25000000,
+  "frames": [
+    {
+      "subject": "stock",
+      "index": 17,
+      "requested_ns": 425000000,
+      "started_ns": 427957000,
+      "finished_ns": 477272300,
+      "geometry": {
+        "window_bounds_physical": [
+          1104,
+          588,
+          1478,
+          1021
+        ],
+        "client_origin_physical": [
+          1115,
+          633
+        ],
+        "client_size_physical": [
+          352,
+          377
+        ],
+        "dpi": 144
+      },
+      "image": "stock/000017.png"
+    },
+    {
+      "subject": "stock",
+      "index": 21,
+      "requested_ns": 525000000,
+      "started_ns": 527546000,
+      "finished_ns": 577661900,
+      "geometry": {
+        "window_bounds_physical": [
+          1104,
+          588,
+          1478,
+          1021
+        ],
+        "client_origin_physical": [
+          1115,
+          633
+        ],
+        "client_size_physical": [
+          352,
+          377
+        ],
+        "dpi": 144
+      },
+      "image": "stock/000021.png"
+    },
+    {
+      "subject": "stock",
+      "index": 81,
+      "requested_ns": 2025000000,
+      "started_ns": 2044094600,
+      "finished_ns": 2093453100,
+      "geometry": {
+        "window_bounds_physical": [
+          1104,
+          588,
+          1478,
+          1021
+        ],
+        "client_origin_physical": [
+          1115,
+          633
+        ],
+        "client_size_physical": [
+          352,
+          377
+        ],
+        "dpi": 144
+      },
+      "image": "stock/000081.png"
+    }
+  ],
+  "missed": [
+    {
+      "first_index": 2,
+      "count": 3
+    },
+    {
+      "first_index": 6,
+      "count": 3
+    },
+    {
+      "first_index": 10,
+      "count": 3
+    },
+    {
+      "first_index": 14,
+      "count": 3
+    },
+    {
+      "first_index": 18,
+      "count": 3
+    },
+    {
+      "first_index": 22,
+      "count": 3
+    },
+    {
+      "first_index": 26,
+      "count": 3
+    },
+    {
+      "first_index": 30,
+      "count": 3
+    },
+    {
+      "first_index": 34,
+      "count": 3
+    },
+    {
+      "first_index": 38,
+      "count": 3
+    },
+    {
+      "first_index": 42,
+      "count": 3
+    },
+    {
+      "first_index": 46,
+      "count": 3
+    },
+    {
+      "first_index": 50,
+      "count": 3
+    },
+    {
+      "first_index": 54,
+      "count": 3
+    },
+    {
+      "first_index": 58,
+      "count": 3
+    },
+    {
+      "first_index": 62,
+      "count": 3
+    },
+    {
+      "first_index": 66,
+      "count": 3
+    },
+    {
+      "first_index": 70,
+      "count": 3
+    },
+    {
+      "first_index": 74,
+      "count": 3
+    },
+    {
+      "first_index": 78,
+      "count": 3
+    },
+    {
+      "first_index": 82,
+      "count": 3
+    },
+    {
+      "first_index": 86,
+      "count": 3
+    },
+    {
+      "first_index": 90,
+      "count": 3
+    },
+    {
+      "first_index": 94,
+      "count": 3
+    },
+    {
+      "first_index": 98,
+      "count": 3
+    },
+    {
+      "first_index": 102,
+      "count": 3
+    },
+    {
+      "first_index": 106,
+      "count": 3
+    },
+    {
+      "first_index": 110,
+      "count": 3
+    },
+    {
+      "first_index": 114,
+      "count": 3
+    },
+    {
+      "first_index": 118,
+      "count": 3
+    },
+    {
+      "first_index": 122,
+      "count": 1
+    },
+    {
+      "first_index": 124,
+      "count": 1
+    },
+    {
+      "first_index": 126,
+      "count": 1
+    },
+    {
+      "first_index": 128,
+      "count": 1
+    },
+    {
+      "first_index": 130,
+      "count": 1
+    },
+    {
+      "first_index": 132,
+      "count": 1
+    },
+    {
+      "first_index": 134,
+      "count": 1
+    },
+    {
+      "first_index": 136,
+      "count": 1
+    },
+    {
+      "first_index": 138,
+      "count": 1
+    },
+    {
+      "first_index": 140,
+      "count": 1
+    },
+    {
+      "first_index": 142,
+      "count": 1
+    },
+    {
+      "first_index": 144,
+      "count": 1
+    },
+    {
+      "first_index": 146,
+      "count": 1
+    },
+    {
+      "first_index": 148,
+      "count": 1
+    },
+    {
+      "first_index": 150,
+      "count": 1
+    },
+    {
+      "first_index": 152,
+      "count": 1
+    },
+    {
+      "first_index": 154,
+      "count": 1
+    },
+    {
+      "first_index": 157,
+      "count": 1
+    },
+    {
+      "first_index": 159,
+      "count": 1
+    }
+  ],
+  "timing": "Capture-call bounds only; sequential subjects are not simultaneous; presentation time is unknown",
+  "trigger": {
+    "started_ns": 19800,
+    "file": "capture.txt",
+    "token": "3bf1c4b93f5546028d043a9c0f6e33b8",
+    "finished_ns": 515500
+  },
+  "finished_ns": 4011380500,
+  "selection": {
+    "description": "Last running sample before assignment, first assigned sample, first settled sample",
+    "original_image_count": 102,
+    "retained_stock_indices": [
+      17,
+      21,
+      81
+    ],
+    "original_capture_sha256": "0b87f398e09d66ee0b2b9610953b88dc502d00439af930589c126afa575c828b"
+  }
+}

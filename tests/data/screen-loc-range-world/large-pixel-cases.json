@@ -1,0 +1,18 @@
+[
+ {"view":"7x5","text":"RIGHT:-192,SOUTH TO EAST:-192,SOUTH"},
+ {"view":"7x5","text":"WEST,SOUTH:-128 TO EAST,TOP:-128"},
+ {"view":"7x5","text":"WEST,TOP:-128 TO WEST,NORTH:-128"},
+ {"view":"7x5","text":"RIGHT+1:-192,SOUTH TO WEST:-192,SOUTH"},
+ {"view":"7x5","text":"WEST,TOP+1:-128 TO WEST,SOUTH:-128"},
+ {"view":"7x5","text":"RIGHT-1:-128,SOUTH TO WEST:-128,SOUTH"},
+ {"view":"7x5","text":"RIGHT:-128,SOUTH TO WEST+2:-128,SOUTH"},
+ {"view":"7x5","text":"WEST,TOP:-64 TO WEST,SOUTH+2:-64"},
+ {"view":"7x5","text":"WEST:-128,SOUTH TO RIGHT+2:-128,SOUTH"},
+ {"view":"7x5","text":"LEFT:-128,SOUTH TO RIGHT+2:-128,SOUTH"},
+ {"view":"7x5","text":"RIGHT-1:-128,SOUTH TO LEFT:-128,SOUTH"},
+ {"view":"7x5","text":"RIGHT:-128,SOUTH TO LEFT+2:-128,SOUTH"},
+ {"view":"8x6","text":"RIGHT:-224,SOUTH TO EAST:-224,SOUTH"},
+ {"view":"8x6","text":"WEST,TOP:-160 TO WEST,NORTH:-160"},
+ {"view":"8x6","text":"RIGHT:-160,SOUTH TO WEST+2:-160,SOUTH"},
+ {"view":"8x6","text":"RIGHT:-160,SOUTH TO LEFT+2:-160,SOUTH"}
+]

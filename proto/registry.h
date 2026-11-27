@@ -26,7 +26,8 @@ inline const char* dirName(Dir d) { return d == Dir::C2S ? "c2s" : "s2c"; }
 // Cross-frame state for one decode run, threaded through the decoders in order.
 class State {
 public:
-    MapView mapView;  // see proto/mapview.h
+    MapView mapView;           // see proto/mapview.h
+    bool wideVerbIds = false;  // session handshake, NOT inferred from an appearance or 0x003b
 
     // Decoder-private state, no header change needed: any default-constructible type, created on
     // first use and kept until this State is destroyed. e.g.  auto& s = st.get<MyDecoderState>();

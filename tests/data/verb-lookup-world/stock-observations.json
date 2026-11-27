@@ -1,0 +1,751 @@
+{
+  "small": {
+    "wire_source": "build\\verb-lookup\\small-stock-wire.jsonl",
+    "rows": [
+      {
+        "dir": "s2c",
+        "type": "0001-header",
+        "body": "04020000ea010000010101"
+      },
+      {
+        "seconds": 0.193,
+        "dir": "s2c",
+        "type": "003b",
+        "size": 41,
+        "body": "000001000000000001000000402700000402ea01000000436f6d6d616e647300ff9806000004020000"
+      },
+      {
+        "seconds": 0.287,
+        "dir": "s2c",
+        "type": "0071",
+        "size": 4,
+        "body": "00000000"
+      },
+      {
+        "seconds": 0.287,
+        "dir": "s2c",
+        "type": "0026",
+        "size": 55,
+        "body": "040000005361707079323534310000ffff0000006d000020002000000000000206000000000001ffff0000000000000000000080400000"
+      },
+      {
+        "seconds": 0.287,
+        "dir": "s2c",
+        "type": "0009",
+        "size": 9,
+        "body": "000000000400000000"
+      },
+      {
+        "seconds": 0.288,
+        "dir": "s2c",
+        "type": "0011",
+        "size": 19,
+        "body": "05004c6174652050726f6265000000ff000400"
+      },
+      {
+        "seconds": 0.288,
+        "dir": "s2c",
+        "type": "0011",
+        "size": 25,
+        "body": "040050726f62652054657874000000ff000401040000007d01"
+      },
+      {
+        "seconds": 0.288,
+        "dir": "s2c",
+        "type": "0011",
+        "size": 21,
+        "body": "030050726f626520416374696f6e000000ff000400"
+      },
+      {
+        "seconds": 0.288,
+        "dir": "s2c",
+        "type": "0026",
+        "size": 58,
+        "body": "02000000636c69656e740000ffff00000063000020002000000000000200000000000001ffff0000030005000400030000000000000000000000"
+      },
+      {
+        "seconds": 0.288,
+        "dir": "s2c",
+        "type": "0038",
+        "size": 12,
+        "body": "020000000000000000000000"
+      },
+      {
+        "seconds": 0.288,
+        "dir": "s2c",
+        "type": "0026",
+        "size": 56,
+        "body": "05000000636c69656e740000ffff00000063000020002000000000000200000000000001ffff000002000400030000000000000000000000"
+      },
+      {
+        "seconds": 0.288,
+        "dir": "s2c",
+        "type": "0038",
+        "size": 12,
+        "body": "050000000000000000000000"
+      },
+      {
+        "seconds": 0.288,
+        "dir": "s2c",
+        "type": "0026",
+        "size": 50,
+        "body": "00000000747572660000ffff00000074000020002000000000000204000000000001ffff0000000000000000000000400000"
+      },
+      {
+        "seconds": 0.288,
+        "dir": "s2c",
+        "type": "0026",
+        "size": 51,
+        "body": "01000000617265610000ffff0000006100002000200000000000020c000000000001ffff00000000000000000000803f000201"
+      },
+      {
+        "seconds": 0.385,
+        "dir": "s2c",
+        "type": "0009",
+        "size": 9,
+        "body": "000000000400000000"
+      },
+      {
+        "seconds": 2.184,
+        "dir": "c2s",
+        "type": "0002",
+        "size": 10,
+        "body": "02000300080000000000"
+      },
+      {
+        "seconds": 3.183,
+        "dir": "c2s",
+        "type": "0002",
+        "size": 10,
+        "body": "02000300080000000000"
+      },
+      {
+        "seconds": 5.181,
+        "dir": "s2c",
+        "type": "003b",
+        "size": 41,
+        "body": "000001000001000001000000402300000402ea01000000436f6d6d616e647300ff9806000004020000"
+      },
+      {
+        "seconds": 5.698,
+        "dir": "c2s",
+        "type": "0002",
+        "size": 10,
+        "body": "02000300080000000000"
+      },
+      {
+        "seconds": 6.683,
+        "dir": "s2c",
+        "type": "003b",
+        "size": 41,
+        "body": "000001000000000001000000402700000402ea01000000436f6d6d616e647300ff9806000004020000"
+      },
+      {
+        "seconds": 6.683,
+        "dir": "s2c",
+        "type": "0038",
+        "size": 12,
+        "body": "020000000000000000000000"
+      },
+      {
+        "seconds": 7.186,
+        "dir": "c2s",
+        "type": "0002",
+        "size": 10,
+        "body": "02000500080000000000"
+      },
+      {
+        "seconds": 8.188,
+        "dir": "c2s",
+        "type": "0002",
+        "size": 17,
+        "body": "020004000800000000010268656c6c6f00"
+      }
+    ],
+    "observations": [
+      "PHASE hidden-first command=Probe-Action before=0",
+      "INVOKED Probe Action 1",
+      "RESULT hidden-first calls=1",
+      "PHASE hidden-repeat command=Probe-Action before=1",
+      "INVOKED Probe Action 2",
+      "RESULT hidden-repeat calls=2",
+      "PHASE hidden-unknown command=Missing-Probe before=2",
+      "RESULT hidden-unknown calls=2",
+      "PHASE visible command=Probe-Action before=2",
+      "INVOKED Probe Action 3",
+      "RESULT visible calls=3",
+      "PHASE hidden-late command=Late-Probe before=3",
+      "INVOKED Late Probe 4",
+      "RESULT hidden-late calls=4",
+      "PHASE hidden-text command=Probe-Text hello before=4",
+      "INVOKED Probe Text hello 5",
+      "RESULT hidden-text calls=5",
+      "DONE",
+      "PHASE hidden-first command=Probe-Action before=0",
+      "INVOKED Probe Action 1",
+      "RESULT hidden-first calls=1",
+      "PHASE hidden-repeat command=Probe-Action before=1",
+      "INVOKED Probe Action 2",
+      "RESULT hidden-repeat calls=2",
+      "PHASE hidden-unknown command=Missing-Probe before=2",
+      "RESULT hidden-unknown calls=2",
+      "PHASE visible command=Probe-Action before=2",
+      "INVOKED Probe Action 3",
+      "RESULT visible calls=3",
+      "PHASE hidden-late command=Late-Probe before=3",
+      "INVOKED Late Probe 4",
+      "RESULT hidden-late calls=4",
+      "PHASE hidden-text command=Probe-Text hello before=4",
+      "INVOKED Probe Text hello 5",
+      "RESULT hidden-text calls=5",
+      "DONE"
+    ]
+  },
+  "mid": {
+    "wire_source": "build\\verb-lookup\\wide-stock-wire.jsonl",
+    "rows": [
+      {
+        "dir": "s2c",
+        "type": "0001-header",
+        "body": "04020000ea010000010101"
+      },
+      {
+        "seconds": 0.402,
+        "dir": "s2c",
+        "type": "003b",
+        "size": 41,
+        "body": "000001000000000001000000402700400402ea01000000436f6d6d616e647300ff9806000004020000"
+      },
+      {
+        "seconds": 0.496,
+        "dir": "s2c",
+        "type": "0071",
+        "size": 4,
+        "body": "00000000"
+      },
+      {
+        "seconds": 0.496,
+        "dir": "s2c",
+        "type": "0026",
+        "size": 55,
+        "body": "040000005361707079323534310000ffff0000006d000020002000000000000206000000000001ffff0000000000000000000080400000"
+      },
+      {
+        "seconds": 0.496,
+        "dir": "s2c",
+        "type": "0009",
+        "size": 9,
+        "body": "000000000400000000"
+      },
+      {
+        "seconds": 0.496,
+        "dir": "s2c",
+        "type": "0011",
+        "size": 19,
+        "body": "ed804c6174652050726f6265000000ff000400"
+      },
+      {
+        "seconds": 0.496,
+        "dir": "s2c",
+        "type": "0011",
+        "size": 25,
+        "body": "ec8050726f62652054657874000000ff000401040000007d01"
+      },
+      {
+        "seconds": 0.496,
+        "dir": "s2c",
+        "type": "0011",
+        "size": 21,
+        "body": "eb8050726f626520416374696f6e000000ff000400"
+      },
+      {
+        "seconds": 0.496,
+        "dir": "s2c",
+        "type": "0026",
+        "size": 58,
+        "body": "02000000636c69656e740000ffff00000063000020002000000000000200000000000001ffff00000300ed80ec80eb8000000000000000000000"
+      },
+      {
+        "seconds": 0.496,
+        "dir": "s2c",
+        "type": "0038",
+        "size": 12,
+        "body": "020000000000000000000000"
+      },
+      {
+        "seconds": 0.496,
+        "dir": "s2c",
+        "type": "0026",
+        "size": 56,
+        "body": "05000000636c69656e740000ffff00000063000020002000000000000200000000000001ffff00000200ec80eb8000000000000000000000"
+      },
+      {
+        "seconds": 0.496,
+        "dir": "s2c",
+        "type": "0038",
+        "size": 12,
+        "body": "050000000000000000000000"
+      },
+      {
+        "seconds": 0.496,
+        "dir": "s2c",
+        "type": "0026",
+        "size": 50,
+        "body": "00000000747572660000ffff00000074000020002000000000000204000000000001ffff0000000000000000000000400000"
+      },
+      {
+        "seconds": 0.496,
+        "dir": "s2c",
+        "type": "0026",
+        "size": 51,
+        "body": "01000000617265610000ffff0000006100002000200000000000020c000000000001ffff00000000000000000000803f000201"
+      },
+      {
+        "seconds": 0.603,
+        "dir": "s2c",
+        "type": "0009",
+        "size": 9,
+        "body": "000000000400000000"
+      },
+      {
+        "seconds": 2.396,
+        "dir": "c2s",
+        "type": "0002",
+        "size": 10,
+        "body": "0200eb800828e0190100"
+      },
+      {
+        "seconds": 3.4,
+        "dir": "c2s",
+        "type": "0002",
+        "size": 10,
+        "body": "0200eb800828e0190100"
+      },
+      {
+        "seconds": 5.398,
+        "dir": "s2c",
+        "type": "003b",
+        "size": 41,
+        "body": "000001000001000001000000402300400402ea01000000436f6d6d616e647300ff9806000004020000"
+      },
+      {
+        "seconds": 5.897,
+        "dir": "c2s",
+        "type": "0002",
+        "size": 10,
+        "body": "0200eb800828e0190100"
+      },
+      {
+        "seconds": 6.9,
+        "dir": "s2c",
+        "type": "003b",
+        "size": 41,
+        "body": "000001000000000001000000402700400402ea01000000436f6d6d616e647300ff9806000004020000"
+      },
+      {
+        "seconds": 6.9,
+        "dir": "s2c",
+        "type": "0038",
+        "size": 12,
+        "body": "020000000000000000000000"
+      },
+      {
+        "seconds": 7.402,
+        "dir": "c2s",
+        "type": "0002",
+        "size": 10,
+        "body": "0200ed800828e0190100"
+      },
+      {
+        "seconds": 8.395,
+        "dir": "c2s",
+        "type": "0002",
+        "size": 17,
+        "body": "0200ec800828e01901010268656c6c6f00"
+      }
+    ],
+    "observations": [
+      "PHASE hidden-first command=Probe-Action before=0",
+      "INVOKED Probe Action 1",
+      "RESULT hidden-first calls=1",
+      "PHASE hidden-repeat command=Probe-Action before=1",
+      "INVOKED Probe Action 2",
+      "RESULT hidden-repeat calls=2",
+      "PHASE hidden-unknown command=Missing-Probe before=2",
+      "RESULT hidden-unknown calls=2",
+      "PHASE visible command=Probe-Action before=2",
+      "INVOKED Probe Action 3",
+      "RESULT visible calls=3",
+      "PHASE hidden-late command=Late-Probe before=3",
+      "INVOKED Late Probe 4",
+      "RESULT hidden-late calls=4",
+      "PHASE hidden-text command=Probe-Text hello before=4",
+      "INVOKED Probe Text hello 5",
+      "RESULT hidden-text calls=5",
+      "DONE"
+    ]
+  },
+  "wide_low": {
+    "wire_source": "build\\verb-lookup\\wide-low-stock-wire.jsonl",
+    "rows": [
+      {
+        "dir": "s2c",
+        "type": "0001-header",
+        "body": "04020000ea010000010103"
+      },
+      {
+        "seconds": 1.496,
+        "dir": "s2c",
+        "type": "003b",
+        "size": 41,
+        "body": "000001000000000001000000402700400402ea01000000436f6d6d616e647300ff9806000004020000"
+      },
+      {
+        "seconds": 1.573,
+        "dir": "s2c",
+        "type": "0071",
+        "size": 4,
+        "body": "00000000"
+      },
+      {
+        "seconds": 1.573,
+        "dir": "s2c",
+        "type": "0026",
+        "size": 55,
+        "body": "040000005361707079323534310000ffff0000006d000020002000000000000206000000000001ffff0000000000000000000080400000"
+      },
+      {
+        "seconds": 1.573,
+        "dir": "s2c",
+        "type": "0009",
+        "size": 9,
+        "body": "000000000400000000"
+      },
+      {
+        "seconds": 1.573,
+        "dir": "s2c",
+        "type": "0011",
+        "size": 21,
+        "body": "050000004c6174652050726f6265000000ff000400"
+      },
+      {
+        "seconds": 1.573,
+        "dir": "s2c",
+        "type": "0011",
+        "size": 27,
+        "body": "0400000050726f62652054657874000000ff000401040000007d01"
+      },
+      {
+        "seconds": 1.573,
+        "dir": "s2c",
+        "type": "0011",
+        "size": 23,
+        "body": "0300000050726f626520416374696f6e000000ff000400"
+      },
+      {
+        "seconds": 1.573,
+        "dir": "s2c",
+        "type": "0026",
+        "size": 64,
+        "body": "02000000636c69656e740000ffff00000063000020002000000000000200000000000001ffff0000030005000000040000000300000000000000000000000000"
+      },
+      {
+        "seconds": 1.573,
+        "dir": "s2c",
+        "type": "0038",
+        "size": 12,
+        "body": "020000000000000000000000"
+      },
+      {
+        "seconds": 1.573,
+        "dir": "s2c",
+        "type": "0026",
+        "size": 60,
+        "body": "05000000636c69656e740000ffff00000063000020002000000000000200000000000001ffff00000200040000000300000000000000000000000000"
+      },
+      {
+        "seconds": 1.573,
+        "dir": "s2c",
+        "type": "0038",
+        "size": 12,
+        "body": "050000000000000000000000"
+      },
+      {
+        "seconds": 1.573,
+        "dir": "s2c",
+        "type": "0026",
+        "size": 50,
+        "body": "00000000747572660000ffff00000074000020002000000000000204000000000001ffff0000000000000000000000400000"
+      },
+      {
+        "seconds": 1.573,
+        "dir": "s2c",
+        "type": "0026",
+        "size": 51,
+        "body": "01000000617265610000ffff0000006100002000200000000000020c000000000001ffff00000000000000000000803f000201"
+      },
+      {
+        "seconds": 1.67,
+        "dir": "s2c",
+        "type": "0009",
+        "size": 9,
+        "body": "000000000400000000"
+      },
+      {
+        "seconds": 3.482,
+        "dir": "c2s",
+        "type": "0002",
+        "size": 12,
+        "body": "02000300000008c401600100"
+      },
+      {
+        "seconds": 4.476,
+        "dir": "c2s",
+        "type": "0002",
+        "size": 12,
+        "body": "02000300000008c401600100"
+      },
+      {
+        "seconds": 6.476,
+        "dir": "s2c",
+        "type": "003b",
+        "size": 41,
+        "body": "000001000001000001000000402300400402ea01000000436f6d6d616e647300ff9806000004020000"
+      },
+      {
+        "seconds": 6.975,
+        "dir": "c2s",
+        "type": "0002",
+        "size": 12,
+        "body": "02000300000008c401600100"
+      },
+      {
+        "seconds": 7.977,
+        "dir": "s2c",
+        "type": "003b",
+        "size": 41,
+        "body": "000001000000000001000000402700400402ea01000000436f6d6d616e647300ff9806000004020000"
+      },
+      {
+        "seconds": 7.977,
+        "dir": "s2c",
+        "type": "0038",
+        "size": 12,
+        "body": "020000000000000000000000"
+      },
+      {
+        "seconds": 8.476,
+        "dir": "c2s",
+        "type": "0002",
+        "size": 12,
+        "body": "02000500000008c401600100"
+      },
+      {
+        "seconds": 9.499,
+        "dir": "c2s",
+        "type": "0002",
+        "size": 19,
+        "body": "02000400000008f0ee4f07010268656c6c6f00"
+      }
+    ],
+    "observations": [
+      "PHASE hidden-first command=Probe-Action before=0",
+      "INVOKED Probe Action 1",
+      "RESULT hidden-first calls=1",
+      "PHASE hidden-repeat command=Probe-Action before=1",
+      "INVOKED Probe Action 2",
+      "RESULT hidden-repeat calls=2",
+      "PHASE hidden-unknown command=Missing-Probe before=2",
+      "RESULT hidden-unknown calls=2",
+      "PHASE visible command=Probe-Action before=2",
+      "INVOKED Probe Action 3",
+      "RESULT visible calls=3",
+      "PHASE hidden-late command=Late-Probe before=3",
+      "INVOKED Late Probe 4",
+      "RESULT hidden-late calls=4",
+      "PHASE hidden-text command=Probe-Text hello before=4",
+      "INVOKED Probe Text hello 5",
+      "RESULT hidden-text calls=5",
+      "DONE"
+    ]
+  },
+  "wide_high": {
+    "wire_source": "build\\verb-lookup\\large-stock-wire.jsonl",
+    "rows": [
+      {
+        "dir": "s2c",
+        "type": "0001-header",
+        "body": "04020000ea010000010103"
+      },
+      {
+        "seconds": 1.522,
+        "dir": "s2c",
+        "type": "003b",
+        "size": 41,
+        "body": "000001000000000001000000402700400402ea01000000436f6d6d616e647300ff9806000004020000"
+      },
+      {
+        "seconds": 1.601,
+        "dir": "s2c",
+        "type": "0071",
+        "size": 4,
+        "body": "00000000"
+      },
+      {
+        "seconds": 1.601,
+        "dir": "s2c",
+        "type": "0026",
+        "size": 55,
+        "body": "040000005361707079323534310000ffff0000006d000020002000000000000206000000000001ffff0000000000000000000080400000"
+      },
+      {
+        "seconds": 1.601,
+        "dir": "s2c",
+        "type": "0009",
+        "size": 9,
+        "body": "000000000400000000"
+      },
+      {
+        "seconds": 1.601,
+        "dir": "s2c",
+        "type": "0011",
+        "size": 21,
+        "body": "d60101004c6174652050726f6265000000ff000400"
+      },
+      {
+        "seconds": 1.601,
+        "dir": "s2c",
+        "type": "0011",
+        "size": 27,
+        "body": "d501010050726f62652054657874000000ff000401040000007d01"
+      },
+      {
+        "seconds": 1.601,
+        "dir": "s2c",
+        "type": "0011",
+        "size": 23,
+        "body": "d401010050726f626520416374696f6e000000ff000400"
+      },
+      {
+        "seconds": 1.601,
+        "dir": "s2c",
+        "type": "0026",
+        "size": 64,
+        "body": "02000000636c69656e740000ffff00000063000020002000000000000200000000000001ffff00000300d6010100d5010100d401010000000000000000000000"
+      },
+      {
+        "seconds": 1.601,
+        "dir": "s2c",
+        "type": "0038",
+        "size": 12,
+        "body": "020000000000000000000000"
+      },
+      {
+        "seconds": 1.601,
+        "dir": "s2c",
+        "type": "0026",
+        "size": 60,
+        "body": "05000000636c69656e740000ffff00000063000020002000000000000200000000000001ffff00000200d5010100d401010000000000000000000000"
+      },
+      {
+        "seconds": 1.601,
+        "dir": "s2c",
+        "type": "0038",
+        "size": 12,
+        "body": "050000000000000000000000"
+      },
+      {
+        "seconds": 1.601,
+        "dir": "s2c",
+        "type": "0026",
+        "size": 50,
+        "body": "00000000747572660000ffff00000074000020002000000000000204000000000001ffff0000000000000000000000400000"
+      },
+      {
+        "seconds": 1.601,
+        "dir": "s2c",
+        "type": "0026",
+        "size": 51,
+        "body": "01000000617265610000ffff0000006100002000200000000000020c000000000001ffff00000000000000000000803f000201"
+      },
+      {
+        "seconds": 1.709,
+        "dir": "s2c",
+        "type": "0009",
+        "size": 9,
+        "body": "000000000400000000"
+      },
+      {
+        "seconds": 3.509,
+        "dir": "c2s",
+        "type": "0002",
+        "size": 12,
+        "body": "0200d401000008c401a50000"
+      },
+      {
+        "seconds": 4.51,
+        "dir": "c2s",
+        "type": "0002",
+        "size": 12,
+        "body": "0200d401000008c401a50000"
+      },
+      {
+        "seconds": 6.507,
+        "dir": "s2c",
+        "type": "003b",
+        "size": 41,
+        "body": "000001000001000001000000402300400402ea01000000436f6d6d616e647300ff9806000004020000"
+      },
+      {
+        "seconds": 6.997,
+        "dir": "c2s",
+        "type": "0002",
+        "size": 12,
+        "body": "0200d401000008c401a50000"
+      },
+      {
+        "seconds": 7.995,
+        "dir": "s2c",
+        "type": "003b",
+        "size": 41,
+        "body": "000001000000000001000000402700400402ea01000000436f6d6d616e647300ff9806000004020000"
+      },
+      {
+        "seconds": 7.995,
+        "dir": "s2c",
+        "type": "0038",
+        "size": 12,
+        "body": "020000000000000000000000"
+      },
+      {
+        "seconds": 8.498,
+        "dir": "c2s",
+        "type": "0002",
+        "size": 12,
+        "body": "0200d601000008c401a50000"
+      },
+      {
+        "seconds": 9.5,
+        "dir": "c2s",
+        "type": "0002",
+        "size": 19,
+        "body": "0200d501000008c8fdc400010268656c6c6f00"
+      }
+    ],
+    "observations": [
+      "PHASE hidden-first command=Probe-Action before=0",
+      "RESULT hidden-first calls=0",
+      "PHASE hidden-repeat command=Probe-Action before=0",
+      "RESULT hidden-repeat calls=0",
+      "PHASE hidden-unknown command=Missing-Probe before=0",
+      "RESULT hidden-unknown calls=0",
+      "PHASE visible command=Probe-Action before=0",
+      "RESULT visible calls=0",
+      "PHASE hidden-late command=Late-Probe before=0",
+      "RESULT hidden-late calls=0",
+      "PHASE hidden-text command=Probe-Text hello before=0",
+      "RESULT hidden-text calls=0",
+      "DONE"
+    ]
+  }
+}

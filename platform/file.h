@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <string>
+#include <string_view>
 #include <sys/stat.h>
 #include <fcntl.h>
 #ifdef _WIN32
@@ -22,6 +23,29 @@
 #endif
 
 namespace fugue::platform {
+// Preserve UTF-8 interpretation on Windows; path(std::string) uses the native
+// narrow encoding there. C++20 replaces u8path with char8_t-based constructors.
+inline std::filesystem::path pathFromUtf8(std::string_view text) {
+    return std::filesystem::path(std::u8string(text.begin(), text.end()));
+}
+
+// Keep CRT spelling differences here, without disabling deprecation warnings.
+#ifdef _WIN32
+inline int close(int fd) { return ::_close(fd); }
+inline int write(int fd, const void* data, unsigned count) { return ::_write(fd, data, count); }
+inline int unlink(const char* path) { return ::_unlink(path); }
+inline int chmod(const char* path, int mode) { return ::_chmod(path, mode); }
+inline int fileno(FILE* file) { return ::_fileno(file); }
+inline FILE* fdopen(int fd, const char* mode) { return ::_fdopen(fd, mode); }
+#else
+using ::chmod;
+using ::close;
+using ::fdopen;
+using ::fileno;
+using ::unlink;
+using ::write;
+#endif
+
 inline std::string homeDir() {
     const char* h = std::getenv("HOME");
 #ifdef _WIN32
@@ -47,7 +71,7 @@ inline int mkdir(const char* path, int mode) {
         return -1;
     }
     SECURITY_ATTRIBUTES sa{sizeof(sa), sd, FALSE};
-    const BOOL ok = CreateDirectoryW(std::filesystem::u8path(path).c_str(), &sa);
+    const BOOL ok = CreateDirectoryW(pathFromUtf8(path).c_str(), &sa);
     const DWORD e = ok ? 0 : GetLastError();
     LocalFree(sd);
     if (ok) return 0;
@@ -59,7 +83,7 @@ inline int mkdir(const char* path, int mode) {
 }
 inline int rename(const char* from, const char* to) {
 #ifdef _WIN32
-    if (MoveFileExW(std::filesystem::u8path(from).c_str(), std::filesystem::u8path(to).c_str(),
+    if (MoveFileExW(pathFromUtf8(from).c_str(), pathFromUtf8(to).c_str(),
                     MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
         return 0;
     errno = EIO;
@@ -70,7 +94,7 @@ inline int rename(const char* from, const char* to) {
 }
 inline int open(const char* path, int flags, int mode) {
 #ifdef _WIN32
-    return _wopen(std::filesystem::u8path(path).c_str(), flags | _O_BINARY | _O_NOINHERIT, mode);
+    return _wopen(pathFromUtf8(path).c_str(), flags | _O_BINARY | _O_NOINHERIT, mode);
 #else
     return ::open(path, flags | O_CLOEXEC, mode);
 #endif
@@ -89,7 +113,7 @@ inline int fchmod(int fd, int mode) {
 // Create a new temporary secret with a protected ACL: owner and SYSTEM only.
 // The protected ACL travels with the file when it atomically replaces its destination.
 inline bool privateWrite(const std::string& path, const std::string& data, std::string* err) {
-    auto dest = std::filesystem::u8path(path);
+    auto dest = pathFromUtf8(path);
     PSECURITY_DESCRIPTOR sd = nullptr;
     if (!ConvertStringSecurityDescriptorToSecurityDescriptorW(L"D:P(A;;FA;;;SY)(A;;FA;;;OW)", SDDL_REVISION_1, &sd,
                                                               nullptr)) {

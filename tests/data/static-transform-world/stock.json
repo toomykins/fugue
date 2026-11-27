@@ -1,0 +1,536 @@
+{
+ "schema": 1,
+ "stock": "DreamSeeker/DreamDaemon 516.1688",
+ "date": "2026-11-14",
+ "crop": "96x96 MAP pixels centred on the case tile (one tile margin); native 1:1 grabs of both clients",
+ "blended": "pixels more than 12 (sum of channel differences) from every palette colour: evidence of bilinear sampling",
+ "sets": {
+  "a": [
+   {
+    "name": "rot45",
+    "stockBlended": 127,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 1
+   },
+   {
+    "name": "scale2",
+    "stockBlended": 647,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 1
+   },
+   {
+    "name": "scale1.5",
+    "stockBlended": 320,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 1
+   },
+   {
+    "name": "scale0.75",
+    "stockBlended": 12,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 1
+   },
+   {
+    "name": "half",
+    "stockBlended": 12,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "name": "shift.5",
+    "stockBlended": 188,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 1
+   },
+   {
+    "name": "rot90",
+    "stockBlended": 0,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "name": "shear",
+    "stockBlended": 90,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 1
+   },
+   {
+    "name": "rot30scale",
+    "stockBlended": 215,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 1
+   },
+   {
+    "name": "rot45 ps",
+    "stockBlended": 0,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "name": "scale2 ps",
+    "stockBlended": 0,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "name": "scale1.5 ps",
+    "stockBlended": 0,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "name": "scale0.75 ps",
+    "stockBlended": 0,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "name": "half ps",
+    "stockBlended": 0,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "name": "shift.5 ps",
+    "stockBlended": 0,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "name": "rot90 ps",
+    "stockBlended": 0,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "name": "shear ps",
+    "stockBlended": 0,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "name": "rot30scale ps",
+    "stockBlended": 0,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 0
+   }
+  ],
+  "b": [
+   {
+    "name": "child16",
+    "stockBlended": 0,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "name": "child48",
+    "stockBlended": 0,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "name": "child48off",
+    "stockBlended": 157,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 1
+   },
+   {
+    "name": "deep",
+    "stockBlended": 98,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 1
+   },
+   {
+    "name": "reset",
+    "stockBlended": 0,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "name": "childown",
+    "stockBlended": 214,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 1
+   },
+   {
+    "name": "mt-rot",
+    "stockBlended": 0,
+    "fugueDiffOver1": 111,
+    "fugueMaxDiff": 239
+   },
+   {
+    "name": "mt-scale",
+    "stockBlended": 1072,
+    "fugueDiffOver1": 995,
+    "fugueMaxDiff": 239
+   },
+   {
+    "name": "mt-off",
+    "stockBlended": 37,
+    "fugueDiffOver1": 78,
+    "fugueMaxDiff": 230
+   },
+   {
+    "name": "mt-wide",
+    "stockBlended": 434,
+    "fugueDiffOver1": 520,
+    "fugueMaxDiff": 240
+   },
+   {
+    "name": "mt-shift",
+    "stockBlended": 0,
+    "fugueDiffOver1": 92,
+    "fugueMaxDiff": 239
+   },
+   {
+    "name": "mt-plain",
+    "stockBlended": 0,
+    "fugueDiffOver1": 111,
+    "fugueMaxDiff": 239
+   },
+   {
+    "name": "off-rot",
+    "stockBlended": 0,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "name": "childoffrot",
+    "stockBlended": 0,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 0
+   }
+  ],
+  "c": [
+   {
+    "name": "ps-parent",
+    "stockBlended": 228,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 1
+   },
+   {
+    "name": "ps-child",
+    "stockBlended": 555,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 1
+   },
+   {
+    "name": "ps-rot-parent",
+    "stockBlended": 47,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 1
+   },
+   {
+    "name": "ps-rot-child",
+    "stockBlended": 109,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 1
+   },
+   {
+    "name": "img-ps-target",
+    "stockBlended": 49,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 1
+   },
+   {
+    "name": "img-ps-own",
+    "stockBlended": 112,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 1
+   },
+   {
+    "name": "img-plain",
+    "stockBlended": 160,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 1
+   },
+   {
+    "name": "reset-ps",
+    "stockBlended": 154,
+    "fugueDiffOver1": 0,
+    "fugueMaxDiff": 1
+   }
+  ]
+ },
+ "expect": {
+  "note": "sampling per icon, read from stockBlended of paired cases (a case and its PIXEL_SCALE twin; parent/child flag swaps)",
+  "cases": [
+   {
+    "case": "rot45",
+    "matrix": [
+     0.707107,
+     0.707107,
+     0,
+     -0.707107,
+     0.707107,
+     0
+    ],
+    "flags": 0,
+    "root": "bilinear"
+   },
+   {
+    "case": "rot45 ps",
+    "matrix": [
+     0.707107,
+     0.707107,
+     0,
+     -0.707107,
+     0.707107,
+     0
+    ],
+    "flags": 512,
+    "root": "nearest"
+   },
+   {
+    "case": "scale2",
+    "matrix": [
+     2,
+     0,
+     0,
+     0,
+     2,
+     0
+    ],
+    "flags": 0,
+    "root": "bilinear"
+   },
+   {
+    "case": "scale2 ps",
+    "matrix": [
+     2,
+     0,
+     0,
+     0,
+     2,
+     0
+    ],
+    "flags": 512,
+    "root": "nearest"
+   },
+   {
+    "case": "scale1.5",
+    "matrix": [
+     1.5,
+     0,
+     0,
+     0,
+     1.5,
+     0
+    ],
+    "flags": 0,
+    "root": "bilinear"
+   },
+   {
+    "case": "scale1.5 ps",
+    "matrix": [
+     1.5,
+     0,
+     0,
+     0,
+     1.5,
+     0
+    ],
+    "flags": 512,
+    "root": "nearest"
+   },
+   {
+    "case": "scale0.75",
+    "matrix": [
+     0.75,
+     0,
+     0,
+     0,
+     0.75,
+     0
+    ],
+    "flags": 0,
+    "root": "bilinear"
+   },
+   {
+    "case": "scale0.75 ps",
+    "matrix": [
+     0.75,
+     0,
+     0,
+     0,
+     0.75,
+     0
+    ],
+    "flags": 512,
+    "root": "nearest"
+   },
+   {
+    "case": "half",
+    "matrix": [
+     0.5,
+     0,
+     0,
+     0,
+     0.5,
+     0
+    ],
+    "flags": 0,
+    "root": "bilinear"
+   },
+   {
+    "case": "half ps",
+    "matrix": [
+     0.5,
+     0,
+     0,
+     0,
+     0.5,
+     0
+    ],
+    "flags": 512,
+    "root": "nearest"
+   },
+   {
+    "case": "shift.5",
+    "matrix": [
+     1,
+     0,
+     0.5,
+     0,
+     1,
+     0.5
+    ],
+    "flags": 0,
+    "root": "bilinear"
+   },
+   {
+    "case": "shift.5 ps",
+    "matrix": [
+     1,
+     0,
+     0.5,
+     0,
+     1,
+     0.5
+    ],
+    "flags": 512,
+    "root": "nearest"
+   },
+   {
+    "case": "shear",
+    "matrix": [
+     1,
+     0.5,
+     0,
+     0,
+     1,
+     0
+    ],
+    "flags": 0,
+    "root": "bilinear"
+   },
+   {
+    "case": "shear ps",
+    "matrix": [
+     1,
+     0.5,
+     0,
+     0,
+     1,
+     0
+    ],
+    "flags": 512,
+    "root": "nearest"
+   },
+   {
+    "case": "rot30scale",
+    "matrix": [
+     1.0825,
+     0.625,
+     0,
+     -0.625,
+     1.0825,
+     0
+    ],
+    "flags": 0,
+    "root": "bilinear"
+   },
+   {
+    "case": "rot30scale ps",
+    "matrix": [
+     1.0825,
+     0.625,
+     0,
+     -0.625,
+     1.0825,
+     0
+    ],
+    "flags": 512,
+    "root": "nearest"
+   },
+   {
+    "case": "ps-parent",
+    "matrix": [
+     2,
+     0,
+     0,
+     0,
+     2,
+     0
+    ],
+    "flags": 512,
+    "root": "nearest",
+    "child": {
+     "flags": 0,
+     "sampling": "bilinear"
+    }
+   },
+   {
+    "case": "ps-child",
+    "matrix": [
+     2,
+     0,
+     0,
+     0,
+     2,
+     0
+    ],
+    "flags": 0,
+    "root": "bilinear",
+    "child": {
+     "flags": 512,
+     "sampling": "nearest"
+    }
+   },
+   {
+    "case": "ps-rot-parent",
+    "matrix": [
+     0.866025,
+     0.5,
+     0,
+     -0.5,
+     0.866025,
+     0
+    ],
+    "flags": 512,
+    "root": "nearest",
+    "child": {
+     "flags": 0,
+     "sampling": "bilinear"
+    }
+   },
+   {
+    "case": "ps-rot-child",
+    "matrix": [
+     0.866025,
+     0.5,
+     0,
+     -0.5,
+     0.866025,
+     0
+    ],
+    "flags": 0,
+    "root": "bilinear",
+    "child": {
+     "flags": 512,
+     "sampling": "nearest"
+    }
+   }
+  ]
+ }
+}

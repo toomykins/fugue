@@ -9,7 +9,7 @@ $ErrorActionPreference = "Stop"
 $deploy = Join-Path $QtDir "bin/windeployqt.exe"
 if (!(Test-Path $deploy)) { throw "windeployqt not found: $deploy" }
 if (!(Test-Path $DependencyBin)) { throw "Dependency DLL directory not found: $DependencyBin" }
-cmake --install $BuildDir --config Release --prefix $Destination
+cmake --install $BuildDir --prefix $Destination
 if ($LASTEXITCODE -ne 0) { throw "Install failed" }
 $bin = Join-Path $Destination "bin"
 & $deploy --release --compiler-runtime (Join-Path $bin "fugue-qt.exe")

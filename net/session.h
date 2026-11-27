@@ -1,4 +1,5 @@
-// A blocking TCP game session: Handshake -> K_login -> Login -> frame pump.
+// A synchronous TCP game session: Handshake -> K_login -> Login -> frame pump.
+// Windows frame-pump reads use event notification (nonblocking socket) plus a precise deadline timer.
 //
 // Threading: plain native sockets (POSIX / Winsock) and ONE thread. The thread that calls run() is the only reader and
 // writer of the socket. Every reply (resource pulls, prompt answers, the Keepalive) is produced inline from the frame
@@ -24,6 +25,10 @@
 #include "net/frame.h"
 #include "net/handshake.h"
 #include "net/respump.h"
+
+namespace fugue::socket {
+class ReadWait;
+}
 
 namespace fugue::net {
 
@@ -83,6 +88,11 @@ struct SessionStats {
 
 class Session {
 public:
+    // Session-thread MeasureText (0x00fc) layout; raw text/style and wrapping width.
+    // Return the 0xffff pair for unsupported input. Without a handler, valid queries
+    // receive that sentinel rather than parking the server procedure.
+    using TextMeasure = std::function<std::pair<uint16_t, uint16_t>(const std::string&, const std::string&, uint16_t)>;
+    void setTextMeasure(TextMeasure measure) { textMeasure_ = std::move(measure); }
     using Observer = std::function<void(uint16_t type, ByteSpan plainBody)>;
     using Log = std::function<void(const std::string&)>;
     explicit Session(SessionConfig cfg, Log log = {});
@@ -120,10 +130,6 @@ public:
     void setWingetHandler(WingetHandler h) { wingetHandler_ = std::move(h); }
     // [value\0][reqid u32 LE], each backslash in the value doubled: the server unescapes it. Session thread only.
     bool replyWinget(uint32_t reqId, const std::string& value);
-    // MeasureText requests are laid out against the default MAP control's `style` param, as stock DreamSeeker does
-    // (render/dsmaptext.h). Unset = no map style.
-    using MapStyleProvider = std::function<std::string()>;
-    void setMapStyleProvider(MapStyleProvider p) { mapStyle_ = std::move(p); }
     // alert() (S2C::Alert) / input() (S2C::Input). By default the session auto-answers them (alert "", input null), so
     // a headless run never parks a DM proc. With manual prompts on, the session answers nothing: the observer sees the
     // request, and the owner replies through sendInput() on the session thread with model/prompt.h's encoders. An owner
@@ -136,6 +142,7 @@ public:
     const ResourceStats& resourceStats() const { return res_->stats(); }
     ResourcePump& resources() { return *res_; }
     uint32_t sessionLoginKey() const { return key_; }
+    bool wideVerbIds() const { return wideVerbIds_; }  // negotiated before any observed game frame
     // Send one c2s frame (plaintext body; the K_login cipher + seq are applied). Session thread only, like run().
     // Used by the input path; counts in stats().c2s and appears in the wire log.
     bool sendInput(uint16_t type, ByteSpan plain) { return sendFrame(type, plain); }
@@ -163,7 +170,8 @@ private:
     void answerCertChallenge(uint8_t flag);
 
     std::unique_ptr<CauthCache> cauth_;  // this connection's cauth key and certStr
-    bool rekeyPending_ = false;          // our CertAnswer is out, CertAck has not arrived
+    bool wideVerbIds_ = false;
+    bool rekeyPending_ = false;  // our CertAnswer is out, CertAck has not arrived
     std::vector<std::pair<uint16_t, Bytes>>
         deferredPost_;  // c2s frames held (sendFrame) until that ack re-keys the cipher
 
@@ -172,7 +180,7 @@ private:
     Observer observer_, sendTap_;
     ResourceObserver resObserver_;
     WingetHandler wingetHandler_;
-    MapStyleProvider mapStyle_;
+    TextMeasure textMeasure_;
     bool manualPrompts_ = false;
     std::set<uint32_t> resReported_;
     uint64_t resSeen_ = 0;
@@ -197,6 +205,7 @@ private:
     void noteFrame(bool c2s, uint16_t type, size_t len);
     std::function<void()> pumpHook_;
     bool wake_ = false;
+    std::unique_ptr<socket::ReadWait> readWait_;
     bool prodDue_ = false;      // the first ResourceList was handled: send Ready once the buffered frames are drained
     bool sentProd_ = false;     // the Ready that answers the first ResourceList went out
     bool sentRefresh_ = false;  // the ConnSetting + WorldRefresh that answer the first SelfRef went out

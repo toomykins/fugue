@@ -1,6 +1,7 @@
 #include <QFile>
 #include <QTemporaryDir>
 #include <QtTest>
+#include "tests/testmain.h"
 #include "audio/sink.h"
 
 class AudioSinkTest : public QObject {
@@ -28,10 +29,8 @@ private slots:
         QCOMPARE(bytes.mid(8, 4), QByteArray("WAVE"));
         QCOMPARE(bytes.size(), qsizetype(44 + 8));
     }
+#ifndef WIN32
     void commandPipe() {
-#ifdef _WIN32
-        QSKIP("Command sinks are not supported on Windows");
-#else
         QTemporaryDir dir;
         QVERIFY(dir.isValid());
         std::string err;
@@ -46,19 +45,26 @@ private slots:
         QCOMPARE(file.readAll(), QByteArray(16, '\0'));
         QVERIFY(!fugue::audio::openExecSink({"/nonexistent/fugue-player"}, &err));
         QVERIFY(!err.empty());
-#endif
     }
-#ifdef __APPLE__
+#endif
+#ifdef FUGUE_TEST_APPLE
     void invalidCoreAudioRate() {
         std::string err;
         QVERIFY(!fugue::audio::openCoreAudioSink(0, &err));
         QVERIFY(!err.empty());
     }
+#endif
+};
+
+#if defined(WIN32) || defined(FUGUE_TEST_APPLE)
+class AudioDeviceTest : public QObject {
+    Q_OBJECT
+private slots:
+#ifdef FUGUE_TEST_APPLE
     void coreAudioDevice() {
-        if (!qEnvironmentVariableIsSet("FUGUE_TEST_COREAUDIO"))
-            QSKIP("Set FUGUE_TEST_COREAUDIO=1 to test a real output device");
         std::string err;
         auto sink = fugue::audio::openSink("auto", 44100, &err);
+        QVERIFY2(err.empty(), err.c_str());
         QCOMPARE(sink->name(), std::string("coreaudio"));
         const float silence[2048]{};
         for (int i = 0; i < 8; ++i) QVERIFY2(sink->write(silence, 1024, &err), err.c_str());
@@ -66,12 +72,8 @@ private slots:
         sink->close();
     }
 #endif
+#ifdef WIN32
     void nativeWindowsDevice() {
-#ifndef _WIN32
-        QSKIP("Windows audio backend");
-#else
-        if (qgetenv("FUGUE_TEST_AUDIO") != "1")
-            QSKIP("Set FUGUE_TEST_AUDIO=1 to exercise a real Windows output device");
         std::string err;
         auto sink = fugue::audio::openSink("auto", 44100, &err);
         QVERIFY2(err.empty(), err.c_str());
@@ -81,8 +83,18 @@ private slots:
         sink->close();
         sink->close();
         QVERIFY(!sink->write(silence, 1024, &err));
-#endif
     }
+#endif
 };
-QTEST_GUILESS_MAIN(AudioSinkTest)
+
+int fugue_run_audio_device(int argc, char** argv) {
+    QCoreApplication app(argc, argv);
+    app.setAttribute(Qt::AA_Use96Dpi, true);
+    AudioDeviceTest test;
+    QTest::setMainSourcePath(__FILE__);
+    return QTest::qExec(&test, argc, argv);
+}
+#endif
+
+FUGUE_TEST_GUILESS_MAIN(AudioSinkTest)
 #include "audio_sink_test.moc"

@@ -1,9 +1,8 @@
 #include "shell/localorigin.h"
-#include "render/dmi.h"
-#include <QBuffer>
 #include <QElapsedTimer>
-#include <QImage>
+#include <QMimeDatabase>
 #include <QRandomGenerator>
+#include <QRegularExpression>
 #include <QTcpSocket>
 #include <QTimer>
 #include <QUrl>
@@ -60,7 +59,10 @@ QString LocalOrigin::mimeFor(const QString& name0) {
     if (e(".ttf")) return "font/ttf";
     if (e(".eot")) return "application/vnd.ms-fontobject";
     if (e(".txt")) return "text/plain; charset=utf-8";
-    return "application/octet-stream";
+    // Use Qt's MIME database for media and other resource types rather than a
+    // game-specific extension whitelist. Unknown extensions remain octet-stream.
+    static const QMimeDatabase database;
+    return database.mimeTypeForFile(name0, QMimeDatabase::MatchExtension).name();
 }
 
 void LocalOrigin::onConn() {
@@ -154,6 +156,12 @@ void LocalOrigin::process(const ConnP& c) {
         return;
     }
     bool head = method == "HEAD";
+    static const QRegularExpression iconRef(QStringLiteral(R"(^\[0x[0-9a-fA-F]+\]$)"));
+    if (store_ && iconRef.match(file).hasMatch()) {
+        c->waitTimer.start();
+        serveIcon(c, file + "?" + u.query(QUrl::FullyDecoded), head);
+        return;
+    }
     if (pages_.contains(file)) {
         if (u.hasQuery()) {  // a `location='?...'` navigation reached the server: a Topic; 204 keeps the document
             st_.topics++;
@@ -169,32 +177,6 @@ void LocalOrigin::process(const ConnP& c) {
     serveFile(c, file, head);
 }
 
-QByteArray LocalOrigin::cellPng(const render::Icon& icon) {
-    if (icon.states.empty()) return {};
-    std::vector<uint8_t> px;
-    if (!icon.frame(icon.states[0], 0, 0, px)) return {};
-    QImage img(px.data(), icon.width, icon.height, icon.width * 4, QImage::Format_RGBA8888);
-    QByteArray out;
-    QBuffer buf(&out);
-    buf.open(QIODevice::WriteOnly);
-    if (!img.save(&buf, "PNG")) return {};
-    return out;
-}
-
-// browserImage: an icon a page references is served as its first cell (first state, dir, frame) as a plain PNG,
-// not the raw .dmi sheet; stock DreamSeeker draws the sheet's top-left cell. Anything that is not a multi-cell
-// .dmi comes back unchanged.
-QByteArray LocalOrigin::browserImage(const QByteArray& b) {
-    if (!b.startsWith("\x89PNG")) return b;
-    auto r = render::parseIcon(reinterpret_cast<const uint8_t*>(b.constData()), size_t(b.size()));
-    if (!r.ok() || r.icon->plainImage || r.icon->states.empty()) return b;
-    int64_t cells = 0;
-    for (const auto& s : r.icon->states) cells += s.dirs * s.frames;
-    if (cells <= 1) return b;
-    QByteArray out = cellPng(*r.icon);
-    return out.isEmpty() ? b : out;
-}
-
 // A file that is not here yet is polled for, never waited on the GUI thread. A 404'd stylesheet or <img> is never
 // retried, and on a remote connection the file can trail the announcement by a round trip, so a name the world
 // announced waits up to kMissWaitMs; its BrowseRsc jumps the declaration queue, so the wait ends when the bytes land.
@@ -206,7 +188,7 @@ void LocalOrigin::serveFile(const ConnP& c, const QString& file, bool head) {
     if (store_ && store_->get(file.toStdString(), bytes)) {
         release(c);
         st_.rsc++;
-        respond(c, 200, mimeFor(file).toUtf8(), browserImage(QByteArray::fromStdString(bytes)), head);
+        respond(c, 200, mimeFor(file).toUtf8(), QByteArray::fromStdString(bytes), head);
         return;
     }
     using Wait = BrowseRscStore::Wait;
@@ -229,6 +211,26 @@ void LocalOrigin::serveFile(const ConnP& c, const QString& file, bool head) {
     release(c);
     st_.notFound++;
     respond(c, 404, mimeFor(file).toUtf8(), "", head);
+}
+
+// An icon by resource reference: asked of the session thread once, then polled for like a file. Its .dmi may still
+// have to be fetched from the world, so the request is held as long as an announced file.
+void LocalOrigin::serveIcon(const ConnP& c, const QString& key, bool head) {
+    std::string png;
+    if (store_->icon(key.toStdString(), png)) {
+        if (png.empty()) st_.notFound++; else st_.rsc++;
+        respond(c, png.empty() ? 404 : 200, "image/png", QByteArray::fromStdString(png), head);
+        return;
+    }
+    if (c->waitTimer.elapsed() >= kMissWaitMs) {
+        st_.notFound++;
+        respond(c, 404, "image/png", "", head);
+        return;
+    }
+    store_->wantIcon(key.toStdString());
+    QTimer::singleShot(20, this, [this, c, key, head] {
+        if (!c->done) serveIcon(c, key, head);
+    });
 }
 
 bool LocalOrigin::admit(const ConnP& c, BrowseRscStore::Wait w) {

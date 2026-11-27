@@ -68,7 +68,9 @@ struct PageCall {
     std::string target;
     std::vector<std::string> args;  // one per list2params parameter, each decoded individually AFTER the split
 };
-bool parsePageCall(const std::string& control, const std::string& rawValue, PageCall& out);
+// Local .output calls may address a function named output directly; server chat
+// keeps its historical special routing unless includeOutput is explicitly true.
+bool parsePageCall(const std::string& control, const std::string& rawValue, PageCall& out, bool includeOutput = false);
 
 // link(url), S2C::Link [url\0]. "?..." and "byond://?..." are a Topic for this world; other byond:// is another world;
 // http, https, ftp and mailto open outside the client; anything else is refused.

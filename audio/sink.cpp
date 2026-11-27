@@ -71,7 +71,9 @@ public:
             ssize_t n = ::write(in_, buf_.data() + off, buf_.size() - off);
             if (n < 0 && errno == EINTR) continue;
             if (n <= 0) {
-                if (err) *err = std::string("write: ") + std::strerror(errno) + childSaid();
+                // errno first: childSaid() reads a non-blocking pipe, which would replace it (often with EAGAIN).
+                const std::string why = std::string("write: ") + std::strerror(errno);
+                if (err) *err = why + childSaid();
                 return false;
             }
             off += size_t(n);
@@ -135,7 +137,9 @@ std::unique_ptr<Sink> openWavSink(const std::string& path, int rate, std::string
 std::vector<std::vector<std::string>> execPlayers(int rate) {
     std::string r = std::to_string(rate);
     return {
-        {"pw-play", "--format", "s16", "--rate", r, "--channels", "2", "--latency", "80ms", "-"},
+        // --raw: without it pw-play hands stdin to libsndfile, which wants a file header and exits on the first write.
+        // A pw-play too old to know --raw exits inside the start grace window, so paplay takes over.
+        {"pw-play", "--raw", "--format", "s16", "--rate", r, "--channels", "2", "--latency", "80ms", "-"},
         {"paplay", "--raw", "--format=s16le", "--rate=" + r, "--channels=2", "--latency-msec=80"},
         {"aplay", "-q", "-t", "raw", "-f", "S16_LE", "-r", r, "-c", "2", "--buffer-time=160000", "--period-time=40000",
          "-"},

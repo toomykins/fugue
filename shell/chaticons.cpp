@@ -5,7 +5,7 @@
 #include <QRegularExpression>
 #include <vector>
 
-#include "render/dmi.h"
+#include "shell/dmiicon.h"
 #include "skin/winicon.h"
 
 namespace fugue::shell {
@@ -57,32 +57,32 @@ Tag parseTag(const QString& tag) {
 // named state the icon lacks (and it has no unnamed one) or bytes that are not an image. With no ICONSTATE, stock draws
 // the unnamed state, or the icon's first state when it has none.
 QString cellImg(const ChatIconLookup& l, const Tag& tag) {
-    render::ParseResult r;
-    const render::Icon* icp = l.icon;
-    if (!icp) {
-        r = render::parseIcon(reinterpret_cast<const uint8_t*>(l.bytes.data()), l.bytes.size());
-        if (!r.ok()) return {};
-        icp = r.icon.get();
+    DmiIcon decoded;
+    const DmiIcon* icon = l.icon;
+    if (!icon) {
+        decoded = DmiIcon::decode(QByteArray::fromStdString(l.bytes));
+        icon = &decoded;
     }
-    const render::Icon& ic = *icp;
-    int si = ic.stateIndex(tag.state);
-    if (si < 0 && tag.hasState)
-        si = ic.stateIndex("");  // as the map: a state the sheet lacks degrades to the unnamed one
-    if (si < 0 && !tag.hasState && !ic.states.empty()) si = 0;
-    if (si < 0) return {};
-    const render::IconState& s = ic.states[size_t(si)];
-    int slot = render::dirIndex(int(s.dirs), kSouth);
-    std::vector<uint8_t> px;
-    if (!ic.frame(s, slot < 0 ? 0 : slot, 0, px) || ic.width <= 0 || ic.height <= 0) return {};
-    QImage img(px.data(), ic.width, ic.height, ic.width * 4, QImage::Format_RGBA8888);
+    if (icon->sheet.isNull() || icon->cell.isEmpty()) return {};
+    // DmiIcon::state degrades a state the sheet lacks to the unnamed one, as the map does.
+    const DmiIcon::State* s = icon->state(QString::fromStdString(tag.state));
+    if (!s && !tag.hasState && icon->metadata)
+        for (const assets::IconState& first : *icon->metadata)
+            if (!first.movement) {
+                s = icon->state(QString::fromStdString(first.name));
+                break;
+            }
+    if (!s) return {};
+    const QImage img = icon->frame(icon->index(*s, kSouth));
+    if (img.isNull()) return {};
     QByteArray png;
     QBuffer buf(&png);
     buf.open(QIODevice::WriteOnly);
     if (!img.save(&buf, "PNG")) return {};
     return QString("<img class=\"icon\" src=\"data:image/png;base64,%1\" width=\"%2\" height=\"%3\">")
         .arg(QString::fromLatin1(png.toBase64()))
-        .arg(ic.width)
-        .arg(ic.height);
+        .arg(img.width())
+        .arg(img.height());
 }
 
 }  // namespace

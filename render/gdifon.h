@@ -19,11 +19,12 @@ struct FonStrike {
     std::vector<Glyph> glyphs;  // first..last
 };
 
-// The file's 96-dpi raster strikes, by increasing height; empty when `file` is not a readable .FON.
+// The file's raster strikes for 96 or 120 dpi, by increasing height; empty when `file` is not a readable .FON.
 std::vector<FonStrike> parseFon(std::string_view file);
 
-// The glyph DreamSeeker draws for `face`, from the strike GDI maps the request to, with bitmap bold's 1 px overstrike.
-// false when that strike's height, ascent or an advance differs from the layout's, so glyphs match the positions.
+// The glyph DreamSeeker draws for `face`, from the strike the layout measured it with (dsmaptext's choice of GDI's),
+// with bitmap bold's 1 px overstrike. false when no strike given has that cell, character height and every advance,
+// so glyphs match the positions.
 bool fonGlyph(const std::vector<FonStrike>& strikes, const DsFace& face, char32_t cp, GlyphMask& out);
 
 }  // namespace fugue::render

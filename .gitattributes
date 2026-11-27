@@ -1,6 +1,11 @@
 * text=auto eol=lf
-# Captures/resources are byte-exact, including resources that happen to contain text.
-tests/data/** -text
+# Captures are byte-exact; their original CRLF is not trailing whitespace.
+tests/data/** -text whitespace=cr-at-eol
+# Raw wire delimiters and log endings are part of the retained recording.
+tests/data/**/frames*.txt -whitespace
+tests/data/**/*.log -whitespace
+# Resources may contain text (such as DMF skins), but retain their exact bytes.
+tests/data/**/res/* binary
 *.png -text
 *.gif -text
 *.jpg -text

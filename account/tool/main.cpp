@@ -8,6 +8,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <cstdio>
+#include <cstdlib>
 #include <iostream>
 #include "account/desc.h"
 #include "account/keyblock.h"
@@ -28,7 +29,7 @@ int fail(const std::string& e) { return out(QJsonObject{{"error", QString::fromS
 QString Q(const std::string& s) { return QString::fromStdString(s); }
 QJsonObject readStdin() {
     QFile f;
-    f.open(stdin, QIODevice::ReadOnly);
+    if (!f.open(stdin, QIODevice::ReadOnly)) std::exit(fail("cannot open stdin: " + f.errorString().toStdString()));
     auto d = QJsonDocument::fromJson(f.readAll());
     return d.object();
 }

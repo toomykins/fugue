@@ -10,8 +10,18 @@
 // but no VDMX table, so on a Liberation-only host the MeasureText width matches stock and the height may be a pixel
 // short.
 #pragma once
+#include <cstdint>
+
+class QByteArray;
 
 namespace fugue::shell {
+
+// A font file among the world's resources (a .ttf or .otf): stock loads those for the session, and maptext can name
+// their families (stock 516.1689: tgstation's lobby text is its own 'Grand9K Pixel'). false when `file` is no font or
+// was added before. Any thread.
+bool addResourceFont(const QByteArray& file);
+// Grows with every font added: text drawn before may have used a stand-in face.
+uint64_t resourceFontGeneration();
 
 // Installs the resolver into render::setTrueTypeResolver. Needs a QGuiApplication; call once after constructing it.
 void installTrueTypeMetrics();

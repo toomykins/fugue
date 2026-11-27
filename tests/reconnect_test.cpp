@@ -7,6 +7,7 @@
 #include "platform/socket.h"
 #include <QTemporaryDir>
 #include <QtTest>
+#include "tests/testmain.h"
 #include <thread>
 #include "net/cipher.h"
 #include "net/handshake.h"
@@ -223,5 +224,5 @@ private slots:
     }
 };
 
-QTEST_MAIN(ReconnectTest)
+FUGUE_TEST_MAIN(ReconnectTest)
 #include "reconnect_test.moc"

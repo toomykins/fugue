@@ -2,7 +2,7 @@
 //   map / output / info focused -> every key goes to macro routing
 //   input focused               -> the key's own binding fires unless the text field takes the key (inputBarFires
 //                                  in focusfilter.cpp), and Any fires only for keys that neither type nor edit
-//   browser focused             -> the page owns its keys (the filter never touches them)
+//   browser focused             -> the page owns its keys, except the client-menu shortcut
 // A matched macro is emitted as macroFired(), an Any macro first; the app routes its command (app/inputrouter: client
 // commands such as `.north`, `.winset` macro-set swaps, and everything else as a command line for the session). A key
 // no macro binds does nothing, arrows included: stock DreamSeeker walks only through a binding, such as the default
@@ -16,6 +16,8 @@
 #include <QKeyEvent>
 #include <QHash>
 #include <QObject>
+#include <QPointer>
+#include <QSet>
 #include <QTimer>
 #include <string>
 #include <vector>
@@ -23,6 +25,8 @@
 #include "skin/usermacros.h"
 
 namespace fugue::shell {
+
+class SkinWindow;
 
 enum class Zone { Map, Output, Info, Input, Browser, Other };
 const char* zoneName(Zone z);
@@ -40,11 +44,11 @@ public:
         have_ = true;
     }
     // The player's own lists (Client > Macros..., skin/usermacros.h): consulted only for keys the skin's set leaves unbound.
-    void setUserMacros(const skin::MacroSet& game, const skin::MacroSet& global) {
-        userGame_ = game;
-        userGlobal_ = global;
-    }
-    static Zone zoneOf(QObject* o);  // walks parents for a "fugueZone" property, MapWidget, BrowserPane or QLineEdit
+    void setUserMacros(const skin::MacroSet& game, const skin::MacroSet& global);
+    // Client-only shortcut: .clientmenu press bindings in the user's game list, else global list,
+    // else CTRL+M. These take priority over game macros, including Any/Any+UP.
+    void setClientWindow(SkinWindow* window);
+    static Zone zoneOf(QObject* o);  // walks parents for a "fugueZone" property, BrowserPane or QLineEdit
     bool eventFilter(QObject* o, QEvent* e) override;
     uint64_t fired() const { return fired_; }
     // Fires the release of every key this filter routed a press for and has not seen released. Called on application
@@ -61,6 +65,10 @@ signals:
 
 private:
     skin::MacroSet macros_, userGame_, userGlobal_;
+    QPointer<SkinWindow> clientWindow_;
+    std::vector<skin::MacroKey> clientMenuKeys_;
+    QSet<int> clientMenuHeld_;
+    bool clientMenuEvent(QObject* receiver, QKeyEvent* event);
     bool have_ = false, inDispatch_ = false;
     uint64_t fired_ = 0;
     // Key to what its routed press saw. A release matches the modifiers its press carried, and is routed in the press's

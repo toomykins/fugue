@@ -1,2 +1,5 @@
 build/
 build-*/
+/build.local.psd1
+__pycache__/
+*.pyc

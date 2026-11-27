@@ -1,0 +1,86 @@
+{
+  "byond_version": "516.1688",
+  "source": "Foreground-verified native stock MAP screenshots, 2026-10-22",
+  "mask_format": "9 rows north-to-south, columns west-to-east; 1=floor, W=wall, 0=black; HUD excluded from tile sampling",
+  "hud_visible_in_all_cases": true,
+  "cases": [
+    {
+      "phase": "lit",
+      "config": "ambient=1&see=0&sight=normal",
+      "mask": "111111111/111111111/111111111/111111111/111111111/111111111/111111111/111111111/111111111",
+      "visible_markers": ["target", "lamp", "observer"]
+    },
+    {
+      "phase": "dark0",
+      "config": "ambient=0&see=0&sight=normal",
+      "mask": "000000000/000000000/000000000/000000000/000000000/000000000/000000000/000000000/000000000",
+      "visible_markers": []
+    },
+    {
+      "phase": "dark0-blackness",
+      "config": "ambient=0&see=0&sight=blackness",
+      "mask": "000000000/000000000/000000000/000000000/000000000/000000000/000000000/000000000/000000000",
+      "visible_markers": []
+    },
+    {
+      "phase": "dark1",
+      "config": "ambient=0&see=1&sight=normal",
+      "mask": "000000000/000000000/000000000/000000000/000010000/000000000/000000000/000000000/000000000",
+      "visible_markers": ["observer"]
+    },
+    {
+      "phase": "dark2",
+      "config": "ambient=0&see=2&sight=normal",
+      "mask": "000000000/000000000/000000000/000111000/000111000/000111000/000000000/000000000/000000000",
+      "visible_markers": ["observer"]
+    },
+    {
+      "phase": "dark2-blackness",
+      "config": "ambient=0&see=2&sight=blackness",
+      "mask": "000000000/000000000/000000000/000111000/000111000/000111000/000000000/000000000/000000000",
+      "visible_markers": ["observer"]
+    },
+    {
+      "phase": "dark6",
+      "config": "ambient=0&see=6&sight=normal",
+      "mask": "111111111/111111111/111111111/111111111/111111111/111111111/111111111/111111111/111111111",
+      "visible_markers": ["target", "lamp", "observer"]
+    },
+    {
+      "phase": "lamp3",
+      "config": "ambient=0&see=0&sight=normal&lamp=3",
+      "mask": "000000000/000000000/111110000/111110000/111110000/111110000/111110000/000000000/000000000",
+      "visible_markers": ["lamp", "observer"]
+    },
+    {
+      "phase": "lamp3-blackness",
+      "config": "ambient=0&see=0&sight=blackness&lamp=3",
+      "mask": "000000000/000000000/111110000/111110000/111110000/111110000/111110000/000000000/000000000",
+      "visible_markers": ["lamp", "observer"]
+    },
+    {
+      "phase": "dark-turfs",
+      "config": "ambient=0&see=0&sight=turfs",
+      "mask": "111111111/111111111/111111111/111111111/111111111/111111111/111111111/111111111/111111111",
+      "visible_markers": []
+    },
+    {
+      "phase": "dark-ghost",
+      "config": "ambient=0&see=0&sight=ghost",
+      "mask": "111111111/111111111/111111111/111111111/111111111/111111111/111111111/111111111/111111111",
+      "visible_markers": ["target", "lamp", "observer"]
+    },
+    {
+      "phase": "lit-wall",
+      "config": "ambient=1&see=0&sight=normal&wall=1",
+      "mask": "11111W000/11111W000/11111W000/11111W000/11111W000/11111W000/11111W000/11111W000/11111W000",
+      "visible_markers": ["lamp", "observer"]
+    },
+    {
+      "phase": "lit-return",
+      "config": "ambient=1&see=0&sight=normal&run=return",
+      "mask": "111111111/111111111/111111111/111111111/111111111/111111111/111111111/111111111/111111111",
+      "visible_markers": ["target", "lamp", "observer"]
+    }
+  ]
+}

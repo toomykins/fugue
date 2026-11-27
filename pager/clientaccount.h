@@ -7,7 +7,7 @@
 //      identity for that key -> a guest.
 //   3. No --account on any other run -> a guest; pager.json and the identity files are not read.
 // A player launch is invoked as DreamSeeker (argv[0] dreamseeker / dreamseeker.exe) or has a DreamSeeker-grammar target
-// (byond://..., host:port, +connect), and carries no --connect, --state-dir, --screenshot or test hook. Fugue's own runs
+// (byond://..., host:port, +connect), and carries no --connect, --state-dir or test hook. Fugue's own runs
 // are therefore guests unless --account names one, so a development run never reads a real HOME's identity.
 // Rules 1 and 3 are this client's policy (stock DreamSeeker has one key.txt and no test modes); rule 2 mirrors
 // DreamSeeker reading cfg/key.txt with no account on argv.

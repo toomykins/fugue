@@ -1,5 +1,6 @@
 #include "shell/browsestore.h"
 #include <algorithm>
+#include <utility>
 
 namespace fugue::shell {
 
@@ -13,8 +14,9 @@ bool BrowseRscStore::blind(const std::string& name) {
     if (d == std::string::npos) return false;
     std::string e = name.substr(d + 1);
     for (auto& c : e) c = char(c >= 'A' && c <= 'Z' ? c - 'A' + 'a' : c);
-    static const char* skip[] = {"dmi", "ogg", "wav", "mp3", "mid", "midi", "mod",
-                                 "xm",  "it",  "s3m", "dmf", "mp4", "webm", "ogv"};
+    // Game-only icon/skin resources stay outside the browser cache. Media files
+    // must be available to HTML audio/video, regardless of native mixer support.
+    static const char* skip[] = {"dmi", "dmf"};
     return std::any_of(std::begin(skip), std::end(skip), [&](const char* s) { return e == s; });
 }
 
@@ -72,6 +74,32 @@ BrowseRscStore::Wait BrowseRscStore::waitFor(const std::string& name) const {
 size_t BrowseRscStore::files() const {
     std::lock_guard<std::mutex> g(mu_);
     return byId_.size();
+}
+
+void BrowseRscStore::wantIcon(const std::string& key) {
+    std::lock_guard<std::mutex> g(mu_);
+    if (icons_.count(key) || !iconsAsked_.insert(key).second) return;
+    iconsWanted_.push_back(key);
+}
+
+std::vector<std::string> BrowseRscStore::takeWantedIcons() {
+    std::lock_guard<std::mutex> g(mu_);
+    return std::exchange(iconsWanted_, {});
+}
+
+void BrowseRscStore::putIcon(const std::string& key, std::string png) {
+    std::lock_guard<std::mutex> g(mu_);
+    if (icons_.size() >= 4096) icons_.clear();  // a page asks again for what it still shows
+    icons_[key] = std::move(png);
+    iconsAsked_.erase(key);
+}
+
+bool BrowseRscStore::icon(const std::string& key, std::string& png) const {
+    std::lock_guard<std::mutex> g(mu_);
+    const auto it = icons_.find(key);
+    if (it == icons_.end()) return false;
+    png = it->second;
+    return true;
 }
 
 }  // namespace fugue::shell

@@ -1,8 +1,10 @@
 // render/gdifon.h: reading raster strikes out of a .FON and drawing a glyph the way DreamSeeker does. The files are
-// built here byte by byte (tests/fonfile.h); a host's own Small Fonts file, when present, is also checked against the
-// layout's advance widths.
+// built here byte by byte (tests/fonfile.h). The separate host-font entry checks an installed Small Fonts file against
+// the layout's advance widths.
+#include <QDir>
 #include <QFile>
 #include <QtTest>
+#include "tests/testmain.h"
 #include <string>
 
 #include "render/dsmaptext.h"
@@ -103,20 +105,46 @@ private slots:
         QCOMPARE(QString::fromStdString(rows(m)), QString::fromStdString(expected(s, 0x80, false)));
         QVERIFY(fonGlyph(ss, smallFonts(7), U'Ā', m));  // outside the code page: the default char
         QCOMPARE(QString::fromStdString(rows(m)), QString::fromStdString(expected(s, s.defaultChar, false)));
-        // Bold overstrikes 1 px to the right; italic draws 1 px to the left.
+        // Bold overstrikes 1 px to the right; italic slants: one pixel right for every two rows above the cell's last.
         QVERIFY(fonGlyph(ss, smallFonts(7, "font-weight:bold"), U'g', m));
         QCOMPARE(QString::fromStdString(rows(m)), QString::fromStdString(expected(s, 'g', true)));
         QVERIFY(fonGlyph(ss, smallFonts(7, "font-style:italic"), U'g', m));
-        QCOMPARE(QString::fromStdString(rows(m)), QString::fromStdString(expected(s, 'g', false)));
-        QCOMPARE(m.left, -1);
-        // A scaled strike (14px: twice the 7pt metrics, 22px: three times) is drawn unscaled.
+        {
+            const int w = int(s.widths['g' - s.first]), top = (int(s.h) - 1) / 2;
+            std::string slanted;
+            for (int y = 0; y < int(s.h); y++) {
+                const int shift = top - y / 2;
+                for (int x = 0; x < w + top; x++)
+                    slanted += x >= shift && x - shift < w && s.ink('g', unsigned(x - shift), unsigned(y)) ? '#' : '.';
+                slanted += '/';
+            }
+            QCOMPARE(QString::fromStdString(rows(m)), QString::fromStdString(slanted));
+        }
+        QCOMPARE(m.left, 0);
+        // Windows never scales a strike: 14px and 22px are the 7pt strike of its 120-dpi file as it is, 13 px high,
+        // which is not in this file.
         for (int px : {14, 22}) {
             const DsFace f = smallFonts(px);
-            QCOMPARE(f.height, 11 * (px == 14 ? 2 : 3));
-            QVERIFY(fonGlyph(ss, f, U'M', m));
-            QCOMPARE(QString::fromStdString(rows(m)), QString::fromStdString(expected(s, 'M', false)));
-            QCOMPARE(m.top, 0);
+            QCOMPARE(f.height, 13);
+            QVERIFY(!fonGlyph(ss, f, U'M', m));
         }
+    }
+
+    // The strike a size is drawn from on Windows: GDI's choice with raster scaling off, among the strikes of both
+    // resolutions (stock 516.1689). A size is in points.
+    void picksTheStrikeGdiPicks() {
+        auto height = [](const std::string& family, int pt) {
+            return dsLayoutMaptext("<span style=\"font-family:'" + family + "';font-size:" + std::to_string(pt) + "pt\">A</span>", "", 0)
+                .faces.at(0)
+                .height;
+        };
+        for (auto [pt, h] : {std::pair{8, 13}, {14, 24}, {16, 25}, {17, 29}, {22, 29}, {23, 36}, {28, 37}, {29, 46}, {79, 46}})
+            QCOMPARE(height("MS Sans Serif", pt), h);
+        QCOMPARE(height("Small Fonts", 7), 11);
+        QCOMPARE(height("Small Fonts", 8), 13);
+        QCOMPARE(height("Small Fonts", 58), 13);
+        QCOMPARE(height("Courier", 16), 20);
+        QCOMPARE(height("Courier", 19), 25);
     }
 
     // Glyphs are only drawn from a strike whose metrics and every advance width match the strike the layout used.
@@ -129,20 +157,28 @@ private slots:
         QVERIFY(!fonGlyph(ss, smallFonts(7), U'x', m));
         s = layoutStrike();
         while (s.widths[s.defaultChar - s.first] == s.widths[128 - s.first])
-            s.defaultChar++;  // a default char of another width
-        QVERIFY(!fonGlyph(parseFon(fontfile::fon({s})), smallFonts(7), U'A', m));
+            s.defaultChar++;  // a default char of another width, among the bytes Windows' files leave empty
+        QVERIFY(!fonGlyph(parseFon(fontfile::fon({s})), smallFonts(7), U'Ā', m));  // only what draws as it is refused
         s = layoutStrike();
         s.ascent = 8;
         QVERIFY(!fonGlyph(parseFon(fontfile::fon({s})), smallFonts(7), U'A', m));
         QVERIFY(fonGlyph(parseFon(fontfile::fon({layoutStrike()})), smallFonts(7), U'A', m));
     }
+};
 
+class GdiFonHost : public QObject {
+    Q_OBJECT
+private slots:
     void hostSmallFontsMatchesTheLayout() {
-        QFile f("/usr/share/wine/fonts/smalle.fon");
-        if (!f.open(QIODevice::ReadOnly)) QSKIP("no Wine Small Fonts on this host");
+        const QString directory = qEnvironmentVariable("FUGUE_FONT_DIR");
+        QFile f(QDir(directory.isEmpty() ? QString("/usr/share/wine/fonts") : directory).filePath("smalle.fon"));
+        // Without FUGUE_FONT_DIR this checks Wine's copy, which only some hosts have.
+        if (directory.isEmpty() && !f.exists()) QSKIP(qPrintable(f.fileName() + " is not installed; set FUGUE_FONT_DIR to check a host font"));
+        QVERIFY2(f.open(QIODevice::ReadOnly), qPrintable(f.fileName() + ": " + f.errorString()));
         const QByteArray d = f.readAll();
+        QVERIFY2(f.error() == QFileDevice::NoError, qPrintable(f.fileName() + ": " + f.errorString()));
         auto ss = parseFon(std::string_view(d.constData(), size_t(d.size())));
-        QVERIFY(!ss.empty());
+        QVERIFY2(!ss.empty(), qPrintable(f.fileName() + ": no readable 96-DPI font strikes"));
         const DsFace fc = smallFonts(7);
         int checked = 0;
         for (int c = 32; c <= 255; c++) {
@@ -155,5 +191,14 @@ private slots:
     }
 };
 
-QTEST_MAIN(GdiFon)
+FUGUE_TEST_MAIN(GdiFon)
+
+int fugue_run_gdifon_host(int argc, char** argv) {
+    QCoreApplication app(argc, argv);
+    app.setAttribute(Qt::AA_Use96Dpi, true);
+    GdiFonHost test;
+    QTest::setMainSourcePath(__FILE__);
+    return QTest::qExec(&test, argc, argv);
+}
+
 #include "gdifon_test.moc"

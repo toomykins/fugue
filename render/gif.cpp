@@ -6,7 +6,7 @@
 #include <cstring>
 #include <vector>
 
-namespace fugue::render {
+namespace fugue::assets {
 namespace {
 
 struct Rd {
@@ -136,6 +136,12 @@ struct Screen {
 template <class F>
 bool walk(const uint8_t* d, size_t n, Screen& sc, std::string& why, F&& onFrame) {
     Rd r{d, n};
+    if (n > 128 * 1024 * 1024) {
+        why = "input size cap";
+        return false;
+    }
+    uint64_t decodedPixels = 0;
+    unsigned frameCount = 0;
     if (n < 6 || !(std::string((const char*)d, 6) == "GIF87a" || std::string((const char*)d, 6) == "GIF89a")) {
         why = "bad header";
         return false;
@@ -148,6 +154,10 @@ bool walk(const uint8_t* d, size_t n, Screen& sc, std::string& why, F&& onFrame)
     r.u8();
     if (!r.ok) {
         why = "truncated header";
+        return false;
+    }
+    if (uint64_t(sc.w) * sc.h > 16 * 1024 * 1024 || sc.w > 8192 || sc.h > 8192) {
+        why = "screen size cap";
         return false;
     }
     sc.haveGlobal = (gfields & 0x80) != 0;
@@ -250,6 +260,16 @@ bool walk(const uint8_t* d, size_t n, Screen& sc, std::string& why, F&& onFrame)
             return false;
         }
         size_t npix = size_t(w) * size_t(h);
+        decodedPixels += npix;
+        // The frames' own pixels are bounded like a composited animation (render/dmi.cpp): 64 million.
+        if (!npix || w > 8192 || h > 8192 || decodedPixels > 64 * 1024 * 1024 || ++frameCount > 65536) {
+            why = "frame work cap";
+            return false;
+        }
+        if (disposal > 3) {
+            why = "unsupported disposal";
+            return false;
+        }
         std::vector<uint8_t> idx;
         if (!lzw(blob, lit, npix, idx)) {
             why = "bad LZW data";
@@ -318,7 +338,11 @@ bool decodeGifAnimation(const uint8_t* d, size_t n, GifAnimation& out, std::stri
             // transparent outside the frame. A zero screen falls back to the first frame's own extent.
             out.w = sc.w > 0 ? sc.w : f.left + f.w;
             out.h = sc.h > 0 ? sc.h : f.top + f.h;
-            if (out.w <= 0 || out.h <= 0) return false;
+            if (out.w <= 0 || out.h <= 0 || out.w > 8192 || out.h > 8192) return false;
+            if (uint64_t(out.w) * out.h > maxBytes / 4) {
+                tooBig = true;
+                return false;
+            }
             canvas.assign(size_t(out.w) * size_t(out.h) * 4, 0);  // the canvas starts transparent
         }
         const size_t frameBytes = canvas.size();
@@ -369,4 +393,4 @@ bool decodeGifAnimation(const uint8_t* d, size_t n, GifAnimation& out, std::stri
     return true;
 }
 
-}  // namespace fugue::render
+}  // namespace fugue::assets

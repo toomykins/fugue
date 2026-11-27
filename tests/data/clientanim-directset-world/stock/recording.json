@@ -1,0 +1,6 @@
+{
+  "client": "fugue-qt",
+  "source": "app-session",
+  "start_unix_ns": 1795566756315321800,
+  "world": "127.0.0.1:18791"
+}

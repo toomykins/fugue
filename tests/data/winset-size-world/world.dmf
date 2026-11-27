@@ -1,0 +1,64 @@
+window "main"
+	elem "main"
+		type = MAIN
+		size = 224x224
+		is-default = true
+	elem "map"
+		type = MAP
+		pos = 0,0
+		size = 224x224
+		anchor1 = 0,0
+		anchor2 = 100,100
+		icon-size = 32
+		is-default = true
+	elem "fixed"
+		type = LABEL
+		pos = 0,0
+		size = 32x32
+		text = "F"
+	elem "half"
+		type = LABEL
+		pos = 0,192
+		size = 64x32
+		anchor1 = 0,100
+		anchor2 = 100,100
+		text = "H"
+	elem "kid"
+		type = CHILD
+		pos = 160,0
+		size = 64x64
+		left = "pane"
+window "pane"
+	elem "pane"
+		type = MAIN
+		size = 64x64
+		is-pane = true
+	elem "pl"
+		type = LABEL
+		pos = 0,32
+		size = 64x32
+		anchor1 = 0,0
+		anchor2 = 100,100
+		text = "P"
+window "loose"
+	elem "loose"
+		type = MAIN
+		size = 50x50
+		is-pane = true
+	elem "ll"
+		type = LABEL
+		pos = 0,0
+		size = 50x50
+		text = "L"
+window "flt"
+	elem "flt"
+		type = MAIN
+		size = 100x100
+		is-visible = false
+	elem "fl"
+		type = LABEL
+		pos = 0,0
+		size = 100x100
+		anchor1 = 0,0
+		anchor2 = 100,100
+		text = "W"

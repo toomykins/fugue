@@ -1,0 +1,44 @@
+# Stock DreamSeeker 516.1689 x DreamDaemon 516.1689, 2026-11-26, display at 150 % (144 dpi): what the map's
+# right-click menu showed for each case of menuprobe.py (see README.md), entry by entry, top to bottom.
+# case	entry	atom	verbs (| between)	icon
+alpha	0	alpha	examine|poke	icons/alpha-0.png
+amp	0	Tom & Jerry	examine|poke	icons/amp-0.png
+anim	0	anim	examine|poke	icons/anim-0.png
+argonly	0	argonly	examine	icons/argonly-0.png
+big-top	0	big	examine|poke	icons/big-top-0.png
+big	0	big	examine|poke	icons/big-0.png
+changer	0	changer	examine|poke	icons/changer-0.png
+colored	0	colored	examine|poke	icons/colored-0.png
+dir-east	0	dir-east	examine|poke	icons/dir-east-0.png
+empty	-	-	-	-
+holder	0	member	poke	icons/holder-0.png
+holder	1	holder	examine|poke	icons/holder-1.png
+html	0	<b>bold</b> name	examine|poke	icons/html-0.png
+hud	0	hud	poke	icons/hud-0.png
+iconless	0	iconless	examine|poke	-
+imaged	0	imaged	examine|poke	icons/imaged-0.png
+improper	0	the Rock	examine|poke	icons/improper-0.png
+long	0	a very long name that goes on and on past any menu width you would expect to see in a game	examine|poke	icons/long-0.png
+mob	0	dummy-mob	poke	icons/mob-0.png
+nostate	0	nostate	examine|poke	icons/nostate-0.png
+offset-up	0	offset	examine|poke	icons/offset-up-0.png
+offset	0	offset	examine|poke	icons/offset-0.png
+outlined	0	outlined	examine|poke	icons/outlined-0.png
+overlay	0	overlay	examine|poke	icons/overlay-0.png
+plain	0	plain	examine|poke	icons/plain-0.png
+proper	0	rock	examine|poke	icons/proper-0.png
+scaled	0	scaled	examine|poke	icons/scaled-0.png
+small	0	small	examine|poke	icons/small-0.png
+stack	0	second	examine|poke	icons/stack-0.png
+stack	1	first	examine|poke	icons/stack-1.png
+stack	2	third	examine|poke	icons/stack-2.png
+stack	3	verbed-turf	poke	icons/stack-3.png
+suffix	0	suffixed	examine|poke	icons/suffix-0.png
+turned	0	turned	examine|poke	icons/turned-0.png
+twins	0	twin	examine|poke	icons/twins-0.png
+twins	1	twin	examine|poke	icons/twins-1.png
+underlay	0	underlay	examine|poke	icons/underlay-0.png
+unicode	0	café ünï	examine|poke	icons/unicode-0.png
+verbs	0	verbs	nullcat|acat| under|<b>Bold</b>|Capital|Cut & Paste|Look At|a-b|described|do thing|examine|near|poke|withargs|x10|zcat	icons/verbs-0.png
+anim-b	0	anim	examine|poke	icons/anim-b-0.png
+anim-c	0	anim	examine|poke	icons/anim-c-0.png

@@ -4,6 +4,7 @@
 #include <QFile>
 #include <QTemporaryDir>
 #include <QtTest>
+#include "tests/testmain.h"
 #include "platform/file.h"
 #include "account/store.h"
 #include "pager/model.h"
@@ -24,10 +25,10 @@ struct Home {
         QString p = dir.path() + "/" + rel;
         QDir().mkpath(QFileInfo(p).absolutePath());
         QFile f(p);
-        f.open(QIODevice::WriteOnly);
-        f.write(b);
+        QVERIFY2(f.open(QIODevice::WriteOnly), qPrintable(f.errorString()));
+        QCOMPARE(f.write(b), qint64(b.size()));
         f.close();
-        ::chmod(p.toUtf8().constData(), mode);
+        QCOMPARE(platform::chmod(p.toUtf8().constData(), mode), 0);
     }
     void client() {
         put("bin/fugue", "x", 0755);
@@ -124,5 +125,5 @@ private slots:
         QCOMPARE(closeAction(true, false), CloseAction::Minimize);
     }
 };
-QTEST_APPLESS_MAIN(PagerModel)
+FUGUE_TEST_APPLESS_MAIN(PagerModel)
 #include "pager_model_test.moc"

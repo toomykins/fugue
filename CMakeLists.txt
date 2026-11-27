@@ -12,7 +12,9 @@ if(MSVC)
   add_compile_options(/W4 /wd4100 /utf-8 /bigobj /Zc:__cplusplus)
   add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
   # Narrow paths and argv are UTF-8 throughout the client, including the Qt-free modules.
-  add_link_options("/MANIFESTINPUT:${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/fugue.manifest")
+  add_library(fugue_manifest INTERFACE)
+  target_sources(fugue_manifest INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/fugue.manifest")
+  link_libraries(fugue_manifest)
 else()
   add_compile_options(-Wall -Wextra -Wno-unused-parameter)
 endif()
@@ -34,9 +36,6 @@ endif()
 # Release build: the player-facing binary. The pager is the no-argument default. Test hooks (FUGUE_AUTO_*, pager
 # --auto-join/--quit-after) are compiled out, and the client disables core dumps (PR_SET_DUMPABLE=0 on Linux).
 option(FUGUE_RELEASE "build the shippable fugue-qt (pager default, no dev hooks)" OFF)
-
-# Ubuntu names libjpeg's soname 8 and Debian 62; they are not interchangeable, so the .deb links it in (libjpeg-turbo8-dev).
-option(FUGUE_STATIC_JPEG "link libjpeg statically instead of depending on the distribution's soname" OFF)
 
 # Headless-only build: just the Qt-free/Core modules, tools and tests (no window, no pager UI). This is an explicit opt-out;
 # without it a missing Qt Widgets/WebEngine/WebChannel is a configure ERROR, so nobody ends up with a build that silently
@@ -72,10 +71,11 @@ find_package(ZLIB)   # gzip bundles; optional
 enable_testing()
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})   # includes are "net/cipher.h", "proto/registry.h", ...
 include(cmake/FugueModule.cmake)
+include(cmake/FugueTests.cmake)
 
 # Module rule: a module directory's CMakeLists.txt calls `fugue_module(<target>)`, which globs <dir>/*.cpp into an
 # OBJECT library (some modules add options or tools after it). New .cpp files need no edit to any shared list. A new
-# module directory adds one name to the list below; model, skin, render, audio, account and pager are included when they have a CMakeLists.txt.
+# module directory adds one name to the list below; model, skin, audio, account and pager are included when they have a CMakeLists.txt.
 add_subdirectory(net)
 add_subdirectory(proto)
 add_subdirectory(tools)
@@ -84,12 +84,6 @@ foreach(m model skin render audio account pager)
     add_subdirectory(${m})
   endif()
 endforeach()
-
-# Experimental GPU executor and differential tests; never adds GUI dependencies to fugue_render.
-option(FUGUE_BUILD_GPU "build the experimental QRhi executor (Qt 6.7+, Gui private headers and ShaderTools)" OFF)
-if(FUGUE_BUILD_GPU)
-  add_subdirectory(rendergpu)
-endif()
 
 # shell/ + app/ (Qt Widgets + WebEngine) are REQUIRED unless you opt out: -DFUGUE_HEADLESS_ONLY=ON (or -DFUGUE_BUILD_SHELL=OFF)
 # builds just the headless modules, tools and tests, which need no WebEngine.
@@ -109,9 +103,7 @@ endif()
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/tests/CMakeLists.txt)
   add_subdirectory(tests)
 endif()
+fugue_finish_tests()
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/cmake/devtree.cmake)
   include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/devtree.cmake)
-endif()
-if(UNIX AND NOT APPLE AND FUGUE_BUILD_SHELL)
-  include(packaging/deb/CPackDeb.cmake)   # `cpack -G DEB`: the Ubuntu/Debian package, which uses the distro's Qt
 endif()

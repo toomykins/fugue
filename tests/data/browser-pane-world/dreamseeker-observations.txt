@@ -1,0 +1,5 @@
+DreamDaemon / DreamSeeker 516.1688, Windows, guest, 2026-10-25
+BEFORE browser.is-visible=true
+READY before attachment
+MOUNTED ready_count=1 same_document=1
+BROWSER_PANE_PROBE_DONE

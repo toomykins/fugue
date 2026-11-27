@@ -11,7 +11,8 @@ namespace {
 //   kind is NULL with zero payload bytes. Refs are u32.
 //   Payload shapes: 0x01/0x04 [u32 head][u32 cid]; 0x02/0x03 [u32 head][u16][u32 cid]; 0x06 cstring; 0x0c u32;
 //   0x0f u16 count + recursive values, depth cap 8; 0x2a float32 bits. A row surfaces head, cid, the 0x06 text and the
-//   0x2a number; the 0x02/0x03 u16, the 0x0c word and 0x0f's values are skipped. The flags&1 / flags&8 DMValues are
+//   0x2a number. Retain the 0x02/0x03 u16 as opaque row data for conservative lifetime invalidation;
+//   its semantics are not assumed. The 0x0c word and 0x0f's values are skipped. The flags&1 / flags&8 DMValues are
 //   read and discarded.
 StatValue value(Reader& r, int depth) {
     StatValue v;
@@ -26,7 +27,7 @@ StatValue value(Reader& r, int depth) {
         case 0x02:
         case 0x03:
             v.head = r.u32();
-            r.u16();
+            v.rowWord = r.u16();
             v.appid = r.u32();
             v.hasAppid = true;
             break;
@@ -86,6 +87,7 @@ canon::Json toJson(const StatValue& v) {
         .u("appid", v.appid)
         .boolean("hasAppid", v.hasAppid)
         .u("head", v.head)
+        .u("rowWord", v.rowWord)
         .build();
 }
 

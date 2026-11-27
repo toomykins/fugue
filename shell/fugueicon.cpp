@@ -1,7 +1,6 @@
 #include "shell/fugueicon.h"
 #include <QFile>
 #include <vector>
-#include "render/dmi.h"
 
 // The resource lives in the fugue_shell static library, so nothing references its initializer and the linker would drop it.
 static void initFugueResources() { Q_INIT_RESOURCE(fugue); }
@@ -32,16 +31,6 @@ std::vector<std::pair<int, QByteArray>> fugueIconPngs() {
     return v;
 }
 
-QImage skinIconImage(const QByteArray& bytes) {
-    if (bytes.startsWith("\x89PNG")) {
-        auto r = render::parseIcon(reinterpret_cast<const uint8_t*>(bytes.constData()), size_t(bytes.size()));
-        if (r.ok() && !r.icon->plainImage && !r.icon->states.empty()) {
-            std::vector<uint8_t> px;
-            if (!r.icon->frame(r.icon->states[0], 0, 0, px)) return {};
-            return QImage(px.data(), r.icon->width, r.icon->height, r.icon->width * 4, QImage::Format_RGBA8888).copy();
-        }
-    }
-    return QImage::fromData(bytes);
-}
+QImage skinIconImage(const QByteArray& bytes) { return QImage::fromData(bytes); }
 
 }  // namespace fugue::shell

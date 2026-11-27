@@ -1,0 +1,11 @@
+window "main"
+    elem "main"
+        type = MAIN
+        size = 992x672
+        is-default = true
+        title = "Stock BYOND Large Blur Measurement"
+    elem "map"
+        type = MAP
+        pos = 0,0
+        size = 992x672
+        is-default = true

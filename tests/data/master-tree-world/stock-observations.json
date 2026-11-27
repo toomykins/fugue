@@ -1,0 +1,182 @@
+[
+  {
+    "phase": "overlay",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the master loc= icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\n"
+  },
+  {
+    "phase": "overlay-tint",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the master loc= icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\n"
+  },
+  {
+    "phase": "overlay-group-tint",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\n"
+  },
+  {
+    "phase": "overlay-zero",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168]],
+    "events": "CLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\n"
+  },
+  {
+    "phase": "nested",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\n"
+  },
+  {
+    "phase": "nested-tint",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\n"
+  },
+  {
+    "phase": "nested-group-tint",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\n"
+  },
+  {
+    "phase": "nested-zero",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168]],
+    "events": "CLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\n"
+  },
+  {
+    "phase": "overlay-nested-group-tint",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\n"
+  },
+  {
+    "phase": "overlay-under-tint",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the master loc= icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\n"
+  },
+  {
+    "phase": "overlay-alpha",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the master loc= icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\n"
+  },
+  {
+    "phase": "nested-same-tint",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\n"
+  },
+  {
+    "phase": "nested-deep-tint",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\n"
+  },
+  {
+    "phase": "nested-childzero",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the floor loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\n"
+  },
+  {
+    "phase": "overlay-nested-tint",
+    "geometry": {
+      "bounds_physical": [80,80,550,609],
+      "client_physical": [448,473],
+      "dpi": 144,
+      "client_dip_96": [298.6666666666667,315.3333333333333],
+      "maximized": false
+    },
+    "pixelsTopLeft": [[104,104],[136,104],[40,168],[60,168]],
+    "events": "CLICK the red loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=4:9,4:24\r\n\r\nCLICK the yellow loc=the floor icon-x=9;icon-y=24;left=1;button=left;screen-loc=5:9,4:24\r\n\r\nCLICK the master loc= icon-x=9;icon-y=24;left=1;button=left;screen-loc=2:9,2:24\r\n\r\nCLICK the floor loc=the floor icon-x=29;icon-y=24;left=1;button=left;screen-loc=2:29,2:24\r\n\r\n"
+  }
+]

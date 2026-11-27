@@ -1,0 +1,12 @@
+window "main"
+    elem "main"
+        type = MAIN
+        size = 448x448
+        is-default = true
+    elem "map"
+        type = MAP
+        pos = 0,0
+        size = 448x448
+        anchor1 = 0,0
+        anchor2 = 100,100
+        is-default = true

@@ -1,0 +1,170 @@
+{
+ "schema": 1,
+ "stock": "DreamSeeker/DreamDaemon 516.1688",
+ "date": "2026-11-14",
+ "method": "native 1:1 grabs of stock and Fugue on one server; bounding boxes from the stock grab (half-covered edge pixels of scaled boxes count); fugueDiff* compare the whole map after the change",
+ "cases": [
+  {
+   "case": "plain",
+   "red": [
+    136,
+    104,
+    151,
+    119
+   ],
+   "blue": [
+    72,
+    168,
+    87,
+    183
+   ],
+   "fugueDiffOver8": 0,
+   "fugueMaxDiff": 0
+  },
+  {
+   "case": "master-turn",
+   "red": [
+    104,
+    136,
+    119,
+    151
+   ],
+   "blue": [
+    40,
+    72,
+    55,
+    87
+   ],
+   "fugueDiffOver8": 0,
+   "fugueMaxDiff": 0
+  },
+  {
+   "case": "master-scale",
+   "red": [
+    160,
+    104,
+    191,
+    119
+   ],
+   "blue": [
+    17,
+    168,
+    78,
+    183
+   ],
+   "fugueDiffOver8": 0,
+   "fugueMaxDiff": 1
+  },
+  {
+   "case": "master-shift",
+   "red": [
+    152,
+    96,
+    167,
+    111
+   ],
+   "blue": [
+    104,
+    152,
+    119,
+    167
+   ],
+   "fugueDiffOver8": 0,
+   "fugueMaxDiff": 0
+  },
+  {
+   "case": "child-turn",
+   "red": [
+    136,
+    104,
+    151,
+    119
+   ],
+   "blue": [
+    69,
+    165,
+    90,
+    186
+   ],
+   "fugueDiffOver8": 0,
+   "fugueMaxDiff": 0
+  },
+  {
+   "case": "master-turn-child-scale",
+   "red": [
+    104,
+    136,
+    119,
+    151
+   ],
+   "blue": [
+    32,
+    72,
+    63,
+    87
+   ],
+   "fugueDiffOver8": 0,
+   "fugueMaxDiff": 1
+  },
+  {
+   "case": "master-scale-child-turn",
+   "red": [
+    160,
+    104,
+    191,
+    119
+   ],
+   "blue": [
+    6,
+    165,
+    89,
+    186
+   ],
+   "fugueDiffOver8": 0,
+   "fugueMaxDiff": 1
+  },
+  {
+   "case": "solo-master-turn",
+   "red": [
+    104,
+    136,
+    119,
+    151
+   ],
+   "blue": null,
+   "fugueDiffOver8": 0,
+   "fugueMaxDiff": 0
+  },
+  {
+   "case": "group-plain",
+   "red": [
+    136,
+    104,
+    151,
+    119
+   ],
+   "blue": null,
+   "fugueDiffOver8": 0,
+   "fugueMaxDiff": 0
+  },
+  {
+   "case": "group-master-turn",
+   "red": null,
+   "blue": null,
+   "fugueDiffOver8": 0,
+   "fugueMaxDiff": 0
+  },
+  {
+   "case": "group-child-turn",
+   "red": [
+    136,
+    104,
+    151,
+    119
+   ],
+   "blue": null,
+   "fugueDiffOver8": 0,
+   "fugueMaxDiff": 0
+  }
+ ]
+}

@@ -1,0 +1,120 @@
+{"control":"alpha","params":"size","answer":"100x40"}
+{"control":"alpha","params":"size;text","answer":"size=100x40;text=A+%26+B%3b+C%3d%2b%25"}
+{"control":"alpha","params":"text","answer":"A & B; C=+%"}
+{"control":"alpha","params":"nonesuch","answer":""}
+{"control":"alpha","params":"size;nonesuch","answer":"size=100x40;nonesuch="}
+{"control":"alpha;beta","params":"size","answer":"alpha.size=100x40;beta.size=80x30"}
+{"control":"alpha;beta","params":"size;text","answer":"alpha.size=100x40;alpha.text=A+%26+B%3b+C%3d%2b%25;beta.size=80x30;beta.text=second"}
+{"control":"alpha;beta","params":"text","answer":"alpha.text=A+%26+B%3b+C%3d%2b%25;beta.text=second"}
+{"control":"alpha;beta","params":"nonesuch","answer":""}
+{"control":"alpha;beta","params":"size;nonesuch","answer":"alpha.size=100x40;beta.size=80x30"}
+{"control":"main.alpha;main.beta","params":"size","answer":"main.alpha.size=100x40;main.beta.size=80x30"}
+{"control":"main.alpha;main.beta","params":"size;text","answer":"main.alpha.size=100x40;main.alpha.text=A+%26+B%3b+C%3d%2b%25;main.beta.size=80x30;main.beta.text=second"}
+{"control":"main.alpha;main.beta","params":"text","answer":"main.alpha.text=A+%26+B%3b+C%3d%2b%25;main.beta.text=second"}
+{"control":"main.alpha;main.beta","params":"nonesuch","answer":""}
+{"control":"main.alpha;main.beta","params":"size;nonesuch","answer":"main.alpha.size=100x40;main.beta.size=80x30"}
+{"control":"beta;alpha","params":"size","answer":"beta.size=80x30;alpha.size=100x40"}
+{"control":"beta;alpha","params":"size;text","answer":"beta.size=80x30;beta.text=second;alpha.size=100x40;alpha.text=A+%26+B%3b+C%3d%2b%25"}
+{"control":"beta;alpha","params":"text","answer":"beta.text=second;alpha.text=A+%26+B%3b+C%3d%2b%25"}
+{"control":"beta;alpha","params":"nonesuch","answer":""}
+{"control":"beta;alpha","params":"size;nonesuch","answer":"beta.size=80x30;alpha.size=100x40"}
+{"control":"alpha;missing","params":"size","answer":"alpha.size=100x40"}
+{"control":"alpha;missing","params":"size;text","answer":"alpha.size=100x40;alpha.text=A+%26+B%3b+C%3d%2b%25"}
+{"control":"alpha;missing","params":"text","answer":"alpha.text=A+%26+B%3b+C%3d%2b%25"}
+{"control":"alpha;missing","params":"nonesuch","answer":""}
+{"control":"alpha;missing","params":"size;nonesuch","answer":"alpha.size=100x40"}
+{"control":"missing;alpha","params":"size","answer":"alpha.size=100x40"}
+{"control":"missing;alpha","params":"size;text","answer":"alpha.size=100x40;alpha.text=A+%26+B%3b+C%3d%2b%25"}
+{"control":"missing;alpha","params":"text","answer":"alpha.text=A+%26+B%3b+C%3d%2b%25"}
+{"control":"missing;alpha","params":"nonesuch","answer":""}
+{"control":"missing;alpha","params":"size;nonesuch","answer":"alpha.size=100x40"}
+{"control":"missing;absent","params":"size","answer":""}
+{"control":"missing;absent","params":"size;text","answer":"size=;text="}
+{"control":"missing;absent","params":"text","answer":""}
+{"control":"missing;absent","params":"nonesuch","answer":""}
+{"control":"missing;absent","params":"size;nonesuch","answer":"size=;nonesuch="}
+{"control":"alpha;alpha","params":"size","answer":"alpha.size=100x40;alpha.size=100x40"}
+{"control":"alpha;alpha","params":"size;text","answer":"alpha.size=100x40;alpha.text=A+%26+B%3b+C%3d%2b%25;alpha.size=100x40;alpha.text=A+%26+B%3b+C%3d%2b%25"}
+{"control":"alpha;alpha","params":"text","answer":"alpha.text=A+%26+B%3b+C%3d%2b%25;alpha.text=A+%26+B%3b+C%3d%2b%25"}
+{"control":"alpha;alpha","params":"nonesuch","answer":""}
+{"control":"alpha;alpha","params":"size;nonesuch","answer":"alpha.size=100x40;alpha.size=100x40"}
+{"control":"alpha;","params":"size","answer":"alpha.size=100x40"}
+{"control":"alpha;","params":"size;text","answer":"alpha.size=100x40;alpha.text=A+%26+B%3b+C%3d%2b%25"}
+{"control":"alpha;","params":"text","answer":"alpha.text=A+%26+B%3b+C%3d%2b%25"}
+{"control":"alpha;","params":"nonesuch","answer":""}
+{"control":"alpha;","params":"size;nonesuch","answer":"alpha.size=100x40"}
+{"control":";alpha","params":"size","answer":".size=640x480;alpha.size=100x40"}
+{"control":";alpha","params":"size;text","answer":".size=640x480;alpha.size=100x40;alpha.text=A+%26+B%3b+C%3d%2b%25"}
+{"control":";alpha","params":"text","answer":"alpha.text=A+%26+B%3b+C%3d%2b%25"}
+{"control":";alpha","params":"nonesuch","answer":""}
+{"control":";alpha","params":"size;nonesuch","answer":".size=640x480;alpha.size=100x40"}
+{"control":"alpha;;beta","params":"size","answer":"alpha.size=100x40;beta.size=80x30"}
+{"control":"alpha;;beta","params":"size;text","answer":"alpha.size=100x40;alpha.text=A+%26+B%3b+C%3d%2b%25;beta.size=80x30;beta.text=second"}
+{"control":"alpha;;beta","params":"text","answer":"alpha.text=A+%26+B%3b+C%3d%2b%25;beta.text=second"}
+{"control":"alpha;;beta","params":"nonesuch","answer":""}
+{"control":"alpha;;beta","params":"size;nonesuch","answer":"alpha.size=100x40;beta.size=80x30"}
+{"control":"alpha; beta","params":"size","answer":"alpha.size=100x40"}
+{"control":"alpha; beta","params":"size;text","answer":"alpha.size=100x40;alpha.text=A+%26+B%3b+C%3d%2b%25"}
+{"control":"alpha; beta","params":"text","answer":"alpha.text=A+%26+B%3b+C%3d%2b%25"}
+{"control":"alpha; beta","params":"nonesuch","answer":""}
+{"control":"alpha; beta","params":"size;nonesuch","answer":"alpha.size=100x40"}
+{"control":" alpha;beta ","params":"size","answer":""}
+{"control":" alpha;beta ","params":"size;text","answer":"size=;text="}
+{"control":" alpha;beta ","params":"text","answer":""}
+{"control":" alpha;beta ","params":"nonesuch","answer":""}
+{"control":" alpha;beta ","params":"size;nonesuch","answer":"size=;nonesuch="}
+{"control":"alpha&beta","params":"size","answer":"alpha.size=100x40;beta.size=80x30"}
+{"control":"alpha&beta","params":"size;text","answer":"alpha.size=100x40;alpha.text=A+%26+B%3b+C%3d%2b%25;beta.size=80x30;beta.text=second"}
+{"control":"alpha&beta","params":"text","answer":"alpha.text=A+%26+B%3b+C%3d%2b%25;beta.text=second"}
+{"control":"alpha&beta","params":"nonesuch","answer":""}
+{"control":"alpha&beta","params":"size;nonesuch","answer":"alpha.size=100x40;beta.size=80x30"}
+{"control":"alpha,beta","params":"size","answer":""}
+{"control":"alpha,beta","params":"size;text","answer":"size=;text="}
+{"control":"alpha,beta","params":"text","answer":""}
+{"control":"alpha,beta","params":"nonesuch","answer":""}
+{"control":"alpha,beta","params":"size;nonesuch","answer":"size=;nonesuch="}
+{"control":"alpha beta","params":"size","answer":""}
+{"control":"alpha beta","params":"size;text","answer":"size=;text="}
+{"control":"alpha beta","params":"text","answer":""}
+{"control":"alpha beta","params":"nonesuch","answer":""}
+{"control":"alpha beta","params":"size;nonesuch","answer":"size=;nonesuch="}
+{"control":"ALPHA;beta","params":"size","answer":"ALPHA.size=100x40;beta.size=80x30"}
+{"control":"ALPHA;beta","params":"size;text","answer":"ALPHA.size=100x40;ALPHA.text=A+%26+B%3b+C%3d%2b%25;beta.size=80x30;beta.text=second"}
+{"control":"ALPHA;beta","params":"text","answer":"ALPHA.text=A+%26+B%3b+C%3d%2b%25;beta.text=second"}
+{"control":"ALPHA;beta","params":"nonesuch","answer":""}
+{"control":"ALPHA;beta","params":"size;nonesuch","answer":"ALPHA.size=100x40;beta.size=80x30"}
+{"control":"main;alpha","params":"size","answer":"main.size=640x480;alpha.size=100x40"}
+{"control":"main;alpha","params":"size;text","answer":"main.size=640x480;alpha.size=100x40;alpha.text=A+%26+B%3b+C%3d%2b%25"}
+{"control":"main;alpha","params":"text","answer":"alpha.text=A+%26+B%3b+C%3d%2b%25"}
+{"control":"main;alpha","params":"nonesuch","answer":""}
+{"control":"main;alpha","params":"size;nonesuch","answer":"main.size=640x480;alpha.size=100x40"}
+{"control":"main.*","params":"size","answer":"main.size=640x480;main.alpha.size=100x40;main.beta.size=80x30"}
+{"control":"main.*","params":"size;text","answer":"main.size=640x480;main.alpha.size=100x40;main.alpha.text=A+%26+B%3b+C%3d%2b%25;main.beta.size=80x30;main.beta.text=second"}
+{"control":"main.*","params":"text","answer":"main.alpha.text=A+%26+B%3b+C%3d%2b%25;main.beta.text=second"}
+{"control":"main.*","params":"nonesuch","answer":""}
+{"control":"main.*","params":"size;nonesuch","answer":"main.size=640x480;main.alpha.size=100x40;main.beta.size=80x30"}
+{"control":"missing.*;alpha","params":"size","answer":"alpha.size=100x40"}
+{"control":"missing.*;alpha","params":"size;text","answer":"alpha.size=100x40;alpha.text=A+%26+B%3b+C%3d%2b%25"}
+{"control":"missing.*;alpha","params":"text","answer":"alpha.text=A+%26+B%3b+C%3d%2b%25"}
+{"control":"missing.*;alpha","params":"nonesuch","answer":""}
+{"control":"missing.*;alpha","params":"size;nonesuch","answer":"alpha.size=100x40"}
+{"control":"main.*;alpha","params":"size","answer":"main.size=640x480;main.alpha.size=100x40;main.beta.size=80x30;alpha.size=100x40"}
+{"control":"main.*;alpha","params":"size;text","answer":"main.size=640x480;main.alpha.size=100x40;main.alpha.text=A+%26+B%3b+C%3d%2b%25;main.beta.size=80x30;main.beta.text=second;alpha.size=100x40;alpha.text=A+%26+B%3b+C%3d%2b%25"}
+{"control":"main.*;alpha","params":"text","answer":"main.alpha.text=A+%26+B%3b+C%3d%2b%25;main.beta.text=second;alpha.text=A+%26+B%3b+C%3d%2b%25"}
+{"control":"main.*;alpha","params":"nonesuch","answer":""}
+{"control":"main.*;alpha","params":"size;nonesuch","answer":"main.size=640x480;main.alpha.size=100x40;main.beta.size=80x30;alpha.size=100x40"}
+{"control":"alpha;main.*","params":"size","answer":"alpha.size=100x40;main.size=640x480;main.alpha.size=100x40;main.beta.size=80x30"}
+{"control":"alpha;main.*","params":"size;text","answer":"alpha.size=100x40;alpha.text=A+%26+B%3b+C%3d%2b%25;main.size=640x480;main.alpha.size=100x40;main.alpha.text=A+%26+B%3b+C%3d%2b%25;main.beta.size=80x30;main.beta.text=second"}
+{"control":"alpha;main.*","params":"text","answer":"alpha.text=A+%26+B%3b+C%3d%2b%25;main.alpha.text=A+%26+B%3b+C%3d%2b%25;main.beta.text=second"}
+{"control":"alpha;main.*","params":"nonesuch","answer":""}
+{"control":"alpha;main.*","params":"size;nonesuch","answer":"alpha.size=100x40;main.size=640x480;main.alpha.size=100x40;main.beta.size=80x30"}
+{"control":";","params":"size","answer":".size=640x480"}
+{"control":";","params":"size;text","answer":".size=640x480"}
+{"control":";","params":"text","answer":""}
+{"control":";","params":"nonesuch","answer":""}
+{"control":";","params":"size;nonesuch","answer":".size=640x480"}
+{"control":"","params":"size","answer":""}
+{"control":"","params":"size;text","answer":"size=;text="}
+{"control":"","params":"text","answer":""}
+{"control":"","params":"nonesuch","answer":""}
+{"control":"","params":"size;nonesuch","answer":"size=;nonesuch="}

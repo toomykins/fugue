@@ -26,16 +26,17 @@
 //   0x3f nothing; 0x06 is refused.
 //
 // The wire blend byte is not an IconBlendMode: it uses its own numbering (ddmi.cpp wireBlend: 0 ADD, 1 SUBTRACT, 2 OR,
-// 3 AND, 4 MULTIPLY, 7 OVERLAY, 8 UNDERLAY), so it must be mapped, never cast; any other byte leaves the icon as it is.
+// 3 AND, 4 MULTIPLY, 7 OVERLAY, 8 UNDERLAY), so it must be mapped, never cast. Other modes are refused.
 #pragma once
 #include <cstdint>
+#include <chrono>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "render/dmi.h"
 
-namespace fugue::render {
+namespace fugue::assets {
 
 struct DdmiRef {
     uint32_t ordinal = 0;  // index into the ResourceList (the same space as an appearance's icon_res)
@@ -49,11 +50,13 @@ struct DdmiRef {
 struct DdmiOp {
     uint8_t tag = 0;
     std::vector<uint8_t> payload;  // verbatim, excluding the tag
-    int ref = -1;                  // 0x01: its index in refs; 0x05/0x40 qualifying a ref: that ref's index
+    int offset = -1;
+    int ref = -1;  // 0x01: its index in refs; 0x05/0x40 qualifying a ref: that ref's index
 };
 
 struct DdmiRecipe {
     std::vector<DdmiRef> refs;
+    int failureOffset = -1;
     std::vector<DdmiOp> ops;  // every op in wire order
 };
 
@@ -66,13 +69,29 @@ bool parseDdmi(const uint8_t* d, size_t n, DdmiRecipe& out, std::string* err);
 struct DdmiResult {
     std::unique_ptr<Icon> owned;  // a new icon, or
     const Icon* alias = nullptr;  // the operand itself ("the extracted operand, verbatim" shape)
-    std::string err;              // set when neither: a refusal (unsupported op / bad operand)
+    bool limited = false;
+    int failureOffset = -1, failureOperation = -1;
+    std::string err;  // set when neither: a refusal (unsupported op / bad operand)
     const Icon* icon() const { return owned ? owned.get() : alias; }
 };
-// ops[i] is the icon refs[i] names, IN ORDER (null only for an empty-icon ref). Pure; mutates nothing.
-DdmiResult evalDdmi(const DdmiRecipe& rec, const std::vector<const Icon*>& ops);
+// Owned, resumable interpreter. No model pointers or partial published results.
+// Work is advisory; each operation still preflights dimensions/cells and a
+// conservative 64 MiB live pixel-storage bound (inputs + stack + scratch).
+class DdmiEvaluation {
+public:
+    using Clock = std::chrono::steady_clock;
+    DdmiEvaluation(const DdmiRecipe& recipe, std::vector<Icon> inputs);
+    ~DdmiEvaluation();
+    // Advances at least one operation unless memory-deferred; yields only at
+    // operation boundaries. availableBytes includes this job's owned inputs.
+    bool step(Clock::time_point deadline, uint64_t availableBytes = 64 * 1024 * 1024);
+    DdmiResult takeResult();  // only after step returns true
+    uint64_t workPixels() const;
+    uint64_t peakBytes() const;
 
-// Test-only hook; 0 is the shipped behaviour.
-void setDdmiMutation(int m);
+private:
+    struct Impl;
+    std::unique_ptr<Impl> impl_;
+};
 
-}  // namespace fugue::render
+}  // namespace fugue::assets

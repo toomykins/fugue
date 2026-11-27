@@ -1,0 +1,33 @@
+window "main"
+    elem "main"
+        type = MAIN
+        size = 1200x850
+        is-default = true
+    elem "map"
+        type = MAP
+        pos = 0,0
+        size = 800x800
+        anchor1 = 0,0
+        anchor2 = 66,100
+        is-default = true
+    elem "output"
+        type = OUTPUT
+        pos = 805,400
+        size = 390x400
+        anchor1 = 66,50
+        anchor2 = 100,100
+        is-default = true
+    elem "stat"
+        type = INFO
+        pos = 805,0
+        size = 390x390
+        anchor1 = 66,0
+        anchor2 = 100,50
+        is-default = true
+    elem "input"
+        type = INPUT
+        pos = 0,810
+        size = 1200x30
+        anchor1 = 0,100
+        anchor2 = 100,100
+        is-default = true

@@ -3,12 +3,12 @@
 
 namespace fugue::proto {
 
-// Layout: [id u16][name\0][desc\0][cat\0][head u8][src u8][flags u8]([flagsExt u32][extByte u8] iff flags&0x80)
+// Layout: [id u16, or u32 in the negotiated wide-verb mode][name\0][desc\0][cat\0][head u8][src u8][flags u8]([flagsExt u32][extByte u8] iff flags&0x80)
 //   [argc u8] argc x [typemask u32][filter u8][filterKind u8]. Head, src, filter and filterKind are not decoded further.
-Verb decodeVerb(ByteSpan body) {
+Verb decodeVerb(State& st, ByteSpan body) {
     Reader r(body);
     Verb m;
-    m.id = r.u16();
+    m.id = st.wideVerbIds ? r.u32() : r.u16();
     m.name = r.cstr();
     m.desc = r.cstr();
     m.category = r.cstr();

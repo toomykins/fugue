@@ -241,8 +241,8 @@ void Player::decodeLoop() {
     }
 }
 
-// Renders in ~23 ms blocks and lets the sink pace (a pipe blocks once full); a sink that accepts everything at once is
-// throttled by the wall clock so a silent client does not spin a core. A failed write re-opens the sink with exponential
+// Renders in ~23 ms blocks and lets the sink pace (a pipe or device blocks once full); a sink that accepts everything at
+// once (Sink::instant) is throttled by the wall clock so a silent client does not spin a core. A failed write re-opens the sink with exponential
 // backoff (capped at 30 s) instead of going silent for the session.
 void Player::outputLoop() {
 #if !defined(_WIN32)
@@ -292,8 +292,16 @@ void Player::outputLoop() {
         if (!sink_->write(buf.data(), kBlockFrames, &err)) reopen(err);
         blocks_++;
         if (loud) peak_++;
-        next += period;
+        // Only a sink with nothing behind it is paced by the clock. A device or pipe sink blocks in write() once its
+        // buffer is full, and that is what keeps blocks queued ahead of the player: sleeping to each block's deadline
+        // as well left at most one block in the pipe, so pw-play found it empty between wake-ups and played gaps in
+        // any sustained sound.
         auto now = clk::now();
+        if (!sink_->instant()) {
+            next = now;
+            continue;
+        }
+        next += period;
         if (next > now)
             std::this_thread::sleep_for(next - now);
         else if (now - next > std::chrono::seconds(1))

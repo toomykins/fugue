@@ -1,0 +1,16 @@
+{
+ "schema": 1,
+ "stock": "DreamSeeker/DreamDaemon 516.1688",
+ "date": "2026-11-14",
+ "method": "native 1:1 grabs of a 64 px icon world (576x384 MAP of 9x6 tiles) on one server; drawn reads whether the case's parts appear in the stock grab; fugueDiff* compare 192 px crops after the change",
+ "sets": {
+  "a": [
+   {"case": "turn-overlay", "drawn": true, "overlayDrawn": true, "fugueDiffOver8": 0},
+   {"case": "scale-overlay", "drawn": true, "overlayDrawn": true, "fugueDiffOver8": 0},
+   {"case": "image-turn", "drawn": true, "imageDrawn": true, "fugueDiffOver8": 0},
+   {"case": "image-own-turn", "drawn": true, "fugueDiffOver8": 0},
+   {"case": "turn-maptext", "drawn": true, "fugueDiffOver8": 74, "note": "glyph rasterization, as in 32 px worlds"},
+   {"case": "plain-turn", "drawn": true, "fugueDiffOver8": 0}
+  ]
+ }
+}

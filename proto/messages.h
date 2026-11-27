@@ -213,7 +213,7 @@ struct Verb {  // S2C::Verb
         uint32_t typeMask = 0;
         uint8_t filter = 0, filterKind = 0;
     };
-    uint16_t id = 0;
+    uint32_t id = 0;  // u16 on the wire unless the handshake negotiated wide verb ids
     std::string name, desc, category;
     uint8_t head = 0, src = 0, flags = 0;
     uint32_t flagsExt = 0;  // flags & 0x80
@@ -272,7 +272,8 @@ struct Appearance {  // S2C::Appearance
     uint32_t appearanceFlags = 0;  // low byte: client flags; >> 21: DM appearance_flags
     std::array<Slot, 3> idSlots{};
     uint32_t iconRef = 0;
-    std::vector<uint16_t> verbs;
+    bool wideVerbIds = false;  // the width the verbs were sent in
+    std::vector<uint32_t> verbs;
     std::vector<uint32_t> overlays, underlays;
     uint32_t layerBits = 0;
     std::string screenLoc;
@@ -354,6 +355,8 @@ struct StatValue {
     double num = 0;         // kind 0x2a
     bool hasAppid = false;  // kinds 0x01-0x04: an atom
     uint32_t appid = 0, head = 0;
+    uint16_t rowWord = 0;  // kinds 0x02/0x03: opaque row data, kept so a changed row invalidates its icon
+    bool operator==(const StatValue&) const = default;
 };
 
 struct StatPanel {  // S2C::StatPanel
@@ -547,12 +550,12 @@ InView decodeInView(ByteSpan body);
 RefBind decodeMobBind(ByteSpan body);
 ContentsDelta decodeContentsDelta(ByteSpan body);
 ResourceList decodeResourceList(State& st, ByteSpan body);
-Verb decodeVerb(ByteSpan body);
+Verb decodeVerb(State& st, ByteSpan body);
 // MapRefreshFull / MapRefresh / MapGrid; advances the map view only when the whole frame decodes.
 MapRefresh decodeMapRefresh(State& st, uint16_t typ, ByteSpan body);
 AreaGrid decodeAreaGrid(State& st, ByteSpan body);  // consumes the footprint the preceding refresh armed
 RefBind decodeObjBind(ByteSpan body);
-Appearance decodeAppearance(ByteSpan body);
+Appearance decodeAppearance(State& st, ByteSpan body);
 ImageOp decodeImageCreate(ByteSpan body);
 ImageOp decodeImageDelete(ByteSpan body);
 ImageOp decodeImageModify(ByteSpan body);

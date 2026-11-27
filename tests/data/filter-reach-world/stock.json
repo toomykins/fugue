@@ -1,0 +1,302 @@
+{
+ "schema": 1,
+ "stock": "DreamSeeker/DreamDaemon 516.1688",
+ "date": "2026-11-14",
+ "method": "native 1:1 grabs of stock and Fugue on one server; facts counted from stock pixels around each case tile by compare.py (fugueRed from Fugue's grab); fugueDiff* compare the 96 px crops after the change. Set b animates and the clients are grabbed about a second apart; set c is before any wave/ripple/bloom support",
+ "sets": {
+  "a": [
+   {
+    "case": "image",
+    "red": 66,
+    "magenta": 0,
+    "redAtText": 10,
+    "fugueRed": 66,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "image-shadow",
+    "red": 0,
+    "magenta": 80,
+    "redAtText": 0,
+    "fugueRed": 0,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "image-turn",
+    "red": 0,
+    "magenta": 80,
+    "redAtText": 0,
+    "fugueRed": 0,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "image-scale",
+    "red": 126,
+    "magenta": 0,
+    "redAtText": 18,
+    "fugueRed": 126,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "image-overlay",
+    "red": 58,
+    "magenta": 0,
+    "redAtText": 10,
+    "fugueRed": 58,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "image-alpha",
+    "red": 0,
+    "magenta": 0,
+    "redAtText": 0,
+    "fugueRed": 0,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "image-pixel",
+    "red": 66,
+    "magenta": 0,
+    "redAtText": 8,
+    "fugueRed": 66,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   },
+   {
+    "case": "maptext",
+    "red": 122,
+    "magenta": 0,
+    "redAtText": 63,
+    "fugueRed": 106,
+    "fugueDiffOver8": 120,
+    "fugueMaxDiff": 255
+   },
+   {
+    "case": "maptext-only",
+    "red": 70,
+    "magenta": 0,
+    "redAtText": 64,
+    "fugueRed": 60,
+    "fugueDiffOver8": 134,
+    "fugueMaxDiff": 255
+   },
+   {
+    "case": "kt-maptext",
+    "red": 0,
+    "magenta": 0,
+    "redAtText": 0,
+    "fugueRed": 0,
+    "fugueDiffOver8": 74,
+    "fugueMaxDiff": 239
+   },
+   {
+    "case": "kt-maptext-outline",
+    "red": 125,
+    "magenta": 0,
+    "redAtText": 64,
+    "fugueRed": 109,
+    "fugueDiffOver8": 120,
+    "fugueMaxDiff": 255
+   },
+   {
+    "case": "maptext-overlay",
+    "red": 114,
+    "magenta": 0,
+    "redAtText": 63,
+    "fugueRed": 98,
+    "fugueDiffOver8": 120,
+    "fugueMaxDiff": 255
+   },
+   {
+    "case": "maptext-shadow",
+    "red": 0,
+    "magenta": 105,
+    "redAtText": 0,
+    "fugueRed": 0,
+    "fugueDiffOver8": 110,
+    "fugueMaxDiff": 250
+   },
+   {
+    "case": "kt-maptext-turn",
+    "red": 0,
+    "magenta": 0,
+    "redAtText": 0,
+    "fugueRed": 0,
+    "fugueDiffOver8": 74,
+    "fugueMaxDiff": 239
+   },
+   {
+    "case": "maptext-turn-outline",
+    "red": 122,
+    "magenta": 0,
+    "redAtText": 11,
+    "fugueRed": 106,
+    "fugueDiffOver8": 120,
+    "fugueMaxDiff": 255
+   }
+  ],
+  "b": [
+   {
+    "case": "anim-pixel",
+    "red": 66,
+    "magenta": 0,
+    "redAtText": 0,
+    "fugueRed": 66,
+    "fugueDiffOver8": 92,
+    "fugueMaxDiff": 239
+   },
+   {
+    "case": "anim-alpha",
+    "red": 0,
+    "magenta": 0,
+    "redAtText": 0,
+    "fugueRed": 0,
+    "fugueDiffOver8": 338,
+    "fugueMaxDiff": 12
+   },
+   {
+    "case": "anim-turn",
+    "red": 48,
+    "magenta": 0,
+    "redAtText": 7,
+    "fugueRed": 46,
+    "fugueDiffOver8": 177,
+    "fugueMaxDiff": 134
+   },
+   {
+    "case": "anim-shadow-turn",
+    "red": 0,
+    "magenta": 68,
+    "redAtText": 0,
+    "fugueRed": 0,
+    "fugueDiffOver8": 145,
+    "fugueMaxDiff": 201
+   },
+   {
+    "case": "anim-color",
+    "red": 0,
+    "magenta": 0,
+    "redAtText": 0,
+    "fugueRed": 0,
+    "fugueDiffOver8": 338,
+    "fugueMaxDiff": 12
+   },
+   {
+    "case": "flick",
+    "red": 66,
+    "magenta": 0,
+    "redAtText": 10,
+    "fugueRed": 66,
+    "fugueDiffOver8": 256,
+    "fugueMaxDiff": 200
+   },
+   {
+    "case": "anim-filter-param",
+    "red": 300,
+    "magenta": 0,
+    "redAtText": 50,
+    "fugueRed": 316,
+    "fugueDiffOver8": 104,
+    "fugueMaxDiff": 144
+   },
+   {
+    "case": "still",
+    "red": 66,
+    "magenta": 0,
+    "redAtText": 10,
+    "fugueRed": 66,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   }
+  ],
+  "c": [
+   {
+    "case": "wave",
+    "red": 0,
+    "magenta": 0,
+    "redAtText": 0,
+    "fugueRed": 0,
+    "fugueDiffOver8": 92,
+    "fugueMaxDiff": 224
+   },
+   {
+    "case": "wave-y",
+    "red": 0,
+    "magenta": 0,
+    "redAtText": 0,
+    "fugueRed": 0,
+    "fugueDiffOver8": 84,
+    "fugueMaxDiff": 220
+   },
+   {
+    "case": "wave-flags",
+    "red": 0,
+    "magenta": 0,
+    "redAtText": 0,
+    "fugueRed": 0,
+    "fugueDiffOver8": 65,
+    "fugueMaxDiff": 203
+   },
+   {
+    "case": "ripple",
+    "red": 0,
+    "magenta": 0,
+    "redAtText": 0,
+    "fugueRed": 0,
+    "fugueDiffOver8": 45,
+    "fugueMaxDiff": 224
+   },
+   {
+    "case": "ripple-xy",
+    "red": 0,
+    "magenta": 0,
+    "redAtText": 0,
+    "fugueRed": 0,
+    "fugueDiffOver8": 32,
+    "fugueMaxDiff": 224
+   },
+   {
+    "case": "bloom",
+    "red": 0,
+    "magenta": 0,
+    "redAtText": 0,
+    "fugueRed": 0,
+    "fugueDiffOver8": 549,
+    "fugueMaxDiff": 144
+   },
+   {
+    "case": "bloom-soft",
+    "red": 0,
+    "magenta": 0,
+    "redAtText": 0,
+    "fugueRed": 0,
+    "fugueDiffOver8": 218,
+    "fugueMaxDiff": 51
+   },
+   {
+    "case": "wave-shadow",
+    "red": 0,
+    "magenta": 79,
+    "redAtText": 0,
+    "fugueRed": 0,
+    "fugueDiffOver8": 138,
+    "fugueMaxDiff": 239
+   },
+   {
+    "case": "plain",
+    "red": 0,
+    "magenta": 0,
+    "redAtText": 0,
+    "fugueRed": 0,
+    "fugueDiffOver8": 0,
+    "fugueMaxDiff": 0
+   }
+  ]
+ }
+}

@@ -7,16 +7,23 @@
 
 #include <jpeglib.h>
 
-namespace fugue::render {
+namespace fugue::assets {
 
 namespace {
 // libjpeg reports a fatal error by calling error_exit, which must not return: jump back to the armed setjmp instead of
 // the default exit(). The message is kept for `why`.
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4324)  // jmp_buf's required ABI alignment pads this error-manager wrapper.
+#endif
 struct ErrMgr {
     jpeg_error_mgr pub;
     std::jmp_buf jump;
     char msg[JMSG_LENGTH_MAX];
 };
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 void onError(j_common_ptr c) {
     auto* e = reinterpret_cast<ErrMgr*>(c->err);
     (*c->err->format_message)(c, e->msg);
@@ -30,14 +37,19 @@ struct Jpeg {
     ErrMgr err;
 };
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4611)  // These two C-style frames own no destructible objects; all owners live in decodeJpeg.
+#endif
 const char* readHeader(Jpeg& j, const uint8_t* d, size_t n, uint64_t maxPixels) {
     if (setjmp(j.err.jump)) return j.err.msg;
     jpeg_create_decompress(&j.c);
     jpeg_mem_src(&j.c, const_cast<unsigned char*>(d), static_cast<unsigned long>(n));
     if (jpeg_read_header(&j.c, TRUE) != JPEG_HEADER_OK) return "no image";
     if (j.c.jpeg_color_space == JCS_CMYK || j.c.jpeg_color_space == JCS_YCCK) return "CMYK is not supported";
-    if (j.c.image_width == 0 || j.c.image_height == 0 || uint64_t(j.c.image_width) * j.c.image_height > maxPixels)
-        return "image size";
+    if (j.c.image_width == 0 || j.c.image_height == 0 || j.c.image_width > 8192 || j.c.image_height > 8192)
+        return "unsupported image dimensions";
+    if (uint64_t(j.c.image_width) * j.c.image_height > maxPixels) return "image size";
     j.c.out_color_space =
         JCS_RGB;  // grayscale expands; otherwise libjpeg's defaults (JDCT_ISLOW, as stock DreamDaemon uses)
     jpeg_calc_output_dimensions(&j.c);
@@ -61,6 +73,9 @@ const char* readPixels(Jpeg& j, uint8_t* px, uint8_t* row) {
     jpeg_finish_decompress(&j.c);
     return nullptr;
 }
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 }  // namespace
 
 bool decodeJpeg(const uint8_t* d, size_t n, RgbaImage& out, std::string& why, uint64_t maxPixels) {
@@ -84,4 +99,4 @@ bool decodeJpeg(const uint8_t* d, size_t n, RgbaImage& out, std::string& why, ui
     return !bad;
 }
 
-}  // namespace fugue::render
+}  // namespace fugue::assets

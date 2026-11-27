@@ -1,5 +1,6 @@
 // pager/launch: the argv a join runs, the scrubbed child environment, the desktop entry and its install.
 #include <QtTest>
+#include "tests/testmain.h"
 #include <QDir>
 #include <QSettings>
 #include <QTemporaryDir>
@@ -48,37 +49,6 @@ private slots:
         QVERIFY(!pager::autoSignIn());  // survived Clear cache
         QVERIFY2(pager::setAutoSignIn(true, &e), e.c_str());
         QVERIFY(pager::autoSignIn());
-    }
-    // The renderer setting is the client's own display.ini: the --state-dir the join passes on, else ~/.fugue. Other keys the
-    // client keeps there survive a write.
-    void rendererSettingIsTheClientsDisplayIni() {
-        QTemporaryDir home;
-        qputenv("HOME", home.path().toUtf8());
-        QCOMPARE(pager::clientStateDir({}), std::string());
-        QCOMPARE(pager::displaySettingsPath(""), (home.path() + "/.fugue/display.ini").toStdString());
-        QCOMPARE(pager::clientStateDir({"--no-pacing", "--state-dir", "/a", "--state-dir=/b"}), std::string("/b"));
-        QCOMPARE(pager::clientStateDir({"--state-dir", "/a", "--", "--state-dir=/b"}), std::string("/b"));
-        QCOMPARE(pager::clientStateDir({"--state-dir="}), std::string());  // empty: the client uses its default too
-        const std::string ini =
-            pager::displaySettingsPath(pager::clientStateDir({"--state-dir", (home.path() + "/alt").toStdString()}));
-        QCOMPARE(ini, (home.path() + "/alt/display.ini").toStdString());
-        QVERIFY(!pager::savedRendererGpu(ini));  // no file: CPU
-        {
-            QSettings c(QString::fromStdString(ini), QSettings::IniFormat);
-            c.setValue("performanceOverlay", true);
-            c.setValue("renderer", "GPU");  // not the client's spelling: CPU
-        }
-        QVERIFY(!pager::savedRendererGpu(ini));
-        std::string e;
-        QVERIFY2(pager::setSavedRenderer(ini, true, &e), e.c_str());
-        QVERIFY(pager::savedRendererGpu(ini));
-        QSettings c(QString::fromStdString(ini), QSettings::IniFormat);
-        QCOMPARE(c.value("renderer").toString(), QString("gpu"));
-        QCOMPARE(c.value("performanceOverlay").toBool(), true);
-        QVERIFY2(pager::setSavedRenderer(ini, false, &e), e.c_str());
-        c.sync();
-        QCOMPARE(c.value("renderer").toString(), QString("cpu"));
-        QVERIFY(!QFile::exists(home.path() + "/.fugue/display.ini"));  // the default dir was not touched
     }
     void buildArgsNeverCarriesASecret() {
         QTemporaryDir home;
@@ -175,10 +145,8 @@ private slots:
             QVERIFY(!e.empty());
         }
     }
+#ifndef WIN32
     void installWritesOnlyUnderXdgData() {
-#ifdef _WIN32
-        QSKIP("XDG desktop install is Unix-only; never change the real Windows registry in a test");
-#endif
         QTemporaryDir home;
         qputenv("HOME", home.path().toUtf8());
         QString xdg = home.path() + "/data";
@@ -211,7 +179,8 @@ private slots:
         QVERIFY(r.desktopPath.rfind(xdg.toStdString(), 0) == 0);
         qunsetenv("XDG_DATA_HOME");
     }
+#endif
 };
 
-QTEST_MAIN(PagerLaunchTest)
+FUGUE_TEST_MAIN(PagerLaunchTest)
 #include "pager_launch_test.moc"

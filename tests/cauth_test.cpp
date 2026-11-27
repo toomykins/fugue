@@ -5,6 +5,7 @@
 #include <QFile>
 #include <QTemporaryDir>
 #include <QtTest>
+#include "tests/testmain.h"
 #include <thread>
 #include <vector>
 #include "net/cauth.h"
@@ -335,5 +336,5 @@ private slots:
             if (i < got.size() - 27 || i >= got.size() - 23) QCOMPARE(got[i], rec[i]);  // nothing else touched
     }
 };
-QTEST_MAIN(CauthTest)
+FUGUE_TEST_MAIN(CauthTest)
 #include "cauth_test.moc"

@@ -58,15 +58,13 @@ public:
     void setQuitting() { quitting_ = true; }
     // Does the skin declare a BROWSER control by this name ("ctl" or "window.ctl")? Decides docked vs popup.
     void setDeclaredPredicate(std::function<bool(const QString&)> f) { declared_ = std::move(f); }
-    // Does the skin file declare that BROWSER control `is-visible = false`? Such a page runs in a windowless pane.
-    void setHiddenPredicate(std::function<bool(const QString&)> f) { hidden_ = std::move(f); }
     // A hidden skin window (not a control) that holds a BROWSER: its page runs windowless (SkinWindow::hiddenWindowBrowser).
     void setHiddenWindowPredicate(std::function<bool(const QString&)> f) { hiddenWindow_ = std::move(f); }
     // The chat lines already shown (replayed into the chat page when it first appears).
     void setChatBacklog(std::function<QStringList()> f) { backlog_ = std::move(f); }
     void setHubStorePath(const QString& p);
 
-    void open(const QString& name, const QString& params, const QString& html);
+    void open(const QString& name, const QString& params, const QString& html, quint64 skinRevision = ~quint64(0));
     void close(const QString& name);
     void pageCall(const QString& window, const QString& fn, const QStringList& args);
     // The skin created or destroyed the BROWSER control `ctl` (in skin window `win`); the skin owns the pane.
@@ -77,9 +75,9 @@ public:
     // state intact, or nullptr. Use it in place of a new pane, and do not adoptControl() it.
     BrowserPane* takeHidden(const QString& win, const QString& ctl);
     void releaseControl(BrowserPane* pane);
-    // Applies a world winset of a popup's `title` (`winset(M, "name", "title=X")`) when its value changes.
-    // See popupTitle() in browsehost.cpp for the other writers of that title.
-    void syncPopupTitles(const skin::PropStore& props);
+    // Applies new world title/visibility writes, including repeated values, without replaying old writes
+    // over page/player changes. Hiding retains the running document and does not invoke on-close.
+    void syncPopupProps(const skin::PropStore& props);
 
     // ---- chat
     bool chatHosted() const { return chatPane_ != nullptr; }
@@ -116,8 +114,8 @@ private:
         QWidget* popup = nullptr;
         model::BrowseParams p;
         bool docked = false, chat = false;
-        bool hidden = false;  // page of an is-visible=false skin control: its own pane, never shown
-        QString worldTitle;   // the popup's `title` as last applied by syncPopupTitles
+        bool hidden = false;  // unplaced skin browser: live page, adopted when its control is placed
+        quint64 worldTitleWrite = 0, worldVisibilityWrite = 0;  // last consumed property-write stamps
     };
     struct Pending {
         QString params, html;
@@ -135,7 +133,7 @@ private:
     void dropHidden(const QString& name);
     void wire(BrowserPane* p);
     QString applyWinset(BrowserPane* from, const model::ByondUrl& u);
-    void applyPopupProps(Slot& s, const QString& prop, const QString& val);
+    void applyPopupProps(Slot& s, const QString& prop, const QString& val, quint64 throughRevision = ~quint64(0));
     QString jsCallback(const QString& cb, const QJsonValue& v) const;
     static bool validCallback(const QString& cb);
     void topicFrom(const QString& raw);
@@ -148,7 +146,7 @@ private:
     LocalOrigin* origin_ = nullptr;
     std::shared_ptr<skin::LiveSkin> live_;
     bool quitting_ = false;
-    std::function<bool(const QString&)> declared_, hidden_, hiddenWindow_;
+    std::function<bool(const QString&)> declared_, hiddenWindow_;
     std::function<QStringList()> backlog_;
     QHash<QString, Slot> slots_;
     QList<Ctl> controls_;

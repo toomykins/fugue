@@ -1,6 +1,5 @@
 // The layout is described in shell/macrodialog.h; the macro file format is in skin/usermacros.h.
 #include "shell/macrodialog.h"
-#include "shell/displaysettings.h"
 #include <algorithm>
 #include <QCheckBox>
 #include <QDialogButtonBox>
@@ -176,6 +175,11 @@ MacroDialog::MacroDialog(const skin::MacroSet& global, const skin::MacroSet& gam
     setProperty("fugueZone", "other");
     auto* v = new QVBoxLayout(this);
     v->addWidget(note("These macros will apply if the corresponding actions are not in use.", this));
+    v->addWidget(
+        note("Client menu: Ctrl+M by default. To replace it, bind .clientmenu to a key combination "
+             "(without UP or REP). This client-only binding takes priority over game keys, even in browsers. "
+             "Game-specific client-menu bindings replace global ones.",
+             this));
     scope_ = new QCheckBox("Apply only to this game", this);
     scope_->setEnabled(gameAvailable);
     scope_->setChecked(gameAvailable);  // checked by default when the world has a per-game list
@@ -254,9 +258,9 @@ bool MacroDialog::eventFilter(QObject* o, QEvent* e) {
     return QDialog::eventFilter(o, e);
 }
 
-void addClientMenuItems(QMenu* client, const std::function<void(const QString&)>& run, DisplaySettings* display) {
-    // Stock order and separators, with unimplemented items left out. No F2 label beside Screenshot...: stock
-    // DreamSeeker's F2 is a built-in accelerator, and this client binds F2 only where a skin does (vg).
+void addClientMenuItems(QMenu* client, const std::function<void(const QString&)>& run,
+                        const std::function<void(bool)>& metrics, bool metricsVisible) {
+    // Stock order and separators, with unimplemented items left out.
     auto item = [&](const char* label, const char* cmd) {
         QAction* a = client->addAction(label);
         a->setData(QString(cmd));
@@ -266,22 +270,26 @@ void addClientMenuItems(QMenu* client, const std::function<void(const QString&)>
     item("&Reconnect", ".reconnect");
     client->addSeparator();
     item("&Macros...", ".macros");
-    client->addSeparator();
-    if (display && display->gpuAvailable()) {
-        display->addToMenu(client);
-        client->addSeparator();
+    if (metrics) {
+        QAction* action = client->addAction("&Performance metrics");
+        action->setObjectName("mapPerformanceAction");
+        action->setCheckable(true);
+        action->setChecked(metricsVisible);
+        QObject::connect(action, &QAction::toggled, client, [metrics](bool visible) { metrics(visible); });
     }
+    client->addSeparator();
     item("&Quit", ".quit");
 }
 
-void addSystemMenuItems(QMenu* m, const std::function<void(const QString&)>& run, DisplaySettings* display) {
+void addSystemMenuItems(QMenu* m, const std::function<void(const QString&)>& run,
+                        const std::function<void(bool)>& metrics, bool metricsVisible) {
     QAction* opt = m->addAction("Options && Messages");  // "&&" shows one '&', so there is no accelerator
     opt->setData(QString(".options"));
     QObject::connect(opt, &QAction::triggered, m, [run] { run(".options"); });
-    addClientMenuItems(m->addMenu("&Client"), run, display);
+    addClientMenuItems(m->addMenu("&Client"), run, metrics, metricsVisible);
 }
 
-OptionsWindow::OptionsWindow(QWidget* parent, DisplaySettings* display) : QDialog(parent) {
+OptionsWindow::OptionsWindow(QWidget* parent) : QDialog(parent) {
     setWindowTitle("Options and Messages");
     // Stock DreamSeeker keeps BYOND's own icon on this window while the main window shows the skin's. Fugue's own
     // icon is set explicitly, because the parent chain would otherwise hand it the world's.
@@ -289,7 +297,7 @@ OptionsWindow::OptionsWindow(QWidget* parent, DisplaySettings* display) : QDialo
     auto* v = new QVBoxLayout(this);
     v->setContentsMargins(0, 0, 0, 0);
     bar_ = new QMenuBar(this);
-    addClientMenuItems(bar_->addMenu("&Client"), [this](const QString& c) { emit command(c); }, display);
+    addClientMenuItems(bar_->addMenu("&Client"), [this](const QString& c) { emit command(c); });
     v->setMenuBar(bar_);
     auto* hint = note("Client > Macros... edits your own key bindings for this game, or for every game.", this);
     hint->setContentsMargins(8, 8, 8, 8);

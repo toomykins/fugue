@@ -1,0 +1,518 @@
+{
+ "schema": 1,
+ "stock": "DreamSeeker/DreamDaemon 516.1688",
+ "date": "2026-11-14",
+ "method": "tools/stockprobe/stockprobe.py click left-clicks each point in the stock and the Fugue window on one server; each atom logs Click(); fugueMatches compares src, icon-x/y and location after the change",
+ "clicks": [
+  {
+   "case": "kt-outline",
+   "label": "prime-floor",
+   "point": [
+    56,
+    56
+   ],
+   "stock": {
+    "src": "floor",
+    "x": 25,
+    "y": 8,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "turf-member",
+   "label": "turf-copy",
+   "point": [
+    3,
+    3
+   ],
+   "stock": {
+    "src": "copied-turf",
+    "x": 4,
+    "y": 29,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "turf-member",
+   "label": "turf-content",
+   "point": [
+    16,
+    16
+   ],
+   "stock": {
+    "src": "copied-content",
+    "x": 17,
+    "y": 16,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "mob-member",
+   "label": "mob",
+   "point": [
+    16,
+    16
+   ],
+   "stock": {
+    "src": "member-mob",
+    "x": 17,
+    "y": 16,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "mob-member",
+   "label": "mob-empty",
+   "point": [
+    3,
+    3
+   ],
+   "stock": {
+    "src": "floor",
+    "x": 4,
+    "y": 29,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "inherit-id",
+   "label": "inherit",
+   "point": [
+    16,
+    16
+   ],
+   "stock": {
+    "src": "inherit-id",
+    "x": 17,
+    "y": 16,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "plain-member",
+   "label": "plain",
+   "point": [
+    16,
+    16
+   ],
+   "stock": {
+    "src": "member-plain",
+    "x": 17,
+    "y": 16,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "vis-turned",
+   "label": "turned-in",
+   "point": [
+    16,
+    5
+   ],
+   "stock": {
+    "src": "member-turned",
+    "x": 9,
+    "y": 24,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "vis-turned",
+   "label": "turned-corner",
+   "point": [
+    9,
+    9
+   ],
+   "stock": {
+    "src": "floor",
+    "x": 10,
+    "y": 23,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "screen-turned",
+   "label": "hud-in",
+   "point": [
+    16,
+    5
+   ],
+   "stock": {
+    "src": "hud-turned",
+    "x": 9,
+    "y": 24,
+    "loc": ""
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "screen-turned",
+   "label": "hud-corner",
+   "point": [
+    9,
+    9
+   ],
+   "stock": {
+    "src": "floor",
+    "x": 10,
+    "y": 23,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "kt-root",
+   "label": "kt-root",
+   "point": [
+    10,
+    16
+   ],
+   "stock": {
+    "src": "kt-root",
+    "x": 11,
+    "y": 16,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "kt-root",
+   "label": "kt-overlay",
+   "point": [
+    30,
+    16
+   ],
+   "stock": {
+    "src": "kt-root",
+    "x": 31,
+    "y": 16,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "outline",
+   "label": "outline-ink",
+   "point": [
+    6,
+    16
+   ],
+   "stock": {
+    "src": "floor",
+    "x": 7,
+    "y": 16,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "outline",
+   "label": "outline-box",
+   "point": [
+    16,
+    16
+   ],
+   "stock": {
+    "src": "outline",
+    "x": 17,
+    "y": 16,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "shadow",
+   "label": "shadow-ink",
+   "point": [
+    27,
+    16
+   ],
+   "stock": {
+    "src": "floor",
+    "x": 28,
+    "y": 16,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "image",
+   "label": "image",
+   "point": [
+    16,
+    16
+   ],
+   "stock": {
+    "src": "image",
+    "x": 17,
+    "y": 16,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "image",
+   "label": "image-outline",
+   "point": [
+    6,
+    16
+   ],
+   "stock": {
+    "src": "floor",
+    "x": 7,
+    "y": 16,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "maptext",
+   "label": "maptext",
+   "point": [
+    2,
+    16
+   ],
+   "stock": {
+    "src": "floor",
+    "x": 3,
+    "y": 16,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "image-turned-target",
+   "label": "image-overlay",
+   "point": [
+    29,
+    15
+   ],
+   "stock": {
+    "src": "image-turned-target",
+    "x": 16,
+    "y": 29,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "image-turned-target",
+   "label": "image-root",
+   "point": [
+    16,
+    16
+   ],
+   "stock": {
+    "src": "image-turned-target",
+    "x": 17,
+    "y": 16,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "wave",
+   "label": "wave-ink",
+   "point": [
+    6,
+    10
+   ],
+   "stock": {
+    "src": "floor",
+    "x": 7,
+    "y": 22,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "kt-outline",
+   "label": "kt-outline-root",
+   "point": [
+    10,
+    16
+   ],
+   "stock": {
+    "src": "kt-outline",
+    "x": 11,
+    "y": 16,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "kt-outline",
+   "label": "kt-outline-overlay",
+   "point": [
+    30,
+    16
+   ],
+   "stock": {
+    "src": "kt-outline",
+    "x": 31,
+    "y": 16,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "kt-outline",
+   "label": "kt-outline-ink",
+   "point": [
+    37,
+    16
+   ],
+   "stock": {
+    "src": "floor",
+    "x": 6,
+    "y": 16,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "scaled-member",
+   "label": "scaled-out",
+   "point": [
+    2,
+    16
+   ],
+   "stock": {
+    "src": "member-scaled",
+    "x": 10,
+    "y": 16,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "scaled-member",
+   "label": "scaled-in",
+   "point": [
+    16,
+    16
+   ],
+   "stock": {
+    "src": "member-scaled",
+    "x": 17,
+    "y": 16,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "kt-turned",
+   "label": "ktturn-root",
+   "point": [
+    16,
+    12
+   ],
+   "stock": {
+    "src": "kt-turned",
+    "x": 13,
+    "y": 16,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "kt-turned",
+   "label": "ktturn-overlay",
+   "point": [
+    16,
+    30
+   ],
+   "stock": {
+    "src": "kt-turned",
+    "x": 31,
+    "y": 16,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "filter-turned",
+   "label": "fturn-box",
+   "point": [
+    16,
+    10
+   ],
+   "stock": {
+    "src": "filter-turned",
+    "x": 12,
+    "y": 21,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "filter-turned",
+   "label": "fturn-ink",
+   "point": [
+    15,
+    3
+   ],
+   "stock": {
+    "src": "floor",
+    "x": 16,
+    "y": 29,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "filter-turned",
+   "label": "fturn-corner",
+   "point": [
+    9,
+    9
+   ],
+   "stock": {
+    "src": "floor",
+    "x": 10,
+    "y": 23,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "maptext-big",
+   "label": "maptext-a",
+   "point": [
+    4,
+    22
+   ],
+   "stock": {
+    "src": "floor",
+    "x": 5,
+    "y": 10,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  },
+  {
+   "case": "maptext-big",
+   "label": "maptext-b",
+   "point": [
+    15,
+    25
+   ],
+   "stock": {
+    "src": "floor",
+    "x": 16,
+    "y": 7,
+    "loc": "the floor"
+   },
+   "fugueMatches": true
+  }
+ ]
+}

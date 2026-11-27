@@ -180,6 +180,7 @@ void setGoAutoGlide(bool on) { g_goAutoGlide = on; }
 
 std::vector<AnimSeq> animSequences(const Atom::Chain& c) {
     std::vector<AnimSeq> out;
+    if (c.rejected || c.steps.size() > 128 || c.tickNs <= 0 || c.tickNs > 10'000'000'000LL) return out;
     for (size_t i = 0; i < c.steps.size(); i++) {
         const Atom::AnimStep& st = c.steps[i];
         if (i == 0 || st.startNs != 0) {
@@ -192,31 +193,62 @@ std::vector<AnimSeq> animSequences(const Atom::Chain& c) {
         }
         AnimSeq& q = out.back();
         q.last = i;
-        q.durNs += int64_t(double(bitsToFloat(st.timeBits)) * double(c.tickNs));
+        const double duration = double(bitsToFloat(st.timeBits)) * double(c.tickNs);
+        if (!std::isfinite(duration) || duration < 0 || duration > double(INT64_MAX / 4) ||
+            q.durNs > INT64_MAX / 4 - int64_t(duration) || st.startNs < 0 || st.startNs > INT64_MAX / 2)
+            return {};
+        q.durNs += int64_t(duration);
     }
     for (AnimSeq& q : out) {
         int32_t loop = c.steps[q.first].loop;
+        if (loop > 0 && q.durNs > (INT64_MAX / 4) / loop) return {};
         q.endNs = loop < 1 ? -1 : q.startNs + int64_t(loop) * q.durNs;
     }
     return out;
 }
 
 // An Animate frame into a chain, as the stock handler builds it for every kind: Chain != 0 (or nothing still playing)
-// replaces it, so a Count = 0 frame clears it; Chain = 0 appends. The first step starts at Delay ticks from `now`, a
-// step with a StepDelay (a parallel or a head) opens a sequence at StepDelay ticks from `now`, and any other step
+// replaces it, so a Count = 0 frame clears it; Chain = 0 appends. The first step starts at Delay units (deciseconds)
+// from `now`, a step with a StepDelay (a parallel or a head) opens a sequence at StepDelay units from `now`, and any
+// other step
 // follows the one before it.
 static void scheduleChain(Atom::Chain& ch, const proto::Animate& m, int64_t now, int64_t tick) {
+    if (ch.rejected && m.chain == 0) return;
     bool playing = false;
     for (const AnimSeq& q : animSequences(ch)) playing = playing || q.endNs < 0 || now < q.endNs;
     if (m.chain != 0 || !playing) {
         ch = Atom::Chain{};
         ch.tickNs = tick;
     }
+    auto reject = [&] {
+        ch.steps.clear();
+        ch.rejected = true;
+    };
+    if (m.steps.size() > 128 - std::min<size_t>(128, ch.steps.size()) || tick <= 0 || tick > 10'000'000'000LL ||
+        now < 0 || now > INT64_MAX / 2) {
+        reject();
+        return;
+    }
+    auto validTime = [&](uint32_t bits, bool delay) {
+        const double ticks = bitsToFloat(bits);
+        return std::isfinite(ticks) && ticks >= (delay ? -1'000'000 : 0) && ticks <= 1'000'000 &&
+               (!delay || static_cast<long double>(now) + ticks * ch.tickNs >= 0);
+    };
+    if (!validTime(m.delayBits, true)) {
+        reject();
+        return;
+    }
+    for (const proto::Animate::Step& step : m.steps)
+        if (!validTime(step.timeBits, false) || (step.hasDelay && !validTime(step.delayBits, true))) {
+            reject();
+            return;
+        }
     auto at = [&](uint32_t bits) { return now + int64_t(double(bitsToFloat(bits)) * double(ch.tickNs)); };
     for (const proto::Animate::Step& st : m.steps) {
         Atom::AnimStep s{st.from, st.to, st.timeBits, st.easing};
         s.flags = st.flags;
         s.loop = st.loop == 0 ? 1 : st.loop;
+        if (st.hasExt) s.extBits = st.extBits;
         if (ch.steps.empty()) {
             s.startNs = at(m.delayBits);
             s.flags &= ~0x40000000u;
@@ -224,7 +256,10 @@ static void scheduleChain(Atom::Chain& ch, const proto::Animate& m, int64_t now,
             s.startNs = at(st.delayBits);
         ch.steps.push_back(s);
     }
-    if (!ch.steps.empty()) ch.startNs = ch.steps[0].startNs;
+    if (!ch.steps.empty()) {
+        ch.startNs = ch.steps[0].startNs;
+        if (animSequences(ch).empty()) reject();
+    }
 }
 
 // The eye scroll offset. X is negated, Y is not: the image y-flip already lives in placement, so flipping it here too
@@ -436,26 +471,39 @@ Atom* Session::record(uint32_t id, uint16_t key, bool fresh) {
         else
             w.resync.newObjs.insert(id);
     };
+    auto bindImages = [&](Atom& a) {
+        w.vis.observed(id, a.renderIdentity);
+        w.bindPendingImages(id, a.renderIdentity);
+    };
     auto it = w.atoms.find(id);
     if (it == w.atoms.end()) {
         if (!fresh) return nullptr;
         Atom& a = w.atoms[id];
         a.key = key;
         a.haveKey = true;
+        a.renderIdentity = ++w.nextAtomIdentity;
         a.touchTick = w.resync.tick;
         created();
+        bindImages(a);
         return &a;
     }
     Atom& a = it->second;
     a.touchTick = w.resync.tick;
     if (w.resync.freed.erase(id)) {  // freed by the GC: rebuilt here, with no teardown
         a.bindOther = a.backlink = 0xffff;
+        a.renderIdentity = ++w.nextAtomIdentity;
+        w.vis.erase(id);
         a.iconStartNs = 0;
+        w.flicks.erase(id);
         a.key = key;
         a.haveKey = true;
         created();
+        bindImages(a);
         return &a;
     }
+    // Rendering is stricter than the legacy zero-key teardown rule. A local
+    // token detects observed slot lifetimes; it cannot prove server identity.
+    const bool identityChanged = !a.renderIdentity || !a.haveKey || a.key != key;
     if (a.haveKey && a.key != key && a.key != 0 && key != 0 && g_modelMutation != 10 && !altRecordModel()) {
         if (anomaly::on()) {
             anomaly::note("slot-rebind", std::string(id & kRegistryA ? "mob:" : "obj:") +
@@ -471,6 +519,11 @@ Atom* Session::record(uint32_t id, uint16_t key, bool fresh) {
         w.resync.teardowns++;
         created();
     }
+    if (identityChanged) {
+        a.renderIdentity = ++w.nextAtomIdentity;
+        w.vis.erase(id);
+    }
+    bindImages(a);
     a.key = key;
     a.haveKey = true;
     return &a;
@@ -521,6 +574,8 @@ void Session::bindAppearance(Atom& a, uint32_t appid, uint32_t id) {
 }
 
 void Session::setTile(const std::array<uint16_t, 3>& key, uint32_t appid) {
+    const auto previous = w_.tiles.find(key);
+    if (previous == w_.tiles.end() || previous->second != appid) w_.tileRevision[key] = ++w_.nextTileRevision;
     w_.tiles[key] = appid;
     stampIcon(w_.tileIconStart[key], appid);
 }
@@ -625,6 +680,24 @@ void Session::applyObjectArrays(const proto::ObjectArrays& m, uint32_t reg) {
         e->hasStep = true;
     }
     for (const auto& vc : m.visContents) {
+        // Validate/create the held slot's new identity BEFORE changing any table.
+        // Missing holders do not get orphan memberships; a changed key may tear
+        // down the old slot, which formerly erased the just-written turf list.
+        Atom* holder = rec(vc.rec, false);
+        if (!holder) continue;
+        const uint32_t pid = reg | vc.rec.id;
+        std::vector<VisReference> ordered;
+        for (const proto::VisItem& item : vc.items) ordered.push_back({item.type, item.value});
+        const bool accepted = w.vis.replace(pid, holder->renderIdentity, ordered, [&](uint32_t child) {
+            const auto found = w.atoms.find(child);
+            return found == w.atoms.end() || w.resync.freed.count(child) ? uint64_t(0) : found->second.renderIdentity;
+        });
+        if (!accepted) {
+            w.visContents.erase(pid);
+            w.visTurfs.erase(pid);
+            holder->visCount = 0;
+            continue;
+        }
         std::vector<uint32_t> ids;
         std::vector<uint32_t> turfs;
         for (const proto::VisItem& it : vc.items)
@@ -635,12 +708,11 @@ void Session::applyObjectArrays(const proto::ObjectArrays& m, uint32_t reg) {
                 ids.push_back(kRegistryA | it.value);
             else if (it.type == 1)
                 turfs.push_back(it.value);  // a turf: World::visTurfs
-        uint32_t pid = reg | vc.rec.id;
         if (turfs.empty())
             w.visTurfs.erase(pid);
         else
             w.visTurfs[pid] = std::move(turfs);
-        if (Atom* a = rec(vc.rec, false)) a->visCount = int(ids.size());
+        holder->visCount = int(ids.size());
         if (ids.empty()) {
             w.visContents.erase(pid);
             continue;
@@ -680,6 +752,7 @@ void Session::addChat(const std::string& plain, const std::string& markup) {
 
 void Session::ingest(uint16_t typ, ByteSpan body) {
     World& w = w_;
+    if (!w.iconClockNs) w.iconClockNs = ingestNs_;
     if (anomaly::on()) anomaly::frame(typ, w.resync.tick, ingestNs_);
     // Runs one decoder: a malformed body is counted in ingestErrors() and yields nothing.
     auto decoded = [&](auto&& decode) -> std::optional<std::invoke_result_t<decltype(decode)>> {
@@ -705,6 +778,7 @@ void Session::ingest(uint16_t typ, ByteSpan body) {
             w.resync.originY = w.grid.y0;
             try {
                 proto::MapRefresh r = proto::decodeMapRefresh(st_, S2C::MapGrid, body);
+                w.viewZ = r.z;
                 for (const auto& c : r.cells) setTile({c.x, c.y, r.z}, c.appid);
             } catch (const std::exception&) { w.mapViewErrs++; }
             return;
@@ -723,6 +797,7 @@ void Session::ingest(uint16_t typ, ByteSpan body) {
             w.resync.haveOrigin = true;
             w.resync.originX = r->originX;
             w.resync.originY = r->originY;
+            w.viewZ = r->z;
             for (const auto& c : r->cells) setTile({c.x, c.y, r->z}, c.appid);
             return;
         }
@@ -772,6 +847,7 @@ void Session::ingest(uint16_t typ, ByteSpan body) {
                 std::array<uint16_t, 3> key{r.x, r.y, r.z};
                 if (r.appid == 0xffff && r.contents.empty()) {
                     w.turfVis.erase(key);
+                    w.vis.erase(VisContents::turf(key[0], key[1], key[2]));
                     if (g_modelMutation == 12) {
                         w.tiles.erase(key);
                         w.tileIconStart.erase(key);
@@ -779,6 +855,16 @@ void Session::ingest(uint16_t typ, ByteSpan body) {
                     continue;
                 }
                 setTile(key, r.appid);
+                std::vector<VisReference> ordered;
+                for (const proto::VisItem& item : r.contents) ordered.push_back({item.type, item.value});
+                if (!w.vis.replace(VisContents::turf(key[0], key[1], key[2]), 0, ordered, [&](uint32_t child) {
+                        const auto found = w.atoms.find(child);
+                        return found == w.atoms.end() || w.resync.freed.count(child) ? uint64_t(0)
+                                                                                     : found->second.renderIdentity;
+                    })) {
+                    w.turfVis.erase(key);
+                    continue;
+                }
                 std::vector<uint32_t> ids;
                 for (const proto::VisItem& it : r.contents)
                     if (it.type == 2)
@@ -802,35 +888,74 @@ void Session::ingest(uint16_t typ, ByteSpan body) {
         case S2C::Bounds: {
             auto m = decoded([&] { return proto::decodeBounds(st_, body); });  // also feeds st_.mapView
             if (!m) return;
-            w.bounds = {true, m->maxX, m->maxY, m->view, m->winW, m->winH, m->viewW, m->viewH};
+            // u16[4..5] are the eye-centred extent that admits light sources, smaller than the buffered map window
+            // (decodeBounds refuses a body under 14 bytes).
+            w.bounds = {true,
+                        m->maxX,
+                        m->maxY,
+                        m->view,
+                        m->winW,
+                        m->winH,
+                        m->viewW,
+                        m->viewH,
+                        int(le16(&body[8])),
+                        int(le16(&body[10]))};
             return;
         }
-        case S2C::FlickTarget:
-            // DD sends it before a flick, but the stock client reads it as a record check and appearance bind for an obj
-            // (kind 2) or a mob (kind 3) only; the flick itself starts with the FlickState.
+        case S2C::FlickTarget: {
+            // DD sends it before a flick. The stock client reads it as a record check and appearance bind for an obj
+            // (kind 2) or a mob (kind 3) only; the flick itself starts with the FlickState, and a repeated same-state
+            // flick need not change this appearance at all.
+            auto m = decoded([&] { return proto::decodeFlickTarget(body); });
+            if (!m) return;
+            const uint8_t kind = m->loc.kind;
+            if ((kind != 2 && kind != 3) || (m->loc.ref & kRegistryA)) return;
+            const uint32_t id = m->loc.ref | (kind == 3 ? kRegistryA : 0);
+            // An obj's record is made here; a mob's is only checked, so a mob made this tick does not flick.
+            Atom* a = record(id, m->loc.aux, kind == 2);
+            if (a && m->hasAppid) {
+                bindAppearance(*a, m->appid, id);
+                if (kind == 2) w.resync.newObjs.erase(id);
+            }
             return;
+        }
         case S2C::FlickState: {  // flick() payload half
             auto m = decoded([&] { return proto::decodeFlickState(body); });
             if (!m) return;
-            // The flick names its obj by {ref, Key} like an InView record does, and stock runs the Key check on the
-            // naming: a slot the server freed and reused under a new Key is torn down here, before the flick is kept.
-            // Checking after, at the position that follows, would drop the flick of an obj made this tick. The record
-            // is bound by the 0xc7 that goes with it, so it is not polled for.
-            if (!altRecordModel()) {
-                record(m->loc.ref, m->loc.aux, true);
-                w.resync.newObjs.erase(m->loc.ref);
+            auto start = [&](World::Flick& f) {
+                f.iconState = m->iconState;
+                f.iconResIndex = m->iconResIndex;
+                f.haveRes = true;
+                f.startNs = ingestNs_;
+            };
+            if (m->loc.kind == 1) {  // a turf the client holds, by its index in the world
+                const uint32_t mx = w.bounds.maxX, my = w.bounds.maxY;
+                if (!mx || !my) return;
+                const std::array<uint16_t, 3> cell{uint16_t(m->loc.ref % mx), uint16_t(m->loc.ref / mx % my),
+                                                   uint16_t(m->loc.ref / mx / my)};
+                if (!w.tiles.count(cell) || (!w.turfFlicks.count(cell) && w.turfFlicks.size() >= 65536)) return;
+                start(w.turfFlicks[cell]);
+                return;
             }
-            World::Flick& f = w.flicks[m->loc.ref];
-            f.iconState = m->iconState;
-            f.iconResIndex = m->iconResIndex;
-            f.haveRes = true;
-            f.startNs = ingestNs_;
+            const uint32_t id = m->loc.ref | (m->loc.kind == 0 ? kRegistryA : 0);
+            const auto atom = w.atoms.find(id);
+            const uint16_t key = m->loc.aux;
+            // The record is checked and bound by the FlickTarget that goes with it. Stock holds the flick of an absent or
+            // recycled record for a few ticks; here it is dropped.
+            if (atom == w.atoms.end() || w.resync.freed.count(id) ||
+                (atom->second.haveKey && atom->second.key && key && atom->second.key != key))
+                return;
+            if (!w.flicks.count(id) && w.flicks.size() >= 65536) return;
+            World::Flick& f = w.flicks[id];
+            start(f);
+            f.key = atom->second.key;
+            f.haveKey = atom->second.haveKey;
             return;
         }
         case S2C::Appearance: {
             w.resync.appearances++;  // the stock GC collects past 500 of these
             // A malformed one is counted in ingestErrors() and is absent from the snapshot.
-            auto m = decoded([&] { return proto::decodeAppearance(body); });
+            auto m = decoded([&] { return proto::decodeAppearance(st_, body); });
             if (!m) return;
             uint32_t appid = m->appid;
             if (anomaly::on()) {
@@ -883,9 +1008,14 @@ void Session::ingest(uint16_t typ, ByteSpan body) {
                 return;
             }
             uint32_t id = typ == S2C::MobBind ? (ref | kRegistryA) : ref;
-            if (w.resync.freed.erase(id))
-                w.atoms[id].bindOther = w.atoms[id].backlink = 0xffff;  // rebuilt, bound: no mark
+            if (w.resync.freed.erase(id)) {  // rebuilt, bound: no mark
+                w.atoms[id].bindOther = w.atoms[id].backlink = 0xffff;
+                w.atoms[id].renderIdentity = ++w.nextAtomIdentity;
+                w.vis.erase(id);
+            }
             Atom& a = w.atoms[id];
+            if (!a.renderIdentity) a.renderIdentity = ++w.nextAtomIdentity;
+            w.vis.observed(id, a.renderIdentity);
             a.touchTick = w.resync.tick;  // a lookup marks the record for the GC (FUGUE_RESYNC_GC) for this tick
             if (anomaly::on() && a.appid != 0 && a.appid != appid)
                 anomaly::note(typ == S2C::MobBind ? "mobbind-change" : "objbind-change",
@@ -906,8 +1036,14 @@ void Session::ingest(uint16_t typ, ByteSpan body) {
             uint32_t reg = typ == S2C::MobGone ? kRegistryA : 0u;
             for (uint32_t id : proto::decodeGone(body).ids) {
                 uint32_t key = reg | id;
+                w.vis.deleted(key);
+                if (auto pending = w.pendingImageTargets.find(key); pending != w.pendingImageTargets.end()) {
+                    for (uint32_t image : pending->second) w.imageInstances.at(image).targetIdentity = UINT64_MAX;
+                    w.pendingImageTargets.erase(pending);
+                }
                 if (w.resync.freed.erase(key)) {
                     w.atoms.erase(key);
+                    w.flicks.erase(key);
                     continue;
                 }  // the GC freed it: not held, nothing to tear down
                 if (!w.atoms.erase(key)) continue;  // stock: a record it does not hold is skipped and arms nothing
@@ -958,6 +1094,9 @@ void Session::ingest(uint16_t typ, ByteSpan body) {
             resyncAfterArrays(w, m->objects, false);  // the parser's tail relinks
             return;
         }
+        case S2C::ClientDir:
+            if (!body.empty()) w.clientDir = uint8_t(body[0]);
+            return;
         case S2C::MouseSubs:
             if (auto m = decoded([&] { return proto::decodeMouseSubs(body); }))
                 w.movementMode = uint8_t((m->extra >> 2) & 3);
@@ -971,17 +1110,21 @@ void Session::ingest(uint16_t typ, ByteSpan body) {
                 if (bitsToFloat(m->eye->stepSizeBits) > 0) w.stepSizeBits = m->eye->stepSizeBits;
             }
             const auto& vis = m->vision;
+            if (vis && (vis->sub & 0x01)) {
+                w.seeInDark = vis->seeInDark;
+                w.haveSeeInDark = true;
+            }
             if (vis && (vis->sub & 0x02)) {
                 w.seeInvisible = vis->seeInvisible;
                 w.haveSeeInvisible = true;
             }
             if (m->hasSight) {
-                w.sight = m->sight;
-                w.haveSight = true;
+                w.sight = w.narrowSight = m->sight;
+                w.haveSight = w.haveNarrowSight = true;
             }
             if (vis && (vis->sub & 0x04)) {
-                w.sight = vis->sightWide;
-                w.haveSight = true;
+                w.sight = w.wideSight = vis->sightWide;
+                w.haveSight = w.haveWideSight = true;
             }
             // client.pixel_x/y (Sub&0x10), and all four of x/y/w/z (Sub&0x20); the server sends both together.
             if (vis && (vis->sub & 0x10)) {
@@ -1051,7 +1194,7 @@ void Session::ingest(uint16_t typ, ByteSpan body) {
             auto m = decoded([&] { return proto::decodeAnimate(body); });
             if (!m) return;
             if (m->kind == 5) {  // animate(client)
-                scheduleChain(w.clientChain, *m, ingestNs_, tickNs(w));
+                scheduleChain(w.clientChain, *m, ingestNs_, kAnimUnitNanos);
                 return;
             }
             // An animate() names its target by {ref, Key} like an InView record does, so it runs the same Key check and
@@ -1064,10 +1207,23 @@ void Session::ingest(uint16_t typ, ByteSpan body) {
             if (steps && m->kind == 2 && !altRecordModel()) w.resync.newObjs.erase(m->ref);
             if (m->kind == 13) {
                 // Only an image we hold. A chain is never expired by time, so its snapshot effect is set membership.
+                // An image's animation is sent just before the image when a client is first shown one that is already
+                // animating; stock runs it (516.1689, stock-parity-world shared-render-target). Otherwise only an image we hold.
                 uint32_t img = m->ref;
-                if (!w.images.count(img)) return;
+                if (!w.images.count(img)) {
+                    if (!steps || w.earlyImageAnims.size() >= 65536) return;
+                    w.earlyImageAnims.insert(img);
+                }
                 if (steps) w.imageAnims.insert(img);
-                if (steps || w.imageChains.count(img)) scheduleChain(w.imageChains[img], *m, ingestNs_, tickNs(w));
+                if (steps || w.imageChains.count(img)) scheduleChain(w.imageChains[img], *m, ingestNs_, kAnimUnitNanos);
+                return;
+            }
+            if (m->kind == 1) {  // a turf the client holds, by its index in the world (as in FlickState)
+                const uint32_t mx = w.bounds.maxX, my = w.bounds.maxY;
+                if (!mx || !my) return;
+                const std::array<uint16_t, 3> cell{uint16_t(m->ref % mx), uint16_t(m->ref / mx % my), uint16_t(m->ref / mx / my)};
+                if (!w.tiles.count(cell) || (!w.turfChains.count(cell) && (!steps || w.turfChains.size() >= 65536))) return;
+                scheduleChain(w.turfChains[cell], *m, ingestNs_, kAnimUnitNanos);
                 return;
             }
             if (m->kind != 2 && m->kind != 3) return;
@@ -1080,7 +1236,7 @@ void Session::ingest(uint16_t typ, ByteSpan body) {
                 if (it->second.appid == 0) bindAppearance(it->second, to, key);
                 it->second.animating = true;  // Set while an animate() chain is held (never cleared by elapsed time)
             }
-            scheduleChain(it->second.chain, *m, ingestNs_, tickNs(w));
+            scheduleChain(it->second.chain, *m, ingestNs_, kAnimUnitNanos);
             return;
         }
         case S2C::SelfRef: {
@@ -1208,7 +1364,7 @@ void Session::ingest(uint16_t typ, ByteSpan body) {
         }
         case S2C::Verb: {
             // De-dup by id, keep first-arrival order, last record wins.
-            auto m = decoded([&] { return proto::decodeVerb(body); });
+            auto m = decoded([&] { return proto::decodeVerb(st_, body); });
             if (!m) return;
             uint32_t id = m->id;
             if (!w.verbById.count(id)) w.verbOrder.push_back(id);
@@ -1227,17 +1383,81 @@ void Session::ingest(uint16_t typ, ByteSpan body) {
             });
             if (!m) return;
             uint32_t id = m->imageID;
+            auto unpend = [&](uint32_t i) {
+                const auto image = w.imageInstances.find(i);
+                if (image == w.imageInstances.end()) return;
+                auto pending = w.pendingImageTargets.find(image->second.target);
+                if (pending == w.pendingImageTargets.end()) return;
+                pending->second.erase(i);
+                if (pending->second.empty()) w.pendingImageTargets.erase(pending);
+            };
             if (typ == S2C::ImageDelete) {
                 auto drop = [&](uint32_t i) {
+                    unpend(i);
+                    w.vis.erase(VisContents::image(i));
                     w.images.erase(i);
+                    w.imageInstances.erase(i);
                     w.imageAnims.erase(i);
+                    w.earlyImageAnims.erase(i);
                     w.imageChains.erase(i);
                     w.imageIconStart.erase(i);
                 };
                 drop(id);
                 for (uint32_t more : m->moreIDs) drop(more);
             } else {
-                if (typ == S2C::ImageCreate) {
+                if (!w.images.count(id) && w.images.size() >= 65536) return;
+                auto& image = w.imageInstances[id];
+                const uint8_t kind = m->locKind;
+                const uint32_t ref = m->locRef;
+                const uint32_t target = kind == 7 ? m->cell : ref | (kind == 2 ? kRegistryA : 0u);
+                const bool fresh = typ == S2C::ImageCreate || !image.identity;
+                const bool moved = image.locKind != kind || image.target != target;
+                if (fresh || moved) image.identity = ++w.nextImageIdentity;
+                if (fresh || moved) {
+                    unpend(id);
+                    image.targetIdentity = 0;
+                    image.targetHud = false;
+                }
+                image.appid = m->appid;
+                image.locKind = kind;
+                image.target = target;
+                if ((fresh || moved) && kind == 7) {
+                    image.turfWidth = image.turfHeight = 0;
+                    const uint64_t area = uint64_t(w.bounds.maxX) * w.bounds.maxY;
+                    // Recorded ImageCreate turf cells are zero-based row-major world indices.
+                    if (w.bounds.maxX > 0 && w.bounds.maxX <= UINT16_MAX && w.bounds.maxY > 0 &&
+                        w.bounds.maxY <= UINT16_MAX && area && target / area <= UINT16_MAX) {
+                        image.turfCell = {uint16_t(target % w.bounds.maxX),
+                                          uint16_t((target / w.bounds.maxX) % w.bounds.maxY), uint16_t(target / area)};
+                        image.turfWidth = uint16_t(w.bounds.maxX);
+                        image.turfHeight = uint16_t(w.bounds.maxY);
+                    }
+                }
+                image.hasVis = !m->visContents.empty();
+                if (fresh || moved) w.vis.erase(VisContents::image(id));
+                std::vector<VisReference> tail;
+                for (const proto::VisItem& child : m->visContents) tail.push_back({child.type, child.value});
+                w.vis.replace(VisContents::image(id), image.identity, tail, [&](uint32_t child) {
+                    const auto a = w.atoms.find(child);
+                    return a != w.atoms.end() && a->second.haveKey && !w.resync.freed.count(child)
+                               ? a->second.renderIdentity
+                               : uint64_t(0);
+                });
+                // Bind once, including normal image-before-target delivery. A same-
+                // location modify never rebinds a pinned image to a recycled slot.
+                if (!image.targetIdentity && (kind == 1 || kind == 2) && !(ref & kRegistryA)) {
+                    const auto atom = w.atoms.find(target);
+                    if (atom != w.atoms.end() && atom->second.haveKey && !w.resync.freed.count(target) &&
+                        atom->second.renderIdentity)
+                        image.targetIdentity = atom->second.renderIdentity;
+                    else if (kind == 1 && w.hudIdentity.count(target) &&
+                             w.hudObjectCurrent(target, w.hudIdentity.at(target).key)) {
+                        image.targetIdentity = w.hudIdentity.at(target).membership;
+                        image.targetHud = true;
+                    } else
+                        w.pendingImageTargets[target].insert(id);
+                }
+                if (typ == S2C::ImageCreate && !w.earlyImageAnims.erase(id)) {
                     w.imageAnims.erase(id);
                     w.imageChains.erase(id);
                     w.imageIconStart.erase(id);
@@ -1262,9 +1482,22 @@ void Session::ingest(uint16_t typ, ByteSpan body) {
                     w.hudOrder.erase(w.hudOrder.begin() + long(index));
                     continue;
                 }
+                World::HudIdentity identity{s.kind, s.ver};
+                const auto previous = w.hudIdentity.find(index);
+                if (previous == w.hudIdentity.end() && w.hudIdentity.size() >= 65536) continue;
+                if (previous != w.hudIdentity.end() &&
+                    (previous->second.kind != identity.kind || previous->second.key != identity.key))
+                    w.hudIconStart.erase(index);
+                identity.membership = previous != w.hudIdentity.end() && w.hud.count(index) &&
+                                              previous->second.kind == identity.kind &&
+                                              previous->second.key == identity.key
+                                          ? previous->second.membership
+                                          : ++w.nextHudMembership;
+                w.hudIdentity[index] = identity;
                 if (!w.hud.count(index)) w.hudOrder.push_back(index);
                 w.hud[index] = s;
                 w.hudAppid[index] = s.appid;
+                if (identity.kind == 2) w.bindPendingImages(index, identity.membership, true);
                 stampIcon(w.hudIconStart[index], s.appid);
             }
             return;
@@ -1299,7 +1532,14 @@ void Session::ingest(uint16_t typ, ByteSpan body) {
                 World::StatLine l{r.ordinal, net::plainText(r.name), std::move(r.value), {}};
                 size_t i = l.ordinal;
                 bool same = i < st.lines.size() && st.lines[i].name == l.name;
-                if (same) l.icon = st.lines[i].icon;
+                const bool unchanged = same && st.lines[i].value == l.value;
+                l.identity = unchanged ? st.lines[i].identity : ++st.nextIdentity;
+                if (same) {
+                    const proto::StatValue& previous = st.lines[i].value;
+                    if (previous.hasAppid && previous.head == l.value.head && previous.kind == l.value.kind &&
+                        previous.rowWord == l.value.rowWord)
+                        l.icon = st.lines[i].icon;
+                }
                 if (l.value.hasAppid) stampIcon(l.icon, l.value.appid);
                 if (same)
                     st.lines[i] = std::move(l);

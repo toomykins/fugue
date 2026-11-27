@@ -13,6 +13,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <cstdio>
+#include <cstdlib>
 #include "account/store.h"
 #include "pager/listing.h"
 #include "pager/model.h"
@@ -31,7 +32,7 @@ int out(const QJsonObject& o, int rc = 0) {
 }
 std::string readAllStdin() {
     QFile f;
-    f.open(stdin, QIODevice::ReadOnly);
+    if (!f.open(stdin, QIODevice::ReadOnly)) std::exit(out({{"error", "cannot open stdin: " + f.errorString()}}, 1));
     return f.readAll().toStdString();
 }
 QJsonArray strs(const std::vector<std::string>& v) {
