@@ -120,6 +120,34 @@ private:
     std::string name_;
     std::vector<uint8_t> buf_;
 };
+
+// 256 frames (~6 ms at 44.1 kHz) of s16 stereo silence into a fresh player's stdin. openSink can run on a thread that
+// does not block SIGPIPE (the Player constructor), so SIGPIPE is blocked around the write and a SIGPIPE it raised is
+// consumed rather than left pending.
+void primeWithSilence(int fd) {
+    static const uint8_t silence[1024] = {};
+    sigset_t sigpipe, old;
+    sigemptyset(&sigpipe);
+    sigaddset(&sigpipe, SIGPIPE);
+    pthread_sigmask(SIG_BLOCK, &sigpipe, &old);
+    sigset_t pending;
+    sigpending(&pending);
+    const bool wasPending = sigismember(&pending, SIGPIPE);
+    ssize_t n;
+    do n = ::write(fd, silence, sizeof silence);
+    while (n < 0 && errno == EINTR);
+    if (n < 0 && errno == EPIPE && !wasPending) {
+#ifdef __APPLE__
+        int sig;
+        sigwait(&sigpipe, &sig);
+#else
+        const timespec zero{};
+        while (sigtimedwait(&sigpipe, nullptr, &zero) < 0 && errno == EINTR) {
+        }
+#endif
+    }
+    pthread_sigmask(SIG_SETMASK, &old, nullptr);
+}
 #endif
 }  // namespace
 
@@ -135,7 +163,8 @@ std::unique_ptr<Sink> openWavSink(const std::string& path, int rate, std::string
 std::vector<std::vector<std::string>> execPlayers(int rate) {
     std::string r = std::to_string(rate);
     return {
-        {"pw-play", "--format", "s16", "--rate", r, "--channels", "2", "--latency", "80ms", "-"},
+        // --raw: without it pw-play hands stdin to libsndfile, which finds no header and exits on the first bytes.
+        {"pw-play", "--raw", "--format", "s16", "--rate", r, "--channels", "2", "--latency", "80ms", "-"},
         {"paplay", "--raw", "--format=s16le", "--rate=" + r, "--channels=2", "--latency-msec=80"},
         {"aplay", "-q", "-t", "raw", "-f", "S16_LE", "-r", r, "-c", "2", "--buffer-time=160000", "--period-time=40000",
          "-"},
@@ -197,6 +226,11 @@ std::unique_ptr<Sink> openExecSink(const std::vector<std::string>& argv, std::st
         return nullptr;
     }
     (void)::fcntl(er[0], F_SETFL, O_NONBLOCK);
+    // Some players fail only once data arrives (pw-play without --raw rejects stdin as an unknown file format), which
+    // would pass the grace window and then fail every write, reopening the same player forever. A little silence
+    // makes them fail inside the window. It fits the pipe, so it never blocks. If the player is already gone the write
+    // fails, and the loop below reaps it and reports what it said.
+    primeWithSilence(in[1]);
     // The start grace window: pw-play with no reachable daemon exits well inside 50 ms.
     for (int i = 0; i < 15; i++) {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
