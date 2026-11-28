@@ -5,7 +5,8 @@
 // No audio library is needed at build time, and this works on PipeWire, PulseAudio and bare ALSA.
 //   - A player on $PATH may still be unable to reach a server (pw-play with no PipeWire daemon exits at once, and the
 //     first write hits a closed pipe). Each candidate gets a 150 ms grace window to stay alive, and auto walks all
-//     candidates rather than stopping at the first.
+//     candidates rather than stopping at the first. A new player is primed with ~6 ms of silence so one that fails
+//     only on its first input fails inside the window too.
 //   - Each candidate pins a ~80 ms target latency. With the player's default, paplay buffers seconds.
 //   - A write failure must not latch silence for the session: the player re-opens (Player::outputLoop).
 // The spec grammar is the -audio flag / $FUGUE_AUDIO: "auto" (default), "none", "wav:<path>", "cmd:a,b,c".

@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <QFile>
 #include <QTemporaryDir>
 #include <QtTest>
@@ -43,10 +44,33 @@ private slots:
         sink->close();
         QFile file(dir.path() + "/pcm");
         QVERIFY(file.open(QIODevice::ReadOnly));
-        QCOMPARE(file.readAll(), QByteArray(16, '\0'));
+        // The 1024-byte silence the sink primes a new player with, then what was written.
+        QCOMPARE(file.readAll(), QByteArray(1024 + 16, '\0'));
         QVERIFY(!fugue::audio::openExecSink({"/nonexistent/fugue-player"}, &err));
         QVERIFY(!err.empty());
 #endif
+    }
+    void playerDyingOnFirstInputIsRefused() {
+#ifdef _WIN32
+        QSKIP("Command sinks are not supported on Windows");
+#else
+        // pw-play without --raw: alive until stdin delivers bytes, then it rejects them and exits.
+        std::string err;
+        auto sink = fugue::audio::openExecSink(
+            {"/bin/sh", "-c", "head -c 1 >/dev/null; echo 'Format not recognised.' >&2; exit 1"}, &err);
+        QVERIFY(!sink);
+        QVERIFY2(err.find("exited immediately") != std::string::npos, err.c_str());
+        QVERIFY2(err.find("Format not recognised.") != std::string::npos, err.c_str());
+#endif
+    }
+    void pwPlayReadsRawPcm() {
+        bool found = false;
+        for (const auto& argv : fugue::audio::execPlayers(44100))
+            if (argv[0] == "pw-play") {
+                found = true;
+                QVERIFY(std::find(argv.begin(), argv.end(), "--raw") != argv.end());
+            }
+        QVERIFY(found);
     }
 #ifdef __APPLE__
     void invalidCoreAudioRate() {
